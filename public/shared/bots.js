@@ -210,10 +210,32 @@ function stuckLoser(st) {
   return over(CCP) ? CCP : over(KMT) ? KMT : null;
 }
 
+// A loss by a held scoring card ranks below every other loss (orchestrator
+// 裁決 #12): it is certain by rule, while any other lost line is a loss on the
+// board that the other side still has to play out and that the guess may have
+// wrong. So with as many scoring cards as rounds left, the bot plays one even
+// when that too evaluates as lost. The gap (100) is far above the noise.
+const HELD_LOSS = 1100;
 export function evaluate(st, side, terms = null) {
-  if (st.winner != null) return st.winner === side ? 1000 : -1000;
+  if (st.winner != null) {
+    const held = st.reason === "scoring" || st.reason === "scoringBoth";
+    const v = held ? HELD_LOSS : 1000;
+    return st.winner === side ? v : -v;
+  }
   const lost = stuckLoser(st);
-  if (lost != null) { if (terms) terms.scoringStuck = lost === side ? -1000 : 1000; return lost === side ? -1000 : 1000; }
+  if (lost != null) {
+    // The board still counts a hundredth: a side answering a choice while the
+    // other is stuck must not become indifferent (seed 23: the Nationalists,
+    // simulated knowing the Communists' hand, stopped defending 蘭州, and the
+    // Communists chose a 「win」 that the real Nationalists, who do not see
+    // that hand, then blocked).
+    const v = HELD_LOSS + 0.01 * boardValue(st, lost === side ? 1 - side : side);
+    if (terms) terms.scoringStuck = lost === side ? -v : v;
+    return lost === side ? -v : v;
+  }
+  return boardValue(st, side, terms);
+}
+function boardValue(st, side, terms = null) {
   const sign = side === CCP ? 1 : -1;
   const T = terms ? (k, x) => { terms[k] = (terms[k] || 0) + sign * x; } : null;
   const turn = Math.max(1, st.turn), turns = st.options.turns;
