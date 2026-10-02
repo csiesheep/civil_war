@@ -1011,6 +1011,7 @@ check("行憲:國軍每推進一格,民心往國軍多移 1,共軍在任一座�
   const a6 = act(six, KMT, "kunming_incident", "reform");
   const p = pendingIs(a6, CCP, "points", "國軍在第 6 回合推進行憲之後"); if (p !== true) return p;
   const blueCities = Object.keys(SPEC_SPACES).filter((id) => SPEC_SPACES[id][0] === "city" && blueOf(six, id) > 0);
+  const o = same(a6.pending.options, blueCities, "共軍可以放的城(有藍的城,相鄰與否都算;鄭州沒有藍、東北是空的)"); if (o !== true) return o;
   const b = choose(a6, ["kunming"]);
   return all(
     eq(a6.reform[KMT], 1, "行憲軌"), eq(a6.mandate - six.mandate, d5 - 1, `民心的變動(第 5 回合同一步是 ${d5};負 = 往國軍)`),
@@ -1051,6 +1052,7 @@ check("決戰:蘇聯支持 +1;共軍對城的奇襲 +1、不推民生、不受�
   );
   if (pre !== true) return pre;
   const a = act(seven, CCP, "gao_shuxun", "campaign", { target: "xuzhou" });
+  if (a.winner != null) return `共軍奇襲徐州之後對局結束了(${a.reason},民生 ${a.weariness}):第 7 回合打城不該推民生`;
   const b = act(a, CCP, "shangdang_campaign", "campaign", { target: "dabieshan" });
   const err = thrown(() => act(b, CCP, "into_manchuria", "campaign", { target: "chasui" }));
   return all(
