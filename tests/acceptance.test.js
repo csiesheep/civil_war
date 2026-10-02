@@ -2301,15 +2301,34 @@ const spend = (st, side, card, id) => act(st, side, card, "place", { points: [id
 
 // ---------- 決戰期・國軍 (5)
 check("金圓券 *(2):民生回復 2;本回合國軍所有牌行動點 +1;回合結算時民心往共軍移 2", () => {
-  const t = cardTodo("gold_yuan"); if (t) return t;
-  const S = holding(KMT, "gold_yuan", { weariness: 2 }), a = ev(S, KMT, "gold_yuan");
-  const seen = turnEnds(() => spend(a, KMT, "kunming_incident", "tianjin"));
+  const t = cardTodo("gold_yuan", "reorganisation_conference"); if (t) return t;
+  // The spare is 軍事整編會議 *: played as its event it leaves the game and moves no 民心. With the discard pile emptied
+  // by hand nothing is left to deal on turn 7, so the walk goes on through turn 7's 結算 as well.
+  const S = holding(KMT, "gold_yuan", { weariness: 2, extra: ["reorganisation_conference"] }), a = ev(S, KMT, "gold_yuan");
+  a.discard = [];
+  const seen = turnEnds(() => ev(a, KMT, "reorganisation_conference"));
   const six = seen.find((x) => x.turn === 6), seven = seen.find((x) => x.turn === 7);
   if (!six || !seven) return `沒有走到第 6、7 回合的結算(走過的回合:${seen.map((x) => x.turn)})`;
   return all(
     eq(a.weariness, 4, "民生 2 回復 2"), eq(E.opsOf(a, KMT, "takeover_officials"), 3, "國軍的 2 點牌"), eq(E.opsOf(a, CCP, "gao_shuxun"), 2, "共軍的 2 點牌"), eq(a.mandate - S.mandate, 0, "打出當下民心的變動"),
     eq(six.mandate - a.mandate, 2, "第 6 回合結算時民心的變動(往共軍 2)"), eq(seven.mandate - six.mandate, 0, "下一個回合結算時又移了一次"),
     eq(where(a, "gold_yuan"), "removed", "牌在哪裡"), ok(true, "民生 2→4;這一回合國軍的牌 +1;回合結算時民心往共軍 2,只算一次"),
+  );
+});
+
+// orchestrator 裁決 (#8), asked by BE: 傅冬菊 lifts 金圓券's +1, a lasting effect; the 民心 the card costs at 結算 is not one, and stays owed.
+check("傅冬菊拿掉金圓券:國軍的牌不再 +1,回合結算的民心照付", () => {
+  const t = cardTodo("fu_dongju", "gold_yuan", "reorganisation_conference"); if (t) return t;
+  const S = holding(CCP, "into_manchuria", { extra: ["fu_dongju"], other: ["score_east", "gold_yuan", "reorganisation_conference"] });
+  const g = ev(spend(S, CCP, "into_manchuria", "taihang"), KMT, "gold_yuan"), a = ev(g, CCP, "fu_dongju");
+  const p = pendingIs(a, CCP, "option", "傅冬菊"); if (p !== true) return p;
+  const b = choose(a, "gold_yuan");
+  const six = turnEnds(() => ev(b, KMT, "reorganisation_conference")).find((x) => x.turn === 6);
+  if (!six) return "沒有走到第 6 回合的結算";
+  return all(
+    same(ids(opts(a)), ["gold_yuan", "beiping"], "可以選的(金圓券的效果,或北平)"), eq(E.opsOf(g, KMT, "takeover_officials"), 3, "拿掉之前國軍的 2 點牌"),
+    eq(E.opsOf(b, KMT, "takeover_officials"), 2, "拿掉之後國軍的 2 點牌"), eq(six.mandate - b.mandate, 2, "回合結算時民心的變動(照樣往共軍 2)"),
+    ok(true, "傅冬菊選金圓券:國軍的牌回到 2 點;回合結算時民心仍然往共軍 2"),
   );
 });
 
@@ -2335,6 +2354,7 @@ check("空運孤城(2):本回合孤城結算時不掉點;國軍在一座孤城�
   const b = choose(a, ["jinan"]);
   const six = turnEnds(() => spend(b, KMT, "kunming_incident", "tianjin")).find((x) => x.turn === 6);
   const Z = holding(KMT, "airlift_to_cut_off_city", { edits: JINAN_CUT, support: [1, 0] }), z = ev(Z, KMT, "airlift_to_cut_off_city");
+  if (z.pending) return `美國支持 0 時空運孤城還問了一個決定(${sideZh(z.pending.who)} 的 ${z.pending.kind}):它應該沒有效果`;
   const zero = turnEnds(() => spend(z, KMT, "kunming_incident", "tianjin")).find((x) => x.turn === 6);
   if (!six || !zero) return "沒有走到第 6 回合的結算";
   return all(
