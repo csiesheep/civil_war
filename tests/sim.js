@@ -185,6 +185,7 @@ function runChild(job, tries) {
     child.on("error", () => {});
     child.on("close", (code) => {
       if (code === 0) { try { return done(JSON.parse(out)); } catch { /* a torn line counts as a death */ } }
+      console.error(`# ${new Date().toISOString()} child died (exit ${code}): ${args.join(" ")}${tries > 1 ? "; running it again" : ""}`);
       if (tries > 1) return done(runChild(job, tries - 1));
       fail(new Error(`child died (${code}): ${args.join(" ")}`));
     });
@@ -329,7 +330,7 @@ function report(state) {
 
   // 1
   out.push(`## 1. 每回合結束時的民心`);
-  out.push(`希望看到:${WANT.mandate}`);
+  out.push(`> 希望看到(owner 原文):${WANT.mandate}`);
   out.push("");
   out.push(head("回合"));
   for (const t of numKeys(...names.map((n) => S[n].mandateByTurn))) out.push(row(`第 ${t} 回合末`, (s) => { const x = s.mandateByTurn[t]; return x ? mean(x.sum, x.n) : "– (n=0)"; }));
@@ -337,7 +338,7 @@ function report(state) {
 
   // 2
   out.push(`## 2. 共軍勝率`);
-  out.push(`希望看到:${WANT.win}`);
+  out.push(`> 希望看到(owner 原文):${WANT.win}`);
   out.push("");
   out.push(head(""));
   out.push(row("共軍勝", (s) => rate(s.wins[CCP], s.games)));
@@ -346,7 +347,7 @@ function report(state) {
 
   // 3
   out.push(`## 3. 結束方式`);
-  out.push(`希望看到:${WANT.reasons}`);
+  out.push(`> 希望看到(owner 原文):${WANT.reasons}`);
   out.push("");
   out.push(head("結束方式"));
   const reasons = [...new Set([...Object.keys(REASON_ZH), ...names.flatMap((n) => Object.keys(S[n].reasons))])].filter((r) => names.some((n) => S[n].reasons[r]));
@@ -361,7 +362,7 @@ function report(state) {
 
   // 4
   out.push(`## 4. 易幟勝場`);
-  out.push(`希望看到:${WANT.unification}`);
+  out.push(`> 希望看到(owner 原文):${WANT.unification}`);
   out.push("");
   out.push(head(""));
   out.push(row("易幟 / 共軍勝場", (s) => rate(s.reasons.unification || 0, s.wins[CCP])));
@@ -369,7 +370,7 @@ function report(state) {
 
   // 5
   out.push(`## 5. 每座城第一次成為孤城的回合`);
-  out.push(`希望看到:${WANT.firstIsolated}`);
+  out.push(`> 希望看到(owner 原文):${WANT.firstIsolated}`);
   out.push("");
   out.push(`「第 0 回合」是免費放置階段。所有城合起來(一局裡一座城算一次),第一次成為孤城的回合:`);
   out.push("");
@@ -379,6 +380,8 @@ function report(state) {
   out.push(row("城次", (_, n) => `${total(P[n])}`));
   for (const t of numKeys(...names.map((n) => P[n]))) out.push(row(`第 ${t} 回合`, (_, n) => rate(P[n][t] || 0, total(P[n]))));
   out.push(row("第 5 回合以後", (_, n) => rate(numKeys(P[n]).filter((t) => t > 4).reduce((a, t) => a + P[n][t], 0), total(P[n]))));
+  out.push("");
+  out.push(`「第 4 回合之後」在這裡讀作第 5 回合以後(> 4);另一種讀法可以從上面逐回合的分佈直接加。`);
   out.push("");
   out.push(`每座城:成為孤城的局數 / 總局數;其中第 5 回合以後的比例;中位回合。`);
   out.push("");
@@ -396,7 +399,7 @@ function report(state) {
 
   // 6
   out.push(`## 6. 每回合的孤城數`);
-  out.push(`希望看到:${WANT.isolated}`);
+  out.push(`> 希望看到(owner 原文):${WANT.isolated}`);
   out.push("");
   out.push(head("回合"));
   for (const t of numKeys(...names.map((n) => S[n].isolatedByTurn))) out.push(row(`第 ${t} 回合末`, (s) => { const x = s.isolatedByTurn[t]; return x ? plain(x.sum, x.n) : "– (n=0)"; }));
@@ -404,7 +407,7 @@ function report(state) {
 
   // 7
   out.push(`## 7. 遷都發生的回合`);
-  out.push(`希望看到:${WANT.capital}`);
+  out.push(`> 希望看到(owner 原文):${WANT.capital}`);
   out.push("");
   for (const [side, label] of [[CCP, "陝北(共軍的首都)"], [KMT, "南京(國軍的首都)"]]) {
     out.push(`${label}:`);
@@ -417,7 +420,7 @@ function report(state) {
 
   // 8
   out.push(`## 8. 兩條支持度軌`);
-  out.push(`希望看到:${WANT.support}`);
+  out.push(`> 希望看到(owner 原文):${WANT.support}`);
   out.push("");
   for (const [key, label] of [["su", "蘇聯支持"], ["us", "美國支持"]]) {
     out.push(`${label}(回合末的格子;平均與每一格的比例):`);
