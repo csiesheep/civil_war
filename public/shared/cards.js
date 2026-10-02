@@ -27,9 +27,15 @@
 //   - 「若因此控制」 is: not controlled before the event, controlled after it;
 //   - 潛伏、戰略機動、久攻不下、熊向暉 are Zongheng's 細作、徙民實邊、頓兵堅城 and
 //     its 「查看手牌」 (`st.forced`, `bog`, `st.revealed`).
-// The cards of 決戰期 still carry `todo: true` and an `effect` that
-// throws, loudly, so that a game which reaches one stops instead of quietly
-// doing nothing.
+// #8: the 21 events of 決戰期, under the same rules, plus orchestrator 裁決 #8:
+//   - 平津戰役 lifts 美軍駐華 only (`{ garrison: false }`);
+//   - 史達林的建議 bars the Communists only (`campaignBan` with `who`);
+//   - 金圓券's 民心 is paid once, at that turn's 結算 (`turnEndVp`); 空運孤城's
+//     「不掉點」 is that turn's only (`noAttrition`);
+//   - 陣前倒戈、補給不繼、大公報社評 are Zongheng's 奪將、逐客令、天狗食日.
+// Every card has its event now. A card left out of EFFECTS would still be
+// `todo`, with an `effect` that throws, loudly, so that a game which reaches
+// one stops instead of quietly doing nothing.
 import * as E from "./engine.js";
 import { SPACES, SPACE, STATES, REGIONS, SCORED_REGIONS } from "./board.js";
 
@@ -81,6 +87,21 @@ function dropNorthernShaanxi(st) {
     if (i >= 0) { st[pile].splice(i, 1); st.removed.push("northern_shaanxi"); }
   }
 }
+// 大公報社評 (Zongheng's 天狗食日): one card of the opponent's hand, not a scoring
+// card, drawn with the game's own RNG (`st.rngState`), so a game replays from its seed.
+function randomEnemyCard(st, side) {
+  const h = st.hands[opp(side)].filter((c) => !CARD[c].scoring);
+  if (!h.length) return null;
+  const rng = E.makeRng(0); rng.setState(st.rngState);
+  const c = h[rng.int(h.length)];
+  st.rngState = rng.getState();
+  return c;
+}
+// 傅冬菊's choices (orchestrator 裁決 #8, 7): the cards whose effects in play are
+// the Nationalists' (`side === KMT`), lasting or to the end of the turn, one entry
+// a card. 金圓券's 民心 at the end of the turn (`turnEndVp`) is not among them: it
+// is what the card costs, settled once, not a lasting effect (BE's reading, flagged on #8).
+const kmtEffects = (st) => [...new Set(st.effects.filter((e) => e.side === K && e.kind !== "turnEndVp").map((e) => e.card))];
 
 // The events, by card id. The table at the bottom takes a card's event from here;
 // a card with none here is still `todo`. The decisions and their shapes are the
@@ -322,6 +343,136 @@ const EFFECTS = {
   stalled_siege(st, side) {
     E.removeEffect(st, (e) => e.kind === "bog" && e.who === opp(side));
     E.addEffect(st, { card: "stalled_siege", side, kind: "bog", who: opp(side), until: "game" });
+  },
+
+  // ---------- 決戰期・國軍 (#8) ----------
+  // 民生 +2 and the Nationalists' cards +1 now; 民心 2 to the Communists at this
+  // turn's 結算, once, before 「本回合的效果結束」 (`turnEndVp`, orchestrator 裁決 #8, 1).
+  gold_yuan(st) {
+    E.recover(st, 2);
+    E.addEffect(st, until("gold_yuan", K, { kind: "opsAll", target: K, delta: 1 }));
+    E.addEffect(st, until("gold_yuan", K, { kind: "turnEndVp", to: C, n: 2 }));
+  },
+  // Lasting (the card leaves the game, the effect stays): the Communists −1
+  // against the cities of 華北 only (天津、北平、太原). 傅冬菊 may lift it.
+  fu_holds_the_north(st) {
+    E.addEffect(st, { card: "fu_holds_the_north", side: K, kind: "campaign", who: C, delta: -1, regions: ["north"], spaceKind: "city", until: "game" });
+  },
+  // 美國支持 0 when played: nothing at all. Else no 孤城 loses blue at this turn's
+  // 結算 (`noAttrition`; turn 7's 2 included), then one 孤城 with room for blue +2.
+  airlift_to_cut_off_city(st, side, ch) {
+    if (!ch.length) {
+      if (support(st, K) === 0) return null;
+      E.addEffect(st, until("airlift_to_cut_off_city", K, { kind: "noAttrition" }));
+      return pick(K, placeable(st, K, E.isolatedCities(st)), { side: K });
+    }
+    const [id] = ch[0];
+    if (id) E.place(st, K, id, 2);
+  },
+  // 桂林、武漢 +2 each, then the Nationalists discard 1 card that is not a
+  // scoring card, its event not set off (orchestrator 裁決 #8, 4); none such, no discard.
+  chiang_steps_down(st, side, ch) {
+    if (!ch.length) {
+      E.place(st, K, "guilin", 2);
+      E.place(st, K, "wuhan", 2);
+      const options = st.hands[K].filter((c) => !CARD[c].scoring);
+      return { kind: "card", who: K, n: 1, min: options.length ? 1 : 0, options };
+    }
+    const [c] = ch[0];
+    if (c) E.discardCard(st, K, c, { noEvent: true });
+  },
+  guningtou(st) {
+    for (const id of cities((s) => s.region === "rear")) E.remove(st, C, id, 1);
+    E.recover(st, 1);
+  },
+
+  // ---------- 決戰期・共軍 (#8) ----------
+  // Every space of the Northeast, cities and villages: blue −2 (down to 0).
+  liaoshen_campaign(st) { for (const id of spaces(inNE)) E.remove(st, K, id, 2); },
+  // A 奇襲 on any space of 華東中原, 4 + 2, over the ordinary target list (#6, 4).
+  huaihai_campaign(st, side, ch) { return freeCampaign(st, C, ch, spaces((s) => s.region === "east"), CARD.huaihai_campaign.ops + 2); },
+  // 天津, no choice: 3 + 2 if the Communists could 奇襲 it but for 美軍駐華 (only
+  // that is lifted: 民生's locks and protection still hold); else no 奇襲. Then,
+  // whether or not it was made, 北平 a 孤城: its blue −2 (orchestrator 裁決 #8, 6).
+  pingjin_campaign(st) {
+    if (E.canCampaign(st, C, "tianjin", { garrison: false })) E.campaign(st, C, "tianjin", CARD.pingjin_campaign.ops + 2, { pusher: st.phasing });
+    if (st.winner != null) return;
+    if (E.isolatedCities(st).includes("beiping")) E.remove(st, K, "beiping", 2);
+  },
+  // The Communists choose: one card whose effects in play are the Nationalists'
+  // (all its Nationalist effects go), or 北平 (blue −2) (orchestrator 裁決 #8, 7).
+  fu_dongju(st, side, ch) {
+    if (!ch.length) return { kind: "option", who: C, options: [...kmtEffects(st).map((id) => ({ id, label: CARD[id].zh })), { id: "beiping", label: SPACE.beiping.zh }] };
+    if (ch[0] === "beiping") E.remove(st, K, "beiping", 2);
+    else E.removeEffect(st, (e) => e.card === ch[0] && e.side === K && e.kind !== "turnEndVp");
+  },
+  // 長春 a 孤城: all its blue off, 2 red in, 民心 2 to the Nationalists; else blue −1.
+  siege_of_changchun(st) {
+    if (E.isolatedCities(st).includes("changchun")) {
+      E.remove(st, K, "changchun", E.infOf(st, "changchun")[K]);
+      E.place(st, C, "changchun", 2);
+      E.vp(st, K, 2);
+    } else E.remove(st, K, "changchun", 1);
+  },
+  jiawang_defection(st) {
+    E.remove(st, K, "xuzhou", 2);
+    if (E.controller(st, "huaihai") === C) E.remove(st, K, "xuzhou", 1);
+  },
+  // A 奇襲 on any city of 後方, 4 + 2, over the ordinary target list (民生's lock
+  // of the Nationalists' home and 美軍駐華 included).
+  yangtze_crossing(st, side, ch) { return freeCampaign(st, C, ch, cities((s) => s.region === "rear"), CARD.yangtze_crossing.ops + 2); },
+  new_consultative_conference(st) {
+    if (E.controller(st, "beiping") === C) E.vp(st, C, 3);
+    E.moveSupport(st, C, 1);
+  },
+  // One 孤城: up to 3 blue off.
+  peaceful_changeover(st, side, ch) {
+    if (!ch.length) return pick(C, E.isolatedCities(st));
+    const [id] = ch[0];
+    if (id) E.remove(st, K, id, 3);
+  },
+
+  // ---------- 決戰期・中立 (#8; `side` is the player) ----------
+  beiping_talks(st, side) {
+    E.recover(st, 2);
+    E.addEffect(st, until("beiping_talks", side, { kind: "campaign", who: "both", delta: -1, regions: null }));
+  },
+  // Only while the Communists control no city of 後方: this turn they may not
+  // 奇襲 a city of 後方 (the Nationalists may; `campaignBan` with `who`), and
+  // 蘇聯支持 +1. Else nothing at all (orchestrator 裁決 #8, 8).
+  stalins_advice(st, side) {
+    if (cities((s) => s.region === "rear").some((id) => E.controller(st, id) === C)) return;
+    E.addEffect(st, until("stalins_advice", side, { kind: "campaignBan", region: "rear", spaceKind: "city", who: C }));
+    E.moveSupport(st, C, 1);
+  },
+  amethyst_incident(st, side) { E.vp(st, side, 1); E.moveSupport(st, K, -1); },
+  // Zongheng's 奪將: the opponent's card of the most printed ops (the first in
+  // hand order on a tie; none if that is 0, i.e. only scoring cards) to the
+  // player's hand, and this card to the opponent's hand, not to a pile.
+  defection_at_the_front(st, side) {
+    const h = st.hands[opp(side)];
+    if (h.length) {
+      const top = h.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));
+      if (CARD[top].ops > 0) { h.splice(h.indexOf(top), 1); st.hands[side].push(top); }
+    }
+    h.push("defection_at_the_front");
+  },
+  // Zongheng's 逐客令: the opponent's cards −1 this turn (`opsOf` keeps a card at 1).
+  supplies_run_short(st, side) { E.addEffect(st, until("supplies_run_short", side, { kind: "opsAll", target: opp(side), delta: -1 })); },
+  // A free 奇襲 on any village, the printed 2 ops, over the ordinary target list.
+  clearing_the_outskirts(st, side, ch) { return freeCampaign(st, side, ch, villages(), CARD.clearing_the_outskirts.ops); },
+  // Zongheng's 天狗食日: a random card of the opponent's, not a scoring card. The
+  // player's own side's card: its event goes off now, resolved for the player
+  // (a `*` card then leaves the game); any other: into the discard pile.
+  ta_kung_pao(st, side) {
+    const c = randomEnemyCard(st, side);
+    if (!c) return;
+    if (CARD[c].side === side) {
+      const h = st.hands[opp(side)];
+      h.splice(h.indexOf(c), 1);
+      E.log(st, { type: "discard", side: opp(side), card: c, noEvent: false });
+      st.plan.splice(1, 0, { do: "event", card: c, side, by: st.phasing, choices: [] }, { do: "finishCard", card: c, side, triggered: true });
+    } else E.discardCard(st, opp(side), c, { noEvent: true });
   },
 };
 

@@ -38,10 +38,13 @@
 //     a `campaign` effect may name a kind of space (`spaceKind`, read by
 //     `campaignMod`). 潛伏, 久攻不下 and 熊向暉 use Zongheng's `forced`, `bog`
 //     and `revealed` as they are.
+//   - #8 the hooks the 21 cards of 決戰期 need (their events are in cards.js):
+//     a `campaignBan` may bar one side only (`who`, read by `campaignBanned(st,
+//     id, side)`); 民心 owed at this turn's 結算 (`turnEndVp`, paid in
+//     `endTurnChecks`); a turn with no 孤城 attrition (`noAttrition`, read by
+//     `attritionLoss`). With these all 72 cards have their events.
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
-// Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (the events of 決戰期) is not done: that is the rest
-// of M1. The Phase 0
+// Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
@@ -480,9 +483,12 @@ export function isProtected(st, id) { return st.effects.some((e) => e.kind === "
 // `spaceKind` "city" or null for cities and villages alike. 蘇軍延期撤兵 bars the
 // Northeast's cities, 六月東北停戰 the whole Northeast. 日軍留守 is `protect`,
 // which bars 遊說 too.
-export function campaignBanned(st, id) {
+// #8: `who` (CCP or KMT) bars that side only; absent, both. 史達林的建議 bars the
+// Communists from the cities of 後方. `side` is the attacker; every reader passes
+// it (`canCampaign`, so `opsOptions` and the events' target lists, and `doOps`).
+export function campaignBanned(st, id, side) {
   const sp = SPACE[id];
-  return st.effects.some((e) => e.kind === "campaignBan" && e.region === sp.region && (!e.spaceKind || e.spaceKind === sp.kind));
+  return st.effects.some((e) => e.kind === "campaignBan" && e.region === sp.region && (!e.spaceKind || e.spaceKind === sp.kind) && (e.who == null || e.who === side));
 }
 // Whether `side` may 奇襲 `id` now: the one test `opsOptions` (so `legal()`) and
 // an event's free 奇襲 read (`eventCampaignTargets`); `doOps` checks the same
@@ -492,7 +498,7 @@ export function campaignBanned(st, id) {
 // locks or 美軍駐華 turns that one test off (`locks: false`, `garrison: false`).
 export function canCampaign(st, side, id, { locks = true, garrison = true } = {}) {
   return infOf(st, id)[other(side)] > 0 && !sovietHeld(st, id) && !(garrison && side === CCP && garrisoned(st, id))
-    && !(locks && campaignLocked(st, id, side)) && !isProtected(st, id) && !campaignBanned(st, id);
+    && !(locks && campaignLocked(st, id, side)) && !isProtected(st, id) && !campaignBanned(st, id, side);
 }
 // An event's free 奇襲 (orchestrator 裁決 #6, 4): the targets are the ones the
 // side could 奇襲 as an action (`canCampaign`), within the card's own list.
@@ -1112,7 +1118,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-7"; // #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind` ("2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-8"; // #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition` ("2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1561,6 +1567,13 @@ function endTurnChecks(st) {
     const ctl = controller(st, "luoyi");
     if (ctl != null) vp(st, ctl, st.options.luoyi);
   }
+  // #8, 金圓券: 民心 owed at this turn's 結算 (`turnEndVp`, `until: "turn"`), paid
+  // here, once, before 「本回合的效果結束」 takes the effect away.
+  for (const e of st.effects.filter((x) => x.kind === "turnEndVp")) {
+    log(st, { type: "turnEndVp", card: e.card, to: e.to, n: e.n });
+    vp(st, e.to, e.n);
+    if (st.winner != null) return;
+  }
   st.effects = st.effects.filter((e) => e.until !== "turn");
   log(st, { type: "endTurn", turn: st.turn, weariness: st.weariness });
 }
@@ -1598,7 +1611,7 @@ function doOps(st, side, card, ops, choice) {
     if (side === CCP && garrisoned(st, t)) fail("campaign: 美軍駐華 -- the Communists may not raid it while 美國支持 is 3 or more");
     if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
-    if (campaignBanned(st, t)) fail("campaign: no 奇襲 there this turn (an event)");
+    if (campaignBanned(st, t, side)) fail("campaign: no 奇襲 there this turn (an event)");
     campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
@@ -1998,9 +2011,13 @@ function placeBarred(st, side) {
   return (id) => SPACE[id].kind === "city" && !ok.has(id);
 }
 // 孤城的效果 2 (#1): how many points each 孤城 loses at the end of this turn.
-// The one place to change it: turn 7's 時局 (決戰) makes it 2 (#2), and a card
-// may stop it for a turn (空運孤城, not done yet).
-function attritionLoss(st) { return !st.options.supply ? 0 : situationOf(st.turn)?.id === "decisive_battle" ? 2 : 1; }
+// The one place to change it: turn 7's 時局 (決戰) makes it 2 (#2), and 空運孤城
+// stops it for the turn it is played in, turn 7's 2 included (#8: its
+// `noAttrition` effect, gone with the turn's other effects right after).
+function attritionLoss(st) {
+  if (!st.options.supply || st.effects.some((e) => e.kind === "noAttrition")) return 0;
+  return situationOf(st.turn)?.id === "decisive_battle" ? 2 : 1;
+}
 // At the end of the turn, after the capital check (so a capital that moved
 // supplies already): read the 孤城 once, each loses `attritionLoss` (not below
 // 0), one `attrition` entry if any did, then the markers once (rulebook 四,
