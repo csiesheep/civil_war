@@ -1991,6 +1991,293 @@ check("六月東北停戰 *(2):本回合東北不可奇襲;民生回復 1", () =
   );
 });
 
+// ---------------------------------------------------------------- group 9
+// The cards of 易勢期 (issue #7): 22 events, one check each. Same rig and same rules as group 8.
+section("9 牌:易勢期");
+
+// ---------- 易勢期・國軍 (8)
+check("胡宗南佔延安 *(4):國軍對西北任一據點免費奇襲,行動點 +2,不受封鎖;移除「轉戰陝北」", () => {
+  const t = cardTodo("hu_takes_yanan", "northern_shaanxi"); if (t) return t;
+  // 民生 3 (通膨): 西北 is the opponent's home, closed to the Nationalists since 動盪. The card says 不受封鎖.
+  const S = holding(KMT, "hu_takes_yanan", { weariness: 3, edits: { lanzhou: { r: 1 } } });
+  const a = ev(S, KMT, "hu_takes_yanan");
+  const p = pendingIs(a, KMT, "points", "胡宗南佔延安"); if (p !== true) return p;
+  const b = choose(a, ["shanbei"]);
+  // With 轉戰陝北 in play (−2 against the villages of 西北): the attack is made first, at 4 + 2 − 2, and the lasting card goes after it.
+  const T = holding(CCP, "northern_shaanxi", { weariness: 3, other: ["score_east", "hu_takes_yanan", "kunming_incident"] });
+  const t1 = ev(T, CCP, "northern_shaanxi"), t2 = answer(ev(t1, KMT, "hu_takes_yanan"), KMT, "points", ["shanbei"], "轉戰陝北在場時的胡宗南佔延安");
+  return all(
+    eq(E.opsOptions(S, KMT).campaignTargets.includes("shanbei"), false, "通膨時國軍平常能奇襲陝北(對照組)"),
+    eq(a.pending.n, 1, "要選的據點數"), same(opts(a), ["shanbei", "lanzhou"], "可以選的據點(西北、有紅)"),
+    eq(rb(b, "shanbei"), "0/2", "奇襲陝北(4 + 2:移除 4、放 2)之後 紅/藍"), eq(b.weariness, 3, "民生(陝北不是城的要衝)"), eq(where(b, "hu_takes_yanan"), "removed", "牌在哪裡"),
+    eq(E.campaignMod(t1, KMT, "shanbei"), -2, "轉戰陝北在場時國軍打陝北的加減"),
+    eq(rb(t2, "shanbei"), "0/0", "轉戰陝北在場時奇襲陝北(4 + 2 − 2:移除 4)之後 紅/藍"),
+    eq(E.campaignMod(t2, KMT, "shanbei"), 0, "之後國軍打陝北的加減(轉戰陝北移除了)"), eq(where(t2, "northern_shaanxi"), "removed", "轉戰陝北那張牌在哪裡"),
+    ok(true, "通膨時照打陝北 4/0→0/2;轉戰陝北在場時只有 4 點(0/0),打完把它移出遊戲"),
+  );
+});
+
+check("重點進攻山東 *(3):移除魯中的紅 2;國軍在濟南或徐州放 2", () => {
+  const t = cardTodo("shandong_offensive"); if (t) return t;
+  const S = holding(KMT, "shandong_offensive"), a = ev(S, KMT, "shandong_offensive");
+  const p = pendingIs(a, KMT, "points", "重點進攻山東"); if (p !== true) return p;
+  const j = choose(a, ["jinan"]), x = choose(a, ["xuzhou"]);
+  return all(
+    eq(a.pending.n, 1, "要選的城數"), same(opts(a), ["jinan", "xuzhou"], "可以選的城"),
+    eq(rb(j, "luzhong"), "1/2", "魯中 紅/藍"), eq(blueOf(j, "jinan"), 4, "選濟南:濟南的藍"), eq(blueOf(x, "xuzhou"), 5, "選徐州:徐州的藍"),
+    eq(where(j, "shandong_offensive"), "removed", "牌在哪裡"), ok(true, "魯中 3/2→1/2;濟南 2→4 或徐州 3→5"),
+  );
+});
+
+check("戡亂動員令 *(2):持續至回合結束:國軍所有牌行動點 +1", () => {
+  const t = cardTodo("mobilisation_order", "kunming_incident"); if (t) return t;
+  const S = holding(KMT, "mobilisation_order", { options: { turns: 6 } }), a = ev(S, KMT, "mobilisation_order");
+  const end = ev(a, KMT, "kunming_incident");
+  return all(
+    eq(E.opsOf(a, KMT, "takeover_officials"), 3, "國軍的 2 點牌(接收大員)"), eq(E.opsOf(a, CCP, "gao_shuxun"), 2, "共軍的 2 點牌"),
+    eq(end.winner != null, true, "回合走完"), eq(E.opsOf(end, KMT, "takeover_officials"), 2, "回合結束後國軍的牌"),
+    eq(where(a, "mobilisation_order"), "removed", "牌在哪裡"), ok(true, "這一回合國軍的牌 2→3,共軍的不變;回合結束後恢復"),
+  );
+});
+
+check("取締民盟 *(2):移除任兩座城的紅各 1;民心往共軍移 1;美國支持 −1", () => {
+  const t = cardTodo("league_banned"); if (t) return t;
+  const S = holding(KMT, "league_banned", { support: [1, 4], edits: { jinan: { r: 1 }, xuzhou: { r: 1 }, wuhan: { r: 2 } } }), a = ev(S, KMT, "league_banned");
+  const p = pendingIs(a, KMT, "points", "取締民盟"); if (p !== true) return p;
+  const b = choose(a, ["wuhan", "jinan"]);
+  const one = holding(KMT, "league_banned", { edits: { wuhan: { r: 2 } } }), o = ev(one, KMT, "league_banned");
+  return all(
+    eq(a.pending.n, 2, "要選的城數"), same(opts(a), ["jinan", "xuzhou", "wuhan"], "可以選的城(有紅的城)"),
+    eq(thrown(() => choose(a, ["wuhan", "wuhan"])) != null, true, "同一座城選兩次沒有被拒絕"),
+    eq(`${redOf(b, "wuhan")},${redOf(b, "jinan")},${redOf(b, "xuzhou")}`, "1,0,1", "武漢、濟南、徐州的紅"),
+    eq(b.mandate - S.mandate, 1, "民心的變動(往共軍 1)"), eq(J(b.support), "[1,3]", "支持度"),
+    eq(o.pending && o.pending.n, 1, "只有一座城有紅時要選的城數"), eq(where(b, "league_banned"), "removed", "牌在哪裡"),
+    ok(true, "武漢 2→1、濟南 1→0;民心往共軍 1;美國支持 4→3"),
+  );
+});
+
+check("陳誠主東北 *(2):國軍在瀋陽放 2、長春放 1", () => {
+  const t = cardTodo("chen_cheng"); if (t) return t;
+  const S = holding(KMT, "chen_cheng"), a = ev(S, KMT, "chen_cheng");
+  return all(eq(`${blueOf(a, "shenyang")},${blueOf(a, "changchun")}`, "2,1", "瀋陽、長春的藍"), eq(total(a, KMT), total(S, KMT) + 3, "藍的合計"), eq(a.pending, null, "還有待決定"), eq(where(a, "chen_cheng"), "removed", "牌在哪裡"), ok(true, "瀋陽 0→2、長春 0→1"));
+});
+
+check("援華法案 *(3):美國支持 +1;國軍抽 1 張", () => {
+  const t = cardTodo("china_aid_act"); if (t) return t;
+  const S = holding(KMT, "china_aid_act", { support: [1, 3] });
+  S.draw = ["yellow_river"]; // the only card in the draw pile
+  const a = ev(S, KMT, "china_aid_act");
+  return all(
+    eq(J(a.support), "[1,4]", "支持度"), same(a.hands[KMT], ["kunming_incident", "yellow_river"], "國軍的手牌(備用牌 + 抽到的)"), eq(a.draw.length, 0, "牌庫剩下的張數"),
+    eq(where(a, "china_aid_act"), "removed", "牌在哪裡"), ok(true, "美國支持 3→4;國軍抽到牌庫頂的黃河歸故"),
+  );
+});
+
+check("行憲國大 *(2):行憲軌前進 1;國軍控制南京的話民心 +1", () => {
+  const t = cardTodo("national_assembly"); if (t) return t;
+  const S = holding(KMT, "national_assembly", { turn: 5 }), a = ev(S, KMT, "national_assembly");
+  const N = holding(KMT, "national_assembly", { turn: 5, edits: { nanjing: { r: 1 } } }), n = ev(N, KMT, "national_assembly");
+  return all(
+    eq(E.controller(S, "nanjing"), KMT, "南京的控制者"), eq(a.reform[KMT], 1, "行憲軌"), eq(a.mandate - S.mandate, reformWorth(S, KMT) - 1, "控制南京:民心的變動(那一格本身的,再往國軍 1)"),
+    eq(E.controller(N, "nanjing"), null, "南京有 1 紅時的控制者"), eq(n.mandate - N.mandate, reformWorth(N, KMT), "不控制南京:民心的變動(只有那一格本身的)"),
+    eq(where(a, "national_assembly"), "removed", "牌在哪裡"), ok(true, "行憲軌 0→1;控制南京時民心再往國軍 1"),
+  );
+});
+
+check("美械整編師(3):持續至回合結束:國軍奇襲行動點 +1。美國支持 < 2 時無效", () => {
+  const t = cardTodo("american_divisions"); if (t) return t;
+  const S = holding(KMT, "american_divisions", { support: [1, 2], extra: ["kunming_incident", "takeover_officials"] }), a = ev(S, KMT, "american_divisions");
+  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const low = ev(holding(KMT, "american_divisions", { support: [1, 1] }), KMT, "american_divisions");
+  return all(
+    eq(E.campaignMod(S, KMT, "jizhong"), 0, "打出之前國軍奇襲的加減"), eq(E.campaignMod(a, KMT, "jizhong"), 1, "美國支持 2:國軍奇襲的加減"), eq(E.campaignMod(a, CCP, "chasui"), 0, "共軍奇襲的加減"),
+    eq(rb(b, "jizhong"), "0/1", "國軍 2 點 +1 奇襲冀中之後 紅/藍"),
+    eq(E.campaignMod(low, KMT, "jizhong"), 0, "美國支持 1:國軍奇襲的加減(無效)"), eq(where(a, "american_divisions"), "discard", "牌在哪裡"),
+    ok(true, "美國支持 2:這一回合國軍奇襲 +1(冀中 2/0→0/1);支持 1:無效;牌進棄牌堆"),
+  );
+});
+
+// ---------- 易勢期・共軍 (8)
+check("轉戰陝北(2):持續:國軍對西北的鄉奇襲行動點 −2。「胡宗南佔延安」觸發時移除", () => {
+  const t = cardTodo("northern_shaanxi"); if (t) return t;
+  const S = holding(CCP, "northern_shaanxi", { other: ["score_east", "surrender_order", "kunming_incident"] }), a = ev(S, CCP, "northern_shaanxi");
+  const b = act(a, KMT, "surrender_order", "campaign", { target: "shanbei" });
+  const fx = a.effects.find((e) => e.card === "northern_shaanxi");
+  return all(
+    eq(E.campaignMod(a, KMT, "shanbei"), -2, "國軍打陝北(西北的鄉)的加減"), eq(E.campaignMod(a, KMT, "xian"), 0, "國軍打西安(城)的加減"), eq(E.campaignMod(a, CCP, "shanbei"), 0, "共軍的加減"), eq(E.campaignMod(a, KMT, "jizhong"), 0, "國軍打別區的鄉的加減"),
+    eq(rb(b, "shanbei"), "3/0", "國軍 3 點 −2 奇襲陝北之後 紅/藍"),
+    eq(!!fx && fx.until !== "turn", true, "效果是持續的(不在回合結束時消失)"), eq(where(a, "northern_shaanxi"), "discard", "牌在哪裡(還沒有被移除)"),
+    ok(true, "國軍打陝北 −2(3 點只移除 1);西安、別區、共軍都不受影響;效果跨回合"),
+  );
+});
+
+check("孟良崮 *(3):移除魯中或淮海的全部藍(至多 3)", () => {
+  const t = cardTodo("menglianggu"); if (t) return t;
+  const S = holding(CCP, "menglianggu", { edits: { luzhong: { b: 4 } } }), a = ev(S, CCP, "menglianggu");
+  const p = pendingIs(a, CCP, "points", "孟良崮"); if (p !== true) return p;
+  const l = choose(a, ["luzhong"]), h = choose(a, ["huaihai"]);
+  return all(
+    eq(a.pending.n, 1, "要選的據點數"), same(opts(a), ["luzhong", "huaihai"], "可以選的據點"),
+    eq(rb(l, "luzhong"), "3/1", "選魯中(藍 4,至多移除 3)之後 紅/藍"), eq(rb(h, "huaihai"), "2/0", "選淮海(藍 1)之後 紅/藍"),
+    eq(where(l, "menglianggu"), "removed", "牌在哪裡"), ok(true, "魯中 3/4→3/1;淮海 2/1→2/0"),
+  );
+});
+
+check("挺進大別山 *(3):共軍在大別山放 3;若因此控制大別山,移除武漢或鄭州的藍 1", () => {
+  const t = cardTodo("dabie_march"); if (t) return t;
+  // 大別山 2/2, 安定 2, cap 4: the third point is lost, red 4 against blue 2 is control, and it was not before.
+  const S = holding(CCP, "dabie_march"), a = ev(S, CCP, "dabie_march");
+  const p = pendingIs(a, CCP, "points", "挺進大別山(因此控制了大別山)"); if (p !== true) return p;
+  const w = choose(a, ["wuhan"]);
+  const had = ev(holding(CCP, "dabie_march", { edits: { dabieshan: { r: 4 } } }), CCP, "dabie_march"); // controlled already: not 因此
+  const not = ev(holding(CCP, "dabie_march", { edits: { dabieshan: { r: 0 } } }), CCP, "dabie_march"); // 3 against 2: no control
+  return all(
+    eq(rb(a, "dabieshan"), "4/2", "大別山 紅/藍"), eq(a.pending.n, 1, "要選的城數"), same(opts(a), ["wuhan", "zhengzhou"], "可以選的城"),
+    eq(blueOf(w, "wuhan"), 2, "選武漢:武漢的藍"), eq(blueOf(w, "zhengzhou"), 2, "鄭州的藍"),
+    eq(had.pending, null, "本來就控制大別山時還有待決定"), eq(`${blueOf(had, "wuhan")},${blueOf(had, "zhengzhou")}`, "3,2", "本來就控制時武漢、鄭州的藍"),
+    eq(rb(not, "dabieshan"), "3/2", "大別山沒有紅時放完 紅/藍"), eq(not.pending, null, "沒有因此控制時還有待決定"),
+    eq(where(w, "dabie_march"), "removed", "牌在哪裡"), ok(true, "大別山 2/2→4/2,因此控制,武漢 3→2;本來就控制、或放完還沒控制,都不移除"),
+  );
+});
+
+check("土地法大綱 *(2):建軍軌前進 1;共軍在任兩個自己控制的鄉各放 1", () => {
+  const t = cardTodo("land_law"); if (t) return t;
+  const S = holding(CCP, "land_law"), a = ev(S, CCP, "land_law");
+  const p = pendingIs(a, CCP, "points", "土地法大綱"); if (p !== true) return p;
+  const b = choose(a, ["jizhong", "shanbei"]);
+  return all(
+    eq(a.reform[CCP], 1, "建軍軌"), eq(a.mandate - S.mandate, reformWorth(S, CCP), "民心的變動(只有那一格本身的)"),
+    eq(a.pending.n, 2, "要選的鄉數"), same(opts(a), ["jizhong", "taihang", "jiluyu", "shanbei"], "可以選的鄉(共軍控制的)"),
+    eq(thrown(() => choose(a, ["shanbei", "shanbei"])) != null, true, "同一個鄉選兩次沒有被拒絕"),
+    eq(`${redOf(b, "jizhong")},${redOf(b, "shanbei")}`, "3,5", "冀中、陝北的紅"), eq(where(b, "land_law"), "removed", "牌在哪裡"),
+    ok(true, "建軍軌 0→1;冀中 2→3、陝北 4→5"),
+  );
+});
+
+check("晉中戰役 *(3):移除晉中的全部藍(至多 3);共軍在晉中放 1", () => {
+  const t = cardTodo("central_shanxi_campaign"); if (t) return t;
+  const a = ev(holding(CCP, "central_shanxi_campaign"), CCP, "central_shanxi_campaign"), b = ev(holding(CCP, "central_shanxi_campaign", { edits: { jinzhong: { b: 4 } } }), CCP, "central_shanxi_campaign");
+  return all(eq(rb(a, "jinzhong"), "2/0", "晉中(1/2)之後 紅/藍"), eq(rb(b, "jinzhong"), "2/1", "晉中(1/4,至多移除 3)之後 紅/藍"), eq(a.pending, null, "還有待決定"), eq(where(a, "central_shanxi_campaign"), "removed", "牌在哪裡"), ok(true, "晉中 1/2→2/0;藍 4 時剩 1"));
+});
+
+check("東北冬季攻勢 *(3):共軍對東北任一個鄉免費奇襲,行動點 +1;若因此控制它,在相鄰的一座城放 1", () => {
+  const t = cardTodo("winter_offensive"); if (t) return t;
+  const edits = { siping: { b: 2 }, liaoxi: { b: 1 }, shenyang: { b: 1 } };
+  const S = holding(CCP, "winter_offensive", { edits }), a = ev(S, CCP, "winter_offensive");
+  const p = pendingIs(a, CCP, "points", "東北冬季攻勢"); if (p !== true) return p;
+  const b = choose(a, ["siping"]);
+  const q = pendingIs(b, CCP, "points", "因此控制了四平"); if (q !== true) return q;
+  const c = choose(b, ["shenyang"]);
+  const strong = holding(CCP, "winter_offensive", { edits: { siping: { b: 4 } } }), s = answer(ev(strong, CCP, "winter_offensive"), CCP, "points", ["siping"]);
+  const five = holding(CCP, "winter_offensive", { turn: 5, edits }), f = answer(ev(five, CCP, "winter_offensive"), CCP, "points", ["siping"]);
+  return all(
+    eq(a.pending.n, 1, "要選的鄉數"), same(opts(a), ["siping", "liaoxi"], "可以選的鄉(東北、有藍;瀋陽是城)"),
+    eq(rb(b, "siping"), "2/0", "奇襲四平(3 + 1:移除 2、放 2)之後 紅/藍"), same(opts(b), ["changchun", "shenyang"], "可以放的城(與四平相鄰)"),
+    eq(redOf(c, "shenyang"), 1, "選瀋陽:瀋陽的紅"), eq(c.pending, null, "還有待決定"),
+    eq(rb(s, "siping"), "0/0", "四平藍 4 時(移除 4)之後 紅/藍"), eq(s.pending, null, "沒有因此控制時還有待決定"),
+    eq(rb(f, "siping"), "3/0", "第 5 回合(戰略反攻,共軍打鄉再 +1)之後 紅/藍"),
+    eq(where(c, "winter_offensive"), "removed", "牌在哪裡"), ok(true, "四平 0/2→2/0,因此控制,瀋陽放 1;藍 4 時打成 0/0 不控制;第 5 回合是 5 點"),
+  );
+});
+
+check("熊向暉 *(1):查看國軍手牌", () => {
+  const t = cardTodo("xiong_xianghui"); if (t) return t;
+  const S = holding(CCP, "xiong_xianghui", { other: ["score_east", "kunming_incident", "surrender_order"] }), a = ev(S, CCP, "xiong_xianghui");
+  return all(
+    eq(E.view(S, CCP).hands[KMT], null, "打出之前共軍看得到國軍的手牌"), same(E.view(a, CCP).hands[KMT] || [], a.hands[KMT], "打出之後共軍看到的國軍手牌"),
+    eq(a.hands[KMT].length, 2, "國軍的手牌數"), eq(E.view(a, KMT).hands[CCP], null, "國軍看得到共軍的手牌"), eq(where(a, "xiong_xianghui"), "removed", "牌在哪裡"),
+    ok(true, "共軍看得到國軍的 2 張手牌;反過來看不到"),
+  );
+});
+
+check("五二〇學潮 *(2):共軍在北平、上海、南京之中任兩座各放 1;民心往共軍移 1", () => {
+  const t = cardTodo("may_twentieth"); if (t) return t;
+  const S = holding(CCP, "may_twentieth"), a = ev(S, CCP, "may_twentieth");
+  const p = pendingIs(a, CCP, "points", "五二〇學潮"); if (p !== true) return p;
+  const b = choose(a, ["shanghai", "nanjing"]);
+  return all(
+    eq(a.pending.n, 2, "要選的城數"), same(opts(a), ["beiping", "shanghai", "nanjing"], "可以選的城"), eq(thrown(() => choose(a, ["nanjing", "nanjing"])) != null, true, "同一座城選兩次沒有被拒絕"),
+    eq(`${redOf(b, "shanghai")},${redOf(b, "nanjing")},${redOf(b, "beiping")}`, "1,1,0", "上海、南京、北平的紅"), eq(b.mandate - S.mandate, 1, "民心的變動(往共軍 1)"),
+    eq(where(b, "may_twentieth"), "removed", "牌在哪裡"), ok(true, "上海、南京各 +1 紅(不相鄰也可以);民心往共軍 1"),
+  );
+});
+
+// ---------- 易勢期・中立 (6)
+check("杜魯門主義 *(2):美國支持 +1;蘇聯支持 +1", () => {
+  const t = cardTodo("truman_doctrine"); if (t) return t;
+  const a = ev(holding(KMT, "truman_doctrine", { support: [1, 3] }), KMT, "truman_doctrine"), top = ev(holding(CCP, "truman_doctrine", { support: [4, 4] }), CCP, "truman_doctrine");
+  return all(eq(J(a.support), "[2,4]", "支持度"), eq(J(top.support), "[4,4]", "兩條都是 4 時"), eq(where(a, "truman_doctrine"), "removed", "牌在哪裡"), ok(true, "蘇聯 1→2、美國 3→4;4 停在 4"));
+});
+
+check("魏德邁調查團 *(2):民生在復員或動盪的話美國支持 +1;否則美國支持 −1", () => {
+  const t = cardTodo("wedemeyer_mission"); if (t) return t;
+  const hi = ev(holding(KMT, "wedemeyer_mission", { support: [1, 3], weariness: 4 }), KMT, "wedemeyer_mission"), lo = ev(holding(KMT, "wedemeyer_mission", { support: [1, 3], weariness: 3 }), KMT, "wedemeyer_mission");
+  return all(eq(J(hi.support), "[1,4]", "民生動盪(4)"), eq(J(lo.support), "[1,2]", "民生通膨(3)"), eq(where(hi, "wedemeyer_mission"), "removed", "牌在哪裡"), ok(true, "動盪:美國支持 3→4;通膨:3→2"));
+});
+
+check("黃河歸故 *(2):華東中原每個鄉雙方各移除 1;民生回復 1", () => {
+  const t = cardTodo("yellow_river"); if (t) return t;
+  const S = holding(CCP, "yellow_river", { weariness: 3 }), a = ev(S, CCP, "yellow_river");
+  return all(
+    eq(["jiluyu", "luzhong", "huaihai", "dabieshan"].map((id) => rb(a, id)).join(" "), "2/0 2/1 1/0 1/1", "冀魯豫、魯中、淮海、大別山 紅/藍"),
+    eq(["jinan", "xuzhou", "zhengzhou"].map((id) => rb(a, id)).join(" "), "0/2 0/3 0/2", "濟南、徐州、鄭州(城)紅/藍"), eq(rb(a, "jizhong"), "2/0", "冀中(華北的鄉)紅/藍"),
+    eq(a.weariness, 4, "民生 3 回復 1"), eq(where(a, "yellow_river"), "removed", "牌在哪裡"),
+    ok(true, "華東中原四個鄉雙方各 −1;城和別區不動;民生 3→4"),
+  );
+});
+
+check("潛伏(1):對手展示手牌;打出者指定 1 張,對手下一個行動回合必須打出,用法自選", () => {
+  const t = cardTodo("sleeper"); if (t) return t;
+  const S = holding(CCP, "into_manchuria", { extra: ["gao_shuxun", "shangdang_campaign"], other: ["score_east", "sleeper", "kunming_incident"] });
+  const c1 = act(S, CCP, "into_manchuria", "place", { points: ["taihang"] }); // the Communists' own card, for ops: nothing fires
+  const a = ev(c1, KMT, "sleeper");
+  const p = pendingIs(a, KMT, "card", "潛伏"); if (p !== true) return p;
+  const seen = E.view(a, KMT).hands[CCP], b = choose(a, ["gao_shuxun"]);
+  const cards = E.legal(b, CCP).cards || [];
+  return all(
+    same(opts(a), ["gao_shuxun", "shangdang_campaign"], "可以指定的牌(共軍的手牌)"), same(seen || [], ["gao_shuxun", "shangdang_campaign"], "回答時國軍看到的共軍手牌"),
+    eq(b.forced[CCP], "gao_shuxun", "共軍被指定的牌"), eq(b.actor, CCP, "輪到誰"), same(cards.map((c) => c.id), ["gao_shuxun"], "共軍這個行動回合可以打的牌"),
+    eq(thrown(() => act(b, CCP, "shangdang_campaign", "place", { points: ["taihang"] })) != null, true, "共軍打另一張牌沒有被拒絕"),
+    eq(cards[0] && !!cards[0].uses.place && cards[0].uses.event, true, "被指定的牌用法自選(扶植、事件都在)"),
+    eq(where(b, "sleeper"), "discard", "牌在哪裡"), ok(true, "國軍看到共軍的 2 張牌,指定高樹勛起義;共軍下一個行動回合只能打它,用法自選"),
+  );
+});
+
+check("戰略機動(3):打出者移除自己 4 點,重新分配到任意據點,每處最多 2 點,不受相鄰限制", () => {
+  const t = cardTodo("redeployment"); if (t) return t;
+  const S = holding(KMT, "redeployment"), a = ev(S, KMT, "redeployment");
+  const p = pendingIs(a, KMT, "points", "戰略機動:移除"); if (p !== true) return p;
+  const pre = all(eq(a.pending.n, 4, "要移除的點數"), same(opts(a), Object.keys(SPEC_SPACES).filter((id) => blueOf(S, id) > 0), "可以移除的據點(有藍的)"),
+    eq(thrown(() => choose(a, ["guangzhou", "guangzhou", "guangzhou", "xian"])) != null, true, "從廣州(藍 2)移除 3 點沒有被拒絕"));
+  if (pre !== true) return pre;
+  const b = choose(a, ["nanjing", "nanjing", "wuhan", "xian"]);
+  const q = pendingIs(b, KMT, "points", "戰略機動:重新分配"); if (q !== true) return q;
+  const c = choose(b, ["jinan", "jinan", "changchun", "changchun"]);
+  return all(
+    eq(b.pending.n, 4, "要放的點數"), eq(opts(b).includes("changchun") && opts(b).includes("beiman"), true, "可以放的據點包含不相鄰的長春、北滿"),
+    eq(thrown(() => choose(b, ["jinan", "jinan", "jinan", "changchun"])) != null, true, "同一處放 3 點沒有被拒絕"),
+    eq(["nanjing", "wuhan", "xian", "jinan", "changchun"].map((id) => blueOf(c, id)).join(), "2,2,3,4,2", "南京、武漢、西安、濟南、長春的藍"), eq(total(c, KMT), total(S, KMT), "藍的合計"),
+    eq(where(c, "redeployment"), "discard", "牌在哪裡"), ok(true, "南京 −2、武漢 −1、西安 −1;濟南 +2、長春 +2;合計不變"),
+  );
+});
+
+check("久攻不下(3):持續:對手下一個行動回合開始時須棄 1 張行動點 ≥ 2 的牌作為該次行動,然後解除", () => {
+  const t = cardTodo("stalled_siege"); if (t) return t;
+  const S = holding(CCP, "into_manchuria", { extra: ["gao_shuxun", "xiong_xianghui"], other: ["score_east", "stalled_siege", "kunming_incident"] });
+  const c1 = act(S, CCP, "into_manchuria", "place", { points: ["taihang"] });
+  const a = ev(c1, KMT, "stalled_siege"), l = E.legal(a, CCP);
+  let b = null;
+  const e = thrown(() => { b = act(a, CCP, "gao_shuxun", "bog"); });
+  if (e != null) return `共軍棄高樹勛起義(2 點)被拒絕:${e}`;
+  return all(
+    eq(a.actor, CCP, "輪到誰"), same(l.bog || [], ["gao_shuxun"], "共軍必須棄的牌(行動點 ≥ 2 的;熊向暉只有 1)"), eq((l.cards || []).length, 0, "共軍可以正常打的牌數"),
+    eq(thrown(() => act(a, CCP, "xiong_xianghui", "event")) != null, true, "共軍不棄牌、照常打出熊向暉沒有被拒絕"),
+    same(b.hands[CCP], ["xiong_xianghui"], "棄牌之後共軍的手牌"), eq(where(b, "gao_shuxun"), "discard", "棄的牌在哪裡"), eq(b.actor, KMT, "棄牌佔掉了那個行動回合,輪到"),
+    eq(b.effects.some((x) => x.kind === "bog"), false, "棄完之後效果還在"), eq(where(a, "stalled_siege"), "discard", "久攻不下那張牌在哪裡"),
+    ok(true, "共軍下一個行動回合只能棄高樹勛起義(事件不觸發),棄完解除"),
+  );
+});
+
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
   const s = summary();
