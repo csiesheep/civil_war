@@ -24,8 +24,8 @@ import {
 import { CARDS, CARD, ERA_DECKS } from "./cards.js";
 export { CARDS, CARD, ERA_DECKS };
 
-export const QIN = 0, CHU = 1;
-export const SIDES = ["qin", "chu"];
+export const CCP = 0, KMT = 1;
+export const SIDES = ["ccp", "kmt"];
 export const other = (s) => 1 - s;
 export const MIN_PLAYERS = 2, MAX_PLAYERS = 2;
 export const JIUDING = "jiuding";
@@ -100,7 +100,7 @@ export const REFORM = [
 // with 1 in 臨淄 and 1 in 薊; see startGame) becomes the default. An absent key
 // is 0, so a save or an export whose own options predate this has no foothold
 // and keeps it that way (createGame merges once; `replay` does not merge).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 };
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -138,7 +138,7 @@ export function homeCapital(st, side) { return (st.capital && st.capital[side]) 
 // lose-majority also `aheadBy`, the enemy when it has more influence there).
 // `view` carries it as `homeCapitals` whenever a homeFall value is set.
 export function homeCapitalStatus(st) {
-  return [QIN, CHU].map((side) => {
+  return [CCP, KMT].map((side) => {
     const capital = homeCapital(st, side), opp = other(side);
     const out = { side, capital, heldBy: controller(st, capital) === opp ? opp : null };
     if (st.options.homeFall === "lose-majority") out.aheadBy = infOf(st, capital)[opp] > infOf(st, capital)[side] ? opp : null;
@@ -161,14 +161,14 @@ export const MOVE_VP = 3;
 // on the Mandate wins, level goes by `tie` as the final scoring does.
 function homeFallWin(st, losers) {
   if (losers.length === 1) return win(st, other(losers[0]), "homeFall");
-  const w = st.mandate > 0 ? QIN : st.mandate < 0 ? CHU : st.options.tie === "qin" ? QIN : CHU;
+  const w = st.mandate > 0 ? CCP : st.mandate < 0 ? KMT : st.options.tie === "ccp" ? CCP : KMT;
   win(st, w, "homeFall");
 }
 function homeFallAtTurnEnd(st) {
   const hf = st.options.homeFall;
   if (hf !== "lose-turn" && hf !== "lose-majority" && hf !== "move") return;
   const moved = [], losers = [];
-  for (const side of [QIN, CHU]) {
+  for (const side of [CCP, KMT]) {
     const cap = homeCapital(st, side), opp = other(side);
     // One entry per capital per turn end, safe or not (the UI reads them).
     const held = hf === "lose-majority" ? infOf(st, cap)[opp] > infOf(st, cap)[side] : controller(st, cap) === opp;
@@ -269,8 +269,8 @@ export function infOf(st, id) { return st.inf[id] || [0, 0]; }
 function ensure(st, id) { if (!st.inf[id]) st.inf[id] = [0, 0]; return st.inf[id]; }
 export function controller(st, id) {
   const [q, c] = infOf(st, id), S = SPACE[id].stability;
-  if (q >= c + S) return QIN;
-  if (c >= q + S) return CHU;
+  if (q >= c + S) return CCP;
+  if (c >= q + S) return KMT;
   return null;
 }
 export function capOf(st, id) { return SPACE[id].stability + st.options.cap; }
@@ -384,11 +384,11 @@ export function recover(st, n) { st.weariness = Math.min(5, st.weariness + n); }
 // reads what those hidden piles actually hold to decide whether it tires
 // the realm.
 function withHiddenPilesFilled(st) {
-  const need = !Array.isArray(st.hands[QIN]) || !Array.isArray(st.hands[CHU]) || !Array.isArray(st.draw) || !st.later
+  const need = !Array.isArray(st.hands[CCP]) || !Array.isArray(st.hands[KMT]) || !Array.isArray(st.draw) || !st.later
     || Object.values(st.later).some((a) => !Array.isArray(a));
   if (!need) return st;
   const s = clone(st);
-  for (const side of [QIN, CHU]) {
+  for (const side of [CCP, KMT]) {
     if (!Array.isArray(s.hands[side])) s.hands[side] = new Array((s.handCounts && s.handCounts[side]) || 0).fill("__hidden__");
   }
   if (!Array.isArray(s.draw)) s.draw = new Array(s.drawCount || 0).fill("__hidden__");
@@ -452,17 +452,17 @@ export function win(st, side, reason) {
 }
 export function vp(st, side, n) {
   if (!n || st.winner != null) return;
-  st.mandate += side === QIN ? n : -n;
+  st.mandate += side === CCP ? n : -n;
   log(st, { type: "vp", side, n, mandate: st.mandate });
-  if (st.mandate >= MANDATE_TO_WIN) win(st, QIN, "mandate");
-  else if (st.mandate <= -MANDATE_TO_WIN) win(st, CHU, "mandate");
+  if (st.mandate >= MANDATE_TO_WIN) win(st, CCP, "mandate");
+  else if (st.mandate <= -MANDATE_TO_WIN) win(st, KMT, "mandate");
 }
 export function checkMarkers(st) {
   if (st.winner != null) return;
   for (const [id, s] of Object.entries(STATES)) {
     const capCtl = controller(st, s.capital);
-    if (st.mie[id] && capCtl === CHU) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
-    if (st.seals[id] && capCtl === QIN) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
+    if (st.mie[id] && capCtl === KMT) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
+    if (st.seals[id] && capCtl === CCP) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
     // After 田單復國 lifts 滅 (owner 裁決 #119), `mieHold[id]` lists the spaces
     // of the state Qin still controlled at that moment; a space leaves the list
     // once Qin loses it. The state falls again only to a new conquest: all of
@@ -470,36 +470,36 @@ export function checkMarkers(st) {
     const sp = spacesOfState(id);
     let held = st.mieHold && st.mieHold[id];
     if (held) {
-      held = held.filter((x) => controller(st, x) === QIN);
+      held = held.filter((x) => controller(st, x) === CCP);
       if (held.length) st.mieHold[id] = held; else { delete st.mieHold[id]; held = null; }
     }
-    const all = sp.every((x) => controller(st, x) === QIN) && !(held && held.length === sp.length);
+    const all = sp.every((x) => controller(st, x) === CCP) && !(held && held.length === sp.length);
     if (all && !st.mie[id]) {
       st.mie[id] = true; log(st, { type: "mie", state: id });
       if (st.mieHold) delete st.mieHold[id];
-      if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, QIN, s.vp); }
+      if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, CCP, s.vp); }
     }
-    const sealed = capCtl === CHU && (st.options.sealAt !== "cap" || infOf(st, s.capital)[CHU] >= capOf(st, s.capital));
+    const sealed = capCtl === KMT && (st.options.sealAt !== "cap" || infOf(st, s.capital)[KMT] >= capOf(st, s.capital));
     if (sealed && !st.seals[id]) {
       st.seals[id] = true; log(st, { type: "seal", state: id });
-      if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, CHU, 1); }
+      if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, KMT, 1); }
     }
   }
-  if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, QIN, "unification");
-  if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, CHU, "alliance");
+  if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, CCP, "unification");
+  if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, KMT, "alliance");
   if (st.winner == null && st.options.homeFall === "lose") {
-    const losers = [QIN, CHU].filter((side) => controller(st, HOME_CAPITAL[side]) === other(side));
+    const losers = [CCP, KMT].filter((side) => controller(st, HOME_CAPITAL[side]) === other(side));
     if (losers.length) homeFallWin(st, losers);
   }
   if (probe.home) probe.home(st, "check");
 }
 export function regionTally(st, region) {
   const ids = spacesOf(region), R = REGIONS[region];
-  const res = [QIN, CHU].map((side) => {
+  const res = [CCP, KMT].map((side) => {
     const ctl = ids.filter((id) => controller(st, id) === side);
     return { spaces: ctl.length, bg: ctl.filter((id) => SPACE[id].battleground).length, ids: ctl };
   });
-  return [QIN, CHU].map((i) => {
+  return [CCP, KMT].map((i) => {
     const me = res[i], op = res[1 - i];
     let level = "none";
     if (me.spaces === ids.length) level = "control";
@@ -513,8 +513,8 @@ export function regionTally(st, region) {
 }
 export function scoreRegion(st, region) {
   const [q, c] = regionTally(st, region);
-  log(st, { type: "score", region, qin: q, chu: c });
-  vp(st, QIN, q.total - c.total);
+  log(st, { type: "score", region, ccp: q, kmt: c });
+  vp(st, CCP, q.total - c.total);
 }
 export function reformThreshold(st, side) { return st.reform[side] >= 6 ? Infinity : REFORM[st.reform[side]].ops; }
 export function reformUsesLeft(st, side) { return (st.reform[side] >= 2 ? 2 : 1) - st.reformUsed[side]; }
@@ -539,7 +539,7 @@ export function emperorLive(st, side) {
   const e = st.options.emperor;
   if (st.reformFirst[6] != null) return false;
   if (e === "win" || e === "win-late") return true;
-  return e === "win-lead" && (side === QIN ? st.mandate > 0 : st.mandate < 0);
+  return e === "win-lead" && (side === CCP ? st.mandate > 0 : st.mandate < 0);
 }
 // Whether `side` reaching box 6 first right now wins the game.
 export function emperorWins(st, side) {
@@ -627,7 +627,7 @@ export function realignWhy(st, side, id) {
 export function realignOdds(st, side, id) {
   const R = LOBBY[st.options.lobby];
   if (!R) return null;
-  const opp = other(side), why = [realignWhy(st, QIN, id), realignWhy(st, CHU, id)];
+  const opp = other(side), why = [realignWhy(st, CCP, id), realignWhy(st, KMT, id)];
   const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
   const own = infOf(st, id)[side], enemy = infOf(st, id)[opp], n = R.die * R.die;
   let win = 0, tie = 0, net = 0;
@@ -640,11 +640,11 @@ export function realignOdds(st, side, id) {
 // One attempt: both rolls from the game's RNG now, the loss, the entry, the markers.
 function realignAttempt(st, side, target, k) {
   const R = LOBBY[st.options.lobby];
-  const why = [realignWhy(st, QIN, target), realignWhy(st, CHU, target)];
+  const why = [realignWhy(st, CCP, target), realignWhy(st, KMT, target)];
   const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
   const roll = withRng(st, (rng) => [1 + rng.int(R.die), 1 + rng.int(R.die)]);
-  const d = roll[QIN] + mod[QIN] - (roll[CHU] + mod[CHU]);
-  const lose = d > 0 ? CHU : d < 0 ? QIN : null;
+  const d = roll[CCP] + mod[CCP] - (roll[KMT] + mod[KMT]);
+  const lose = d > 0 ? KMT : d < 0 ? CCP : null;
   const n = lose == null ? 0 : remove(st, lose, target, Math.min(Math.abs(d), R.cap));
   log(st, { type: "realign", side, target, k, roll, mod, adj: why.map((w) => w.adj), more: why.map((w) => w.more), home: why.map((w) => w.home), lose, n });
   checkMarkers(st);
@@ -795,11 +795,11 @@ function startGame(seed, options) {
   const rng = makeRng(seed);
   const st = {
     seed, rngState: 0, options, rulesVersion: RULES_VERSION,
-    turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: QIN, phasing: QIN,
+    turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: CCP, phasing: CCP,
     inf: {}, mandate: 0, weariness: 5,
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
     mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: true,
-    jiuding: { holder: CHU, faceDown: false },
+    jiuding: { holder: KMT, faceDown: false },
     draw: [], discard: [], removed: [], later: {},
     hands: [[], []], headline: [null, null],
     effects: [], forced: [null, null], revealed: [false, false],
@@ -811,14 +811,14 @@ function startGame(seed, options) {
     // before #137, the tutorial's hand-built position) records nothing.
     actions: [],
   };
-  for (const side of [QIN, CHU]) {
+  for (const side of [CCP, KMT]) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
-  ensure(st, "hangu")[QIN] = st.options.hangu;
+  ensure(st, "hangu")[CCP] = st.options.hangu;
   // #135 (D1, 遠交): `qinFarStart: n` -- Qin's fixed setup also puts n in 臨淄 and
   // n in 薊, before the free placement. 1 by default since #142; absent (a game
   // created before #142) or 0 is the setup without it, and stays so.
-  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[QIN] = st.options.qinFarStart;
+  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[CCP] = st.options.qinFarStart;
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
   if (st.options.scoringSplit === "v2") {
@@ -829,9 +829,9 @@ function startGame(seed, options) {
   st.later = { alliance: decks.alliance, conquest: decks.conquest };
   st.rngState = rng.getState();
   st.plan = [
-    { do: "setup", side: QIN, n: SETUP.qin.free, regions: SETUP.qin.freeIn, choices: [] },
-    { do: "setup", side: CHU, n: SETUP.chu.free, regions: SETUP.chu.freeIn, choices: [] },
-    { do: "setup", side: CHU, n: st.options.comp, regions: null, choices: [] },
+    { do: "setup", side: CCP, n: SETUP.ccp.free, regions: SETUP.ccp.freeIn, choices: [] },
+    { do: "setup", side: KMT, n: SETUP.kmt.free, regions: SETUP.kmt.freeIn, choices: [] },
+    { do: "setup", side: KMT, n: st.options.comp, regions: null, choices: [] },
     { do: "startTurn" },
   ];
   return run(st);
@@ -948,7 +948,7 @@ function exec(st, step) {
         endTurnChecks(st);
         if (st.winner != null) return true;
         step.stage = "discard";
-        step.sides = [QIN, CHU].filter((s) => hasPerk(st, s, "discard") && st.hands[s].some((c) => !CARD[c].scoring));
+        step.sides = [CCP, KMT].filter((s) => hasPerk(st, s, "discard") && st.hands[s].some((c) => !CARD[c].scoring));
         step.choices = [];
       }
       while (step.sides.length) {
@@ -980,7 +980,7 @@ function eventMark(st) {
   for (const k in st.inf) inf[k] = [st.inf[k][0], st.inf[k][1]];
   return {
     inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
-    hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
+    hands: [st.hands[CCP].length, st.hands[KMT].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
     effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
     jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
   };
@@ -1054,7 +1054,7 @@ function startTurn(st) {
   // Alternate draws so a mid-deal reshuffle is fair.
   for (let guard = 0; guard < 40; guard++) {
     let dealt = 0;
-    for (const side of [QIN, CHU]) if (st.hands[side].length < era.hand) dealt += draw(st, side, 1);
+    for (const side of [CCP, KMT]) if (st.hands[side].length < era.hand) dealt += draw(st, side, 1);
     if (!dealt) break;
   }
   st.phase = "headline";
@@ -1077,14 +1077,14 @@ function handSize(st, side) { const h = st.hands[side]; return h ? h.length : st
 function needsHeadline(st, side) { return st.headline[side] == null && handSize(st, side) > 0; }
 
 function resolveHeadlines(st) {
-  const played = [QIN, CHU].filter((s) => st.headline[s] != null);
+  const played = [CCP, KMT].filter((s) => st.headline[s] != null);
   // Ties go to Qin. With only one headline it goes alone; with none (both
   // hands empty) the phase is over before it began. A side that committed
   // nothing is logged the way `beginAction` logs an action-round skip.
   const order = played.length === 2
-    ? (CARD[st.headline[CHU]].ops > CARD[st.headline[QIN]].ops ? [CHU, QIN] : [QIN, CHU])
+    ? (CARD[st.headline[KMT]].ops > CARD[st.headline[CCP]].ops ? [KMT, CCP] : [CCP, KMT])
     : played;
-  for (const side of [QIN, CHU]) if (st.headline[side] == null) log(st, { type: "skip", side });
+  for (const side of [CCP, KMT]) if (st.headline[side] == null) log(st, { type: "skip", side });
   log(st, { type: "headline", cards: st.headline, first: order[0] ?? null });
   const steps = [];
   for (const side of order) {
@@ -1095,7 +1095,7 @@ function resolveHeadlines(st) {
   }
   steps.push({ do: "beginAction" });
   st.plan.splice(1, 0, ...steps);
-  st.phase = "action"; st.round = 1; st.actor = QIN;
+  st.phase = "action"; st.round = 1; st.actor = CCP;
 }
 
 // A side with nothing to play skips its half of the action round (rulebook
@@ -1115,15 +1115,15 @@ function beginAction(st) {
 }
 function endAction(st) {
   if (st.winner != null) return;
-  if (st.actor === QIN) { st.actor = CHU; }
-  else { st.actor = QIN; st.round++; }
+  if (st.actor === CCP) { st.actor = KMT; }
+  else { st.actor = CCP; st.round++; }
   if (st.round > st.rounds) { st.round = st.rounds; st.plan.push({ do: "endTurn" }); return; }
   st.plan.push({ do: "beginAction" });
 }
 function endTurnChecks(st) {
   if (probe.home) probe.home(st, "turnEnd");
-  const holding = [QIN, CHU].filter((s) => st.hands[s].some((c) => CARD[c].scoring));
-  if (holding.length === 2) return win(st, CHU, "scoringBoth");
+  const holding = [CCP, KMT].filter((s) => st.hands[s].some((c) => CARD[c].scoring));
+  if (holding.length === 2) return win(st, KMT, "scoringBoth");
   if (holding.length === 1) return win(st, other(holding[0]), "scoring");
   homeFallAtTurnEnd(st);
   if (st.winner != null) return;
@@ -1137,14 +1137,14 @@ function endTurnChecks(st) {
 }
 function finalScoring(st) {
   for (const r of SCORED_REGIONS) { scoreRegion(st, r); if (st.winner != null) return; }
-  if (st.mandate > 0) win(st, QIN, "final");
-  else if (st.mandate < 0) win(st, CHU, "final");
-  else win(st, st.options.tie === "qin" ? QIN : CHU, "tie");
+  if (st.mandate > 0) win(st, CCP, "final");
+  else if (st.mandate < 0) win(st, KMT, "final");
+  else win(st, st.options.tie === "ccp" ? CCP : KMT, "tie");
 }
 function finishCard(st, step) {
   const c = step.card;
   if (c === JIUDING) return;
-  if (st.hands[QIN].includes(c) || st.hands[CHU].includes(c) || st.removed.includes(c) || st.discard.includes(c)) return;
+  if (st.hands[CCP].includes(c) || st.hands[KMT].includes(c) || st.removed.includes(c) || st.discard.includes(c)) return;
   if (step.triggered && CARD[c].remove) st.removed.push(c);
   else st.discard.push(c);
 }
@@ -1184,7 +1184,7 @@ function doOps(st, side, card, ops, choice) {
 export function mustAct(st) {
   if (st.winner != null) return [];
   if (st.pending) return [st.pending.who];
-  if (st.phase === "headline") return [QIN, CHU].filter((s) => needsHeadline(st, s));
+  if (st.phase === "headline") return [CCP, KMT].filter((s) => needsHeadline(st, s));
   if (st.phase === "action") return [st.actor];
   return [];
 }
@@ -1279,7 +1279,7 @@ function headline(st, action) {
   h.splice(i, 1);
   st.headline[side] = c;
   // Everyone who owed a headline has one now (a side with no card owes none, #57).
-  if (![QIN, CHU].some((s) => needsHeadline(st, s))) st.plan.unshift({ do: "headline" });
+  if (![CCP, KMT].some((s) => needsHeadline(st, s))) st.plan.unshift({ do: "headline" });
   return run(st);
 }
 
@@ -1461,7 +1461,7 @@ export function view(st, side) {
   delete v.seed; delete v.rngState;
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
-  v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
+  v.handCounts = [st.hands[CCP].length, st.hands[KMT].length];
   if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
   if (side == null) {
     // A spectator sees the table and neither hand.
@@ -1479,7 +1479,7 @@ export function view(st, side) {
   // viewer cannot see (明法令's discard, 春申君, 韓非入秦): those options are
   // dropped (#131). The side that answers keeps them all.
   if (v.pending && v.pending.who !== side && v.pending.kind === "card") {
-    const hidden = new Set([QIN, CHU].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
+    const hidden = new Set([CCP, KMT].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
     v.pending.options = v.pending.options.filter((c) => !hidden.has(c));
   }
   // #137: once the game is over everything is revealed, to every seat and to

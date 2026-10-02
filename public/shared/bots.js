@@ -9,7 +9,7 @@
 // reply on the top few, less noise.
 import * as E from "./engine.js";
 
-const { QIN, CHU, SPACES, SPACE, STATES, SCORED_REGIONS, CARD, ERA_DECKS, ERAS, JIUDING } = E;
+const { CCP, KMT, SPACES, SPACE, STATES, SCORED_REGIONS, CARD, ERA_DECKS, ERAS, JIUDING } = E;
 export const LEVELS = ["easy", "normal", "hard"];
 
 // Expected scorings of each region over a whole game, final scoring included.
@@ -57,7 +57,7 @@ const EMPEROR_NEAR = FALL * ROAD_TEMPO[0];
 // The fewest actions (1 or 2) in which `s` reaches box 6 this turn, or 0.
 function emperorSteps(st, s) {
   if (st.phase !== "action" || st.pending || st.reform[s] < 4 || !E.emperorWins(st, s)) return 0;
-  const acts = Math.min(2, st.rounds - st.round + (st.actor === QIN || s === CHU ? 1 : 0));
+  const acts = Math.min(2, st.rounds - st.round + (st.actor === CCP || s === KMT ? 1 : 0));
   const cards = st.hands[s].filter((c) => (TRACK_EVENT[c] && CARD[c].side === s) || (c !== JIUDING && !CARD[c].scoring && CARD[c].ops >= 3));
   const go = (box, adv, k, rest) => {
     if (box >= 6) return k;
@@ -93,7 +93,7 @@ function gauss(rng) {
 export function heldSinceRestore(st, id) {
   const held = st.mieHold && st.mieHold[id];
   if (!held || st.mie[id]) return false;
-  return E.spacesOfState(id).every((x) => held.includes(x) && E.controller(st, x) === QIN);
+  return E.spacesOfState(id).every((x) => held.includes(x) && E.controller(st, x) === CCP);
 }
 
 // ---------- evaluation: how good is this position for `side` ----------
@@ -108,7 +108,7 @@ export function heldSinceRestore(st, id) {
 // inside this file) the cost is one branch per bucket.
 export function evaluate(st, side, terms = null) {
   if (st.winner != null) return st.winner === side ? 1000 : -1000;
-  const sign = side === QIN ? 1 : -1;
+  const sign = side === CCP ? 1 : -1;
   const T = terms ? (k, x) => { terms[k] = (terms[k] || 0) + sign * x; } : null;
   const turnsLeft = Math.max(0, st.options.turns - st.turn) + (st.phase === "headline" ? 1 : 0.5);
   const frac = Math.min(1, turnsLeft / st.options.turns);
@@ -118,7 +118,7 @@ export function evaluate(st, side, terms = null) {
     const [q, c] = E.regionTally(st, r);
     const card = "score_" + r;
     let exp = RATE[r] * frac;
-    const inHand = st.hands[QIN]?.includes(card) || st.hands[CHU]?.includes(card);
+    const inHand = st.hands[CCP]?.includes(card) || st.hands[KMT]?.includes(card);
     if (inHand) exp += 0.8;
     const dumped = st.discard.includes(card);
     if (dumped) exp *= 0.8;
@@ -165,10 +165,10 @@ export function evaluate(st, side, terms = null) {
     } else if (T) terms[`$sealNeed:${id}`] = 0;
   }
   const risk = (s) => (st.weariness <= 2 ? 3 * st.hands[s].filter((c) => TIRING.has(c) && CARD[c].side !== s).length : 0);
-  const tiring = risk(QIN) - risk(CHU);
+  const tiring = risk(CCP) - risk(KMT);
   vq -= tiring;
   if (T) { T("tiring", -tiring); terms.$tiring = st.hands[side].filter((c) => TIRING.has(c) && CARD[c].side !== side).length; }
-  const reformPerk = REFORM_PERK[st.reform[QIN]] - REFORM_PERK[st.reform[CHU]];
+  const reformPerk = REFORM_PERK[st.reform[CCP]] - REFORM_PERK[st.reform[KMT]];
   vq += reformPerk;
   if (T) T("reform", reformPerk);
   // #121: under emperor "win" / "win-late" / "win-lead" the first to box 6
@@ -186,62 +186,62 @@ export function evaluate(st, side, terms = null) {
       const card = box >= 4 && st.hands[s].some((c) => c !== JIUDING && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
       return EMPEROR_ROAD[box] + card;
     };
-    const road = race(QIN) - race(CHU);
+    const road = race(CCP) - race(KMT);
     vq += road;
     if (T) T("reform", road);
   }
   const hf = st.options.homeFall;
   if (hf && hf !== "none") {
     let cap = 0;
-    for (const s of [QIN, CHU]) {
-      const id = E.homeCapital(st, s), [q, c] = E.infOf(st, id), own = s === QIN ? q : c, foe = s === QIN ? c : q;
+    for (const s of [CCP, KMT]) {
+      const id = E.homeCapital(st, s), [q, c] = E.infOf(st, id), own = s === CCP ? q : c, foe = s === CCP ? c : q;
       const short = hf === "lose-majority" ? Math.max(0, own - foe + 1) : Math.max(0, own + SPACE[id].stability - foe);
       const next = st.phase === "action" && !st.pending ? st.actor : null;
       const first = hf === "move" && id === E.HOME_CAPITAL[s];
       const road = first ? MOVE_ROAD : next === 1 - s ? ROAD_TEMPO : next === s ? ROAD_DEFENCE : ROAD;
       if (short >= road.length) continue;
-      cap += (s === QIN ? -1 : 1) * (first ? E.MOVE_VP : FALL) * road[short];
+      cap += (s === CCP ? -1 : 1) * (first ? E.MOVE_VP : FALL) * road[short];
     }
     vq += cap;
     if (T) T("capital", cap);
   }
   const enemyCards = (s) => st.hands[s].filter((c) => CARD[c].side === 1 - s).length;
-  const enemyHeld = 0.4 * (enemyCards(QIN) - enemyCards(CHU));
+  const enemyHeld = 0.4 * (enemyCards(CCP) - enemyCards(KMT));
   vq -= enemyHeld;
   if (T) { T("enemyCards", -enemyHeld); terms.$enemyCards = enemyCards(side); }
-  const handSize = 0.25 * (st.hands[QIN].length - st.hands[CHU].length);
+  const handSize = 0.25 * (st.hands[CCP].length - st.hands[KMT].length);
   vq += handSize;
   if (T) T("handSize", handSize);
   // A scoring card must leave the hand before the turn ends: with no action
   // left this turn it is a certain loss, with one left it is urgent.
   if (st.phase === "action") {
-    for (const s of [QIN, CHU]) {
+    for (const s of [CCP, KMT]) {
       const n = st.hands[s].filter((c) => CARD[c].scoring).length;
       if (!n) continue;
-      const left = st.rounds - st.round + (st.actor === QIN || s === CHU ? 1 : 0);
+      const left = st.rounds - st.round + (st.actor === CCP || s === KMT ? 1 : 0);
       const pain = left < n ? 500 : left === n ? 8 * n : n;
-      vq += (s === QIN ? -1 : 1) * pain;
-      if (T) T("scoringPain", (s === QIN ? -1 : 1) * pain);
+      vq += (s === CCP ? -1 : 1) * pain;
+      if (T) T("scoringPain", (s === CCP ? -1 : 1) * pain);
     }
   }
   if (st.luoyiYields) {
     const l = E.controller(st, "luoyi");
     if (l != null) {
-      const yields = (l === QIN ? 1 : -1) * st.options.luoyi * turnsLeft * 0.8;
+      const yields = (l === CCP ? 1 : -1) * st.options.luoyi * turnsLeft * 0.8;
       vq += yields;
       if (T) T("luoyi", yields);
     }
   }
   for (const s of SPACES) {
     const [q, c] = E.infOf(st, s.id), ctl = E.controller(st, s.id);
-    if (q > 0 && ctl !== QIN) { vq += 0.15; if (T) T("spread", 0.15); }
-    if (c > 0 && ctl !== CHU) { vq -= 0.15; if (T) T("spread", -0.15); }
+    if (q > 0 && ctl !== CCP) { vq += 0.15; if (T) T("spread", 0.15); }
+    if (c > 0 && ctl !== KMT) { vq -= 0.15; if (T) T("spread", -0.15); }
   }
   const j = st.jiuding;
-  const cauldrons = (j.holder === QIN ? 1 : -1) * (j.faceDown ? 0.8 : 1.5);
+  const cauldrons = (j.holder === CCP ? 1 : -1) * (j.faceDown ? 0.8 : 1.5);
   vq += cauldrons;
   if (T) T("jiuding", cauldrons);
-  return side === QIN ? vq : -vq;
+  return side === CCP ? vq : -vq;
 }
 
 // ---------- the guess: a full state consistent with what this seat sees ----------
@@ -292,7 +292,7 @@ export function determinize(view, side, rng) {
 // card could be in it). Draws from `rng` only when it splits.
 // The other side's actions left this turn, `side` acting now (evaluate's count).
 function othersActionsLeft(st, side) {
-  return st.rounds - st.round + (side === QIN ? 1 : 0);
+  return st.rounds - st.round + (side === CCP ? 1 : 0);
 }
 export function turnEndWorlds(view, side, st, rng) {
   if (st.phase !== "action" || st.pending || st.actor !== side) return null;
@@ -493,11 +493,11 @@ export function greedyPlacement(st, side, ops, restrict = null) {
 // no such target nothing here runs, and no RNG is drawn either way.
 function winTargets(st, side) {
   const out = [], opp = 1 - side;
-  if (side === QIN && Object.keys(st.mie).length >= st.options.mie - 1) {
-    for (const id of Object.keys(STATES)) if (!st.mie[id]) out.push({ ids: E.spacesOfState(id), done: (s, x) => E.controller(s, x) === QIN });
+  if (side === CCP && Object.keys(st.mie).length >= st.options.mie - 1) {
+    for (const id of Object.keys(STATES)) if (!st.mie[id]) out.push({ ids: E.spacesOfState(id), done: (s, x) => E.controller(s, x) === CCP });
   }
-  if (side === CHU && Object.keys(st.seals).length >= st.options.seals - 1) {
-    const sealed = (s, x) => E.controller(s, x) === CHU && (s.options.sealAt !== "cap" || E.infOf(s, x)[CHU] >= E.capOf(s, x));
+  if (side === KMT && Object.keys(st.seals).length >= st.options.seals - 1) {
+    const sealed = (s, x) => E.controller(s, x) === KMT && (s.options.sealAt !== "cap" || E.infOf(s, x)[KMT] >= E.capOf(s, x));
     for (const [id, s] of Object.entries(STATES)) if (!st.seals[id]) out.push({ ids: [s.capital], done: sealed });
   }
   const hf = st.options.homeFall;

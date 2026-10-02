@@ -4,7 +4,7 @@
 //
 //   node tests/sim.js 200                       # normal vs normal, base rules
 //   node tests/sim.js 200 seals=5 cap=3         # one cell
-//   node tests/sim.js 200 qin=hard chu=normal   # levels
+//   node tests/sim.js 200 ccp=hard kmt=normal   # levels
 //   node tests/sim.js 200 --cells [--jobs=4]    # every cell in child processes, with retries
 //   node tests/sim.js 1000 --only=nn/control,nn/ts --out=f.txt [--resume]   # resumable batch
 //   node tests/sim.js --report=f.txt.state.json # markdown table with 95% intervals (#104)
@@ -43,7 +43,7 @@ function startSets(st, side) {
   }
   return { ctl, ts };
 }
-export function playGame(seed, { qin = "normal", chu = "normal", options = {} } = {}) {
+export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } = {}) {
   const rng = E.makeRng((seed * 2654435761) >>> 0);
   let st = E.createGame(seed, options);
   const scores = [];
@@ -56,7 +56,7 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     const { ctl, ts } = startSets(s, side);
     const outC = points.filter((id) => !ctl.has(id)).length, outT = points.filter((id) => !ts.has(id)).length;
     pl.places++; pl.placedPts += points.length;
-    if (side === E.QIN) for (const id of points) { const k = D1_FAR[id]; if (k) d1["qPl" + k]++; }
+    if (side === E.CCP) for (const id of points) { const k = D1_FAR[id]; if (k) d1["qPl" + k]++; }
     if (outC) { pl.chained++; pl.chainedPts += outC; }
     if (outT) { pl.beyondTs++; pl.beyondTsPts += outT; }
   };
@@ -85,9 +85,9 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
     const side = who[rng.int(who.length)];
-    const a = B.decide(E.view(st, side), side, side === E.QIN ? qin : chu, rng);
+    const a = B.decide(E.view(st, side), side, side === E.CCP ? ccp : kmt, rng);
     if (!a) throw new Error(`seed ${seed}: no action for ${side} at turn ${st.turn}`);
-    const P = side === E.QIN ? "Q" : "C", last = lastHold(st, side);
+    const P = side === E.CCP ? "Q" : "C", last = lastHold(st, side);
     if (last) {
       kp["lastHold" + P]++;
       if (!(a.type === "play" && E.CARD[a.card]?.scoring)) {
@@ -110,7 +110,7 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   // A keep is settled at that turn's end check, which may come an `apply` or
   // two later (the play can still ask a choice of either side).
   if (st.reason === "scoring" || st.reason === "scoringBoth") {
-    for (const s of [E.QIN, E.CHU]) if (keptIn[s] === st.turn) kp[(st.winner === s ? "keepWon" : "keepLost") + (s === E.QIN ? "Q" : "C")]++;
+    for (const s of [E.CCP, E.KMT]) if (keptIn[s] === st.turn) kp[(st.winner === s ? "keepWon" : "keepLost") + (s === E.CCP ? "Q" : "C")]++;
   }
   const byUse = {};
   const reformUses = [0, 0];
@@ -183,7 +183,7 @@ function lobbyStats(lc, l) {
     lc.lbN++; lc.lbOps += l.ops; lc.lbRem += l.removed || 0; lc.lbLost += l.lost || 0;
     if (E.SPACE[l.target].battleground) lc.lbBg++;
     if (l.own === 0) lc.lbNoRisk++;
-    if (l.side === E.QIN) lc.lbQ++; else lc.lbC++;
+    if (l.side === E.CCP) lc.lbQ++; else lc.lbC++;
   } else if (l.type === "realign") {
     lc.lbAtt++;
     if (l.lose == null || !l.n) lc.lbAttTie++;
@@ -195,14 +195,14 @@ function lobbyStats(lc, l) {
     lc.$last = l.lose == null ? "Tie" : l.lose === l.side ? "Lost" : "Won";
   } else if (l.type === "lobbyStop") {
     lc.lbStop++; lc[`lbStop${lc.$last || "Tie"}`]++;
-  } else if (l.type === "capitalMoves") lc[(l.whose === E.QIN ? "g" : "y") + "Moved"] = l.t;
+  } else if (l.type === "capitalMoves") lc[(l.whose === E.CCP ? "g" : "y") + "Moved"] = l.t;
 }
 const HOME = ["guanzhong", "ying"];
 function homeWatch(lc) {
   const prev = [null, null], fellThisTurn = [0, 0];
   return (st, where) => {
-    for (const owner of [E.QIN, E.CHU]) {
-      const cap = (st.capital && st.capital[owner]) || HOME[owner], enemy = 1 - owner, p = owner === E.QIN ? "g" : "y";
+    for (const owner of [E.CCP, E.KMT]) {
+      const cap = (st.capital && st.capital[owner]) || HOME[owner], enemy = 1 - owner, p = owner === E.CCP ? "g" : "y";
       const held = E.controller(st, cap) === enemy;
       const o = E.infOf(st, cap)[owner], x = E.infOf(st, cap)[enemy];
       if (where === "check") {
@@ -240,28 +240,28 @@ export const D1_ROW = ["cSetLinzi", "sealTQi", "sealTYan", "sealEndQi", "sealEnd
 const D1_FAR = Object.fromEntries([...E.spacesOfState("qi").map((id) => [id, "Qi"]), ...E.spacesOfState("yan").map((id) => [id, "Yan"])]);
 function d1TurnEnd(d, st) {
   d.teN++;
-  for (const [id, k] of Object.entries(D1_FAR)) d["q" + k + "TE"] += E.infOf(st, id)[E.QIN];
+  for (const [id, k] of Object.entries(D1_FAR)) d["q" + k + "TE"] += E.infOf(st, id)[E.CCP];
   for (const [id, k] of [["linzi", "Linzi"], ["ji", "Ji"]]) {
-    const q = E.infOf(st, id)[E.QIN];
+    const q = E.infOf(st, id)[E.CCP];
     d["q" + k + "TE"] += q;
     if (!q) d["q" + k + "ZeroTE"]++;
-    if (E.controller(st, id) === E.CHU) d["c" + k + "CtlTE"]++;
+    if (E.controller(st, id) === E.KMT) d["c" + k + "CtlTE"]++;
   }
 }
 function d1Stats(d, l) {
   const K = { qi: "Qi", yan: "Yan" };
-  if (l.type === "setup" && l.side === E.CHU) d.cSetLinzi += (l.points || []).filter((id) => id === "linzi").length;
+  if (l.type === "setup" && l.side === E.KMT) d.cSetLinzi += (l.points || []).filter((id) => id === "linzi").length;
   else if (l.type === "seal" && K[l.state]) { if (!d["sealT" + K[l.state]]) d["sealT" + K[l.state]] = l.t; }
   else if (l.type === "unseal" && K[l.state]) d["unseal" + K[l.state]]++;
   const k = D1_FAR[l.target];
   if (!k) return;
-  if (l.type === "campaign" && l.side === E.QIN) d["qCp" + k]++;
+  if (l.type === "campaign" && l.side === E.CCP) d["qCp" + k]++;
   else if (l.type === "lobby" && (l.edge !== undefined || l.mode)) { // the 遊說 use of ops, not 縱橫家遊說's event
-    if (l.side === E.CHU) { d["cLb" + k]++; return; }
+    if (l.side === E.KMT) { d["cLb" + k]++; return; }
     d["qLb" + k]++; d["qLbOps" + k] += l.ops;
     if (!l.mode) d["qLbRem" + k] += l.removed || 0; // today's rule: the entry is the whole 遊說
-  } else if (l.type === "realign" && l.side === E.QIN) {
-    if (l.lose === E.CHU) d["qLbRem" + k] += l.n; else if (l.lose === E.QIN) d["qLbLost" + k] += l.n;
+  } else if (l.type === "realign" && l.side === E.CCP) {
+    if (l.lose === E.KMT) d["qLbRem" + k] += l.n; else if (l.lose === E.CCP) d["qLbLost" + k] += l.n;
   }
 }
 // #121: per-game reform columns, appended after ROW. Reach turns are 0 when the
@@ -271,13 +271,13 @@ export const EMP_USES = ["event", "place", "campaign", "lobby", "reform", "bog"]
 export const EMP_ROW = ["q6turn", "c6turn", "first6", "qBox", "cBox", "qReformUses", "cReformUses", "eventAdvances",
   ...EMP_USES.flatMap((u) => [`n_${u}`, `ops_${u}`])];
 
-export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal", options = {} } = {}) {
+export function simulate({ games = 100, seed = 1, ccp = "normal", kmt = "normal", options = {} } = {}) {
   const t0 = Date.now();
-  const out = { games, qin, chu, options, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [],
+  const out = { games, ccp, kmt, options, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [],
     places: 0, placedPts: 0, chained: 0, chainedPts: 0, beyondTs: 0, beyondTsPts: 0, probeMiss: 0, stuck: 0, rows: [] };
   for (let g = 0; g < games; g++) {
     let res;
-    try { res = playGame(seed + g, { qin, chu, options }); } catch (e) {
+    try { res = playGame(seed + g, { ccp, kmt, options }); } catch (e) {
       out.errors.push(`${seed + g}: ${e.message}`);
       if (/no end after|no action for/.test(e.message)) out.stuck++;
       continue;
@@ -285,17 +285,17 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
     const { st, scores, pl, emp, lc, d1 } = res;
     for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
     if (pl.logged !== pl.places || pl.unmatched) out.probeMiss++;
-    if (st.winner === E.QIN) out.qinWins++;
+    if (st.winner === E.CCP) out.qinWins++;
     out.ends[st.reason] = (out.ends[st.reason] || 0) + 1;
     out.turns += st.turn; out.mandate += st.mandate; out.absMandate += Math.abs(st.mandate);
     out.mie += Object.keys(st.mieVp).length; out.seals += Object.keys(st.sealVp).length;
     // One row per game (ROW names the columns), so `--report` can give intervals,
     // distributions and the outlying seeds, not only the means.
-    out.rows.push([seed + g, st.winner === E.QIN ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
+    out.rows.push([seed + g, st.winner === E.CCP ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
       pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp, ...lc, ...d1]);
     for (const l of scores) {
       const r = out.regions[l.region] || (out.regions[l.region] = { n: 0, net: 0, q: 0, c: 0 });
-      r.n++; r.net += l.qin.total - l.chu.total; r.q += l.qin.total; r.c += l.chu.total;
+      r.n++; r.net += l.ccp.total - l.kmt.total; r.q += l.ccp.total; r.c += l.kmt.total;
     }
   }
   out.played = games - out.errors.length;
@@ -337,7 +337,7 @@ export const CELLS = [
   ["turns=9", { options: { turns: 9 } }],
   ["scoringSplit=v2", { options: { scoringSplit: "v2" } }],
   ["cap+comp0", { options: { sealAt: "cap", comp: 0 } }],
-  ["cap+tieQin", { options: { sealAt: "cap", tie: "qin" } }],
+  ["cap+tieQin", { options: { sealAt: "cap", tie: "ccp" } }],
   ["cap+seals5", { options: { sealAt: "cap", seals: 5 } }],
   ["cap+hangu3", { options: { sealAt: "cap", hangu: 3 } }],
   ["cap+hangu3+comp0", { options: { sealAt: "cap", hangu: 3, comp: 0 } }],
@@ -352,43 +352,43 @@ export const CELLS = [
   ["s5+hangu3+wuguo", { options: { seals: 5, hangu: 3, wuguo: "nonbg" } }],
   ["cap+hangu3+wuguo+comp0", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg", comp: 0 } }],
   ["cap+hangu3+wuguo+comp1", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg", comp: 1 } }],
-  ["qin=hard", { qin: "hard" }],
-  ["chu=hard", { chu: "hard" }],
-  ["qin=easy", { qin: "easy" }],
-  ["chu=easy", { chu: "easy" }],
+  ["ccp=hard", { ccp: "hard" }],
+  ["kmt=hard", { kmt: "hard" }],
+  ["ccp=easy", { ccp: "easy" }],
+  ["kmt=easy", { kmt: "easy" }],
   // #104: placement reach, today's rule against Twilight Struggle 6.1 (option B).
   ["nn/control", { options: { reach: "control" } }],
   ["nn/ts", { options: { reach: "ts" } }],
-  ["hh/control", { qin: "hard", chu: "hard", options: { reach: "control" } }],
-  ["hh/ts", { qin: "hard", chu: "hard", options: { reach: "ts" } }],
-  ["hqnc/control", { qin: "hard", chu: "normal", options: { reach: "control" } }],
-  ["hqnc/ts", { qin: "hard", chu: "normal", options: { reach: "ts" } }],
-  ["nqhc/control", { qin: "normal", chu: "hard", options: { reach: "control" } }],
-  ["nqhc/ts", { qin: "normal", chu: "hard", options: { reach: "ts" } }],
+  ["hh/control", { ccp: "hard", kmt: "hard", options: { reach: "control" } }],
+  ["hh/ts", { ccp: "hard", kmt: "hard", options: { reach: "ts" } }],
+  ["hqnc/control", { ccp: "hard", kmt: "normal", options: { reach: "control" } }],
+  ["hqnc/ts", { ccp: "hard", kmt: "normal", options: { reach: "ts" } }],
+  ["nqhc/control", { ccp: "normal", kmt: "hard", options: { reach: "control" } }],
+  ["nqhc/ts", { ccp: "normal", kmt: "hard", options: { reach: "ts" } }],
   // #121: what reaching reform box 6 (稱帝) first is worth. emp/<lvl>/vp is today's rule.
-  ...["nn", "hh"].flatMap((lv) => E.EMPEROR.map((v) => [`emp/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options: { emperor: v } }])),
+  ...["nn", "hh"].flatMap((lv) => E.EMPEROR.map((v) => [`emp/${lv}/${v}`, { ccp: lv === "nn" ? "normal" : "hard", kmt: lv === "nn" ? "normal" : "hard", options: { emperor: v } }])),
   // #130: 遊說 as a realignment roll, and losing (or moving) the home capital.
-  ...["nn", "hh"].flatMap((lv) => LC_CELLS.map(([v, options]) => [`lc/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  ...["nn", "hh"].flatMap((lv) => LC_CELLS.map(([v, options]) => [`lc/${lv}/${v}`, { ccp: lv === "nn" ? "normal" : "hard", kmt: lv === "nn" ? "normal" : "hard", options }])),
   // #132: today's rules, run once on the base build and once on the fix (two --out files).
-  ["k132/nn", { qin: "normal", chu: "normal" }],
-  ["k132/hh", { qin: "hard", chu: "hard" }],
+  ["k132/nn", { ccp: "normal", kmt: "normal" }],
+  ["k132/hh", { ccp: "hard", kmt: "hard" }],
   // #135: D1 (遠交) -- Qin starts with 1 in 臨淄 and 1 in 薊 -- under the new rules (realign-own + lose-turn) and today's.
   ...["nn", "hh"].flatMap((lv) => [["new", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 0 }], ["new+D1", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 }],
-    ["today+D1", { qinFarStart: 1 }], ["today", { qinFarStart: 0 }]].map(([v, options]) => [`d1/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+    ["today+D1", { qinFarStart: 1 }], ["today", { qinFarStart: 0 }]].map(([v, options]) => [`d1/${lv}/${v}`, { ccp: lv === "nn" ? "normal" : "hard", kmt: lv === "nn" ? "normal" : "hard", options }])),
   // #135, second ask: 相印 needed for 合縱 = 5 (all five capitals). The variants first, then their baselines on the same build.
   ...[["nn", "new+seals5"], ["nn", "today+seals5"], ["hh", "new+seals5"], ["hh", "today+seals5"], ["nn", "new"], ["nn", "today"], ["hh", "new"], ["hh", "today"]].map(([lv, v]) => [`s5/${lv}/${v}`, {
-    qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard",
+    ccp: lv === "nn" ? "normal" : "hard", kmt: lv === "nn" ? "normal" : "hard",
     options: { ...(v.startsWith("new") ? { lobby: "realign-own", homeFall: "lose-turn" } : {}), ...(v.endsWith("+seals5") ? { seals: 5 } : {}), qinFarStart: 0 } }]),
   // NB: since #133 the defaults ARE realign-own + lose-turn + seals 5, so on a build after 62b2380 the `today` cells
   // above (d1/, s5/) play the new rules; their recorded results were run before that (see tests/sim-results/135-*.md).
   // #135, third ask: 5 相印 + D1 on the new defaults. `def` = the defaults without D1, `def+D1` = { qinFarStart: 1 }.
   // #142 made qinFarStart 1 the default, so every cell above that names no qinFarStart now plays with the foothold;
   // the #135 cells without D1 name `qinFarStart: 0`, which is what they played when they were recorded.
-  ...["nn", "hh"].flatMap((lv) => [["def", { qinFarStart: 0 }], ["def+D1", { qinFarStart: 1 }]].map(([v, options]) => [`def/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  ...["nn", "hh"].flatMap((lv) => [["def", { qinFarStart: 0 }], ["def+D1", { qinFarStart: 1 }]].map(([v, options]) => [`def/${lv}/${v}`, { ccp: lv === "nn" ? "normal" : "hard", kmt: lv === "nn" ? "normal" : "hard", options }])),
 ];
 
 function parseArgs(argv) {
-  const cfg = { games: 100, seed: 1, qin: "normal", chu: "normal", options: {}, cells: false, only: null, json: false, jobs: 4 };
+  const cfg = { games: 100, seed: 1, ccp: "normal", kmt: "normal", options: {}, cells: false, only: null, json: false, jobs: 4 };
   for (const a of argv) {
     if (a === "--cells") cfg.cells = true;
     else if (a.startsWith("--only=")) { cfg.cells = true; cfg.only = a.slice(7).split(","); }
@@ -400,7 +400,7 @@ function parseArgs(argv) {
     else if (/^\d+$/.test(a)) cfg.games = Number(a);
     else if (a.includes("=")) {
       const [k, v] = a.split("=");
-      if (k === "qin" || k === "chu") cfg[k] = v;
+      if (k === "ccp" || k === "kmt") cfg[k] = v;
       else if (k === "seed") cfg.seed = Number(v);
       else cfg.options[k] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v;
     }
@@ -462,7 +462,7 @@ async function runCells(cfg) {
   for (const [name, cell] of cells) {
     for (let start = 0; start < cfg.games; start += CHUNK) {
       const n = Math.min(CHUNK, cfg.games - start);
-      queue.push({ name, args: [String(n), `seed=${cfg.seed + start}`, `qin=${cell.qin || cfg.qin}`, `chu=${cell.chu || cfg.chu}`, ...Object.entries({ ...cfg.options, ...(cell.options || {}) }).map(([k, v]) => `${k}=${v}`)] });
+      queue.push({ name, args: [String(n), `seed=${cfg.seed + start}`, `ccp=${cell.ccp || cfg.ccp}`, `kmt=${cell.kmt || cfg.kmt}`, ...Object.entries({ ...cfg.options, ...(cell.options || {}) }).map(([k, v]) => `${k}=${v}`)] });
     }
   }
   // With `--out`, the running totals are kept in `<out>.state.json` after every
@@ -1077,6 +1077,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   else {
     const r = simulate(cfg);
     if (cfg.json) console.log(JSON.stringify(r));
-    else { console.log(line(`${cfg.qin} vs ${cfg.chu} ${JSON.stringify(cfg.options)}`, r)); for (const e of r.errors) console.log("  " + e); }
+    else { console.log(line(`${cfg.ccp} vs ${cfg.kmt} ${JSON.stringify(cfg.options)}`, r)); for (const e of r.errors) console.log("  " + e); }
   }
 }
