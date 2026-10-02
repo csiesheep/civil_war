@@ -11,6 +11,7 @@ const STYLE = {
 };
 const CIVIL = STYLE.com_oil.replace(", soldiers in earthy grey and khaki cotton uniforms", "");
 const TAIL = "Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere.";
+const NOTEXT = "No text, no characters, no seals, no writing.";
 const AID = { american_aid: ["K", "nat_closeup", "美援", 0], soviet_aid: ["C", "com_oil", "蘇援", 0] };
 const meta = new Map();
 for (const c of E.CARDS) meta.set(c.id, { zh: c.zh, num: c.num, year: c.year, side: c.side === 1 ? "K" : c.side === 0 ? "C" : "N" });
@@ -24,13 +25,14 @@ order.forEach((id, i) => {
   const m = meta.get(id), style = styleOf(m, id), civil = !!s[3];
   if (civil && style !== "com_oil") throw new Error("civil on a non-Communist card " + id);
   const head = civil ? CIVIL : STYLE[style];
-  out.push({ key: id, zh: m.zh, side: m.side, style, w: 768, h: 1024, seed: 16001 + i, scene_zh: s[2], prompt: `${head} Scene: ${s[1]} ${TAIL}` });
+  out.push({ key: id, zh: m.zh, side: m.side, style, w: 768, h: 1024, seed: 16001 + i, scene_zh: s[2], prompt: `${head} Scene: ${s[1]} ${NOTEXT} ${TAIL}` });
 });
 if (out.length !== 74 || SCENES.length !== 74) throw new Error("count " + out.length + "/" + SCENES.length);
 fs.writeFileSync(dir + "prompts.json", JSON.stringify(out, null, 2) + "\n");
 const civilN = SCENES.filter((s) => s[3]).length;
-const row = (e) => { const m = meta.get(e.key); const civil = e.prompt.startsWith(CIVIL + " Scene:"); return `| ${m.num} | ${e.zh} | ${m.year ?? "—"} | ${e.style}${civil ? "(無士兵版)" : ""} | ${e.scene_zh.replace(/\|/g, "/")} |`; };
-const sec = (title, pred) => `### ${title}\n\n| 編號 | 牌名 | 年 | 風格 | 畫面 |\n|---|---|---|---|---|\n${out.filter(pred).map(row).join("\n")}\n`;
+const SIDE_ZH = { K: "國軍", C: "共軍", N: "中立" };
+const row = (e) => { const m = meta.get(e.key); const civil = e.prompt.startsWith(CIVIL + " Scene:"); const side = e.key.startsWith("score_") ? "記分卡" : e.key.endsWith("_aid") ? SIDE_ZH[e.side] + "外援" : SIDE_ZH[e.side]; return `| ${m.num} | ${e.zh} | ${side} | ${m.year ?? "—"} | ${e.style}${civil ? "(無士兵版)" : ""} | ${e.scene_zh.replace(/\|/g, "/")} |`; };
+const sec = (title, pred) => `### ${title}\n\n| 編號 | 牌名 | 陣營 | 年 | 風格 | 畫面 |\n|---|---|---|---|---|---|\n${out.filter(pred).map(row).join("\n")}\n`;
 const isScoreOrAid = (e) => e.key.startsWith("score_") || e.key.endsWith("_aid");
 const md = `# 74 張牌的圖 prompt(#16)
 
@@ -44,11 +46,15 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 - 共軍牌的畫面裡沒有士兵時(共 ${civilN} 張,表裡標「無士兵版」),風格文字拿掉「, soldiers in earthy grey and khaki cotton uniforms」,其餘不動。
 - 每一則的結尾:${TAIL}
 
+第一輪出圖(#17,十張牌 × 兩個模型)之後,所有畫面都改過:飛機的機徽寫成「藍底白色十二芒日」、機身橄欖綠或銀色,不畫星;共軍的旗一律寫「素面紅旗,沒有星、徽、字」;國旗每次寫全(紅地、藍角、白色十二芒日);國軍軍服卡其或橄欖綠、美式鋼盔、軍官軍帽,共軍軍服灰或卡其棉布、布帽、綁腿;有名字的人物都寫了外貌(頭、臉、衣服),不單靠名字。每則畫面後面都有一句「No text, no characters, no seals, no writing.」。
+
 每一則的形狀:\`<風格文字> Scene: <畫面與年代細節> <結尾>\`,全英文,沒有要求圖裡出現任何字。種子 = 16000 + 該牌在 prompts.json 的序號。尺寸 768 × 1024。
 
 ## 怎麼出其中一張(之後出圖的人)
 
 用 \`art/explore/14/r3/workflow_api.json\`(Qwen Image 2.1,25 步、cfg 1、euler / simple)當樣板,只換這四個欄位再送給 ComfyUI(\`http://127.0.0.1:8188/prompt\`):\`452.inputs.prompt\` = 該筆的 \`prompt\`,\`458.inputs.seed\` = \`seed\`,\`456.inputs.width / height\` = 768 / 1024,\`461.inputs.filename_prefix\` = 自訂。\`art/explore/14/r3/repro.mjs\` 是現成的寫法(把裡面讀 prompts.json 的路徑改成這個檔)。
+
+用 Z-Image Turbo 出的話,樣板是 \`art/explore/17/workflow_api_zimage.json\`(8 或 20 步),\`art/explore/17/gen.mjs\` 是現成的寫法;#17 看到 Z-Image 會多出紙邊與小字(結尾那一段擋不住),Qwen 沒有。
 
 ## 畫面表
 
