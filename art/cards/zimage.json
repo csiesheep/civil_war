@@ -1,0 +1,372 @@
+[
+  {
+    "key": "score_north",
+    "seed": 16001,
+    "steps": 20
+  },
+  {
+    "key": "score_east",
+    "seed": 16002,
+    "steps": 20
+  },
+  {
+    "key": "score_northeast",
+    "seed": 16003,
+    "steps": 20
+  },
+  {
+    "key": "score_northwest",
+    "seed": 16004,
+    "steps": 20
+  },
+  {
+    "key": "score_rear",
+    "seed": 16005,
+    "steps": 20
+  },
+  {
+    "key": "surrender_order",
+    "seed": 19006,
+    "steps": 20
+  },
+  {
+    "key": "airlift",
+    "seed": 16007,
+    "steps": 20
+  },
+  {
+    "key": "kunming_incident",
+    "seed": 16008,
+    "steps": 20
+  },
+  {
+    "key": "takeover_officials",
+    "seed": 16009,
+    "steps": 20
+  },
+  {
+    "key": "japanese_garrisons",
+    "seed": 17010,
+    "steps": 20
+  },
+  {
+    "key": "sino_soviet_treaty",
+    "seed": 17011,
+    "steps": 20
+  },
+  {
+    "key": "return_to_nanjing",
+    "seed": 16012,
+    "steps": 20
+  },
+  {
+    "key": "reorganisation_conference",
+    "seed": 16013,
+    "steps": 20
+  },
+  {
+    "key": "siping_taken",
+    "seed": 16014,
+    "steps": 20
+  },
+  {
+    "key": "zhangjiakou_taken",
+    "seed": 16015,
+    "steps": 20
+  },
+  {
+    "key": "into_manchuria",
+    "seed": 16016,
+    "steps": 20
+  },
+  {
+    "key": "shangdang_campaign",
+    "seed": 16017,
+    "steps": 20
+  },
+  {
+    "key": "gao_shuxun",
+    "seed": 16018,
+    "steps": 20
+  },
+  {
+    "key": "soviet_arms",
+    "seed": 16019,
+    "steps": 20
+  },
+  {
+    "key": "may_fourth_directive",
+    "seed": 16020,
+    "steps": 20
+  },
+  {
+    "key": "arms_embargo",
+    "seed": 16021,
+    "steps": 20
+  },
+  {
+    "key": "chongqing_talks",
+    "seed": 16022,
+    "steps": 20
+  },
+  {
+    "key": "january_truce",
+    "seed": 16023,
+    "steps": 20
+  },
+  {
+    "key": "marshall_mission",
+    "seed": 16024,
+    "steps": 20
+  },
+  {
+    "key": "pcc_resolutions",
+    "seed": 16025,
+    "steps": 20
+  },
+  {
+    "key": "soviets_delay",
+    "seed": 16026,
+    "steps": 20
+  },
+  {
+    "key": "soviet_removals",
+    "seed": 16027,
+    "steps": 20
+  },
+  {
+    "key": "inflation",
+    "seed": 16028,
+    "steps": 20
+  },
+  {
+    "key": "june_truce",
+    "seed": 16029,
+    "steps": 20
+  },
+  {
+    "key": "hu_takes_yanan",
+    "seed": 16030,
+    "steps": 20
+  },
+  {
+    "key": "shandong_offensive",
+    "seed": 16031,
+    "steps": 20
+  },
+  {
+    "key": "mobilisation_order",
+    "seed": 17032,
+    "steps": 20
+  },
+  {
+    "key": "league_banned",
+    "seed": 17033,
+    "steps": 20
+  },
+  {
+    "key": "chen_cheng",
+    "seed": 19034,
+    "steps": 20
+  },
+  {
+    "key": "china_aid_act",
+    "seed": 16035,
+    "steps": 20
+  },
+  {
+    "key": "national_assembly",
+    "seed": 16036,
+    "steps": 20
+  },
+  {
+    "key": "american_divisions",
+    "seed": 16037,
+    "steps": 20
+  },
+  {
+    "key": "northern_shaanxi",
+    "seed": 16038,
+    "steps": 20
+  },
+  {
+    "key": "menglianggu",
+    "seed": 16039,
+    "steps": 20
+  },
+  {
+    "key": "dabie_march",
+    "seed": 16040,
+    "steps": 20
+  },
+  {
+    "key": "land_law",
+    "seed": 16041,
+    "steps": 20
+  },
+  {
+    "key": "central_shanxi_campaign",
+    "seed": 16042,
+    "steps": 20
+  },
+  {
+    "key": "winter_offensive",
+    "seed": 16043,
+    "steps": 20
+  },
+  {
+    "key": "xiong_xianghui",
+    "seed": 16044,
+    "steps": 20
+  },
+  {
+    "key": "may_twentieth",
+    "seed": 16045,
+    "steps": 20
+  },
+  {
+    "key": "truman_doctrine",
+    "seed": 16046,
+    "steps": 20
+  },
+  {
+    "key": "wedemeyer_mission",
+    "seed": 16047,
+    "steps": 20
+  },
+  {
+    "key": "yellow_river",
+    "seed": 16048,
+    "steps": 20
+  },
+  {
+    "key": "sleeper",
+    "seed": 16049,
+    "steps": 20
+  },
+  {
+    "key": "redeployment",
+    "seed": 16050,
+    "steps": 20
+  },
+  {
+    "key": "stalled_siege",
+    "seed": 16051,
+    "steps": 20
+  },
+  {
+    "key": "gold_yuan",
+    "seed": 16052,
+    "steps": 20
+  },
+  {
+    "key": "fu_holds_the_north",
+    "seed": 16053,
+    "steps": 20
+  },
+  {
+    "key": "airlift_to_cut_off_city",
+    "seed": 16054,
+    "steps": 20
+  },
+  {
+    "key": "chiang_steps_down",
+    "seed": 16055,
+    "steps": 20
+  },
+  {
+    "key": "guningtou",
+    "seed": 16056,
+    "steps": 20
+  },
+  {
+    "key": "liaoshen_campaign",
+    "seed": 16057,
+    "steps": 20
+  },
+  {
+    "key": "huaihai_campaign",
+    "seed": 16058,
+    "steps": 20
+  },
+  {
+    "key": "pingjin_campaign",
+    "seed": 16059,
+    "steps": 20
+  },
+  {
+    "key": "fu_dongju",
+    "seed": 16060,
+    "steps": 20
+  },
+  {
+    "key": "siege_of_changchun",
+    "seed": 16061,
+    "steps": 20
+  },
+  {
+    "key": "jiawang_defection",
+    "seed": 16062,
+    "steps": 20
+  },
+  {
+    "key": "yangtze_crossing",
+    "seed": 16063,
+    "steps": 20
+  },
+  {
+    "key": "new_consultative_conference",
+    "seed": 19064,
+    "steps": 20
+  },
+  {
+    "key": "peaceful_changeover",
+    "seed": 16065,
+    "steps": 20
+  },
+  {
+    "key": "beiping_talks",
+    "seed": 17066,
+    "steps": 20
+  },
+  {
+    "key": "stalins_advice",
+    "seed": 16067,
+    "steps": 20
+  },
+  {
+    "key": "amethyst_incident",
+    "seed": 16068,
+    "steps": 20
+  },
+  {
+    "key": "defection_at_the_front",
+    "seed": 16069,
+    "steps": 20
+  },
+  {
+    "key": "supplies_run_short",
+    "seed": 16070,
+    "steps": 20
+  },
+  {
+    "key": "clearing_the_outskirts",
+    "seed": 16071,
+    "steps": 20
+  },
+  {
+    "key": "ta_kung_pao",
+    "seed": 17072,
+    "steps": 20
+  },
+  {
+    "key": "american_aid",
+    "seed": 16073,
+    "steps": 20
+  },
+  {
+    "key": "soviet_aid",
+    "seed": 17074,
+    "steps": 20
+  }
+]
