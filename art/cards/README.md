@@ -1,11 +1,6 @@
-# 74 張牌的圖 prompt(#16 → #22)
+# 74 張牌的圖 prompt(#16)
 
-owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援)。
-- **#19**(第一輪):完整的 Qwen Image 與 Z-Image Turbo 各 74 張對照,`img/<key>.jpg` 與 `img-zimage/<key>.jpg`,三張對照表是 `sheet-nationalist.jpg`、`sheet-communist.jpg`、`sheet-neutral.jpg`,逐張的檢查在 `CHECK.md` 與 `CHECK-zimage.md`。
-- **#21**(挑圖):owner 選定 59 張(57 張 Qwen + 2 張 Z-Image),15 張重出 4 張候選,在 `redo/<card id>__c<1-4>.jpg`,檢查在 `CHECK-redo.md`,挑圖頁是 `pick.html` / `redo.html`。
-- **#22**(定案):final/ 下 74 張是定案的圖像,59 張來自 #19 和 #21,15 張來自 #21 的 redo 候選,見下「定案」一節。
-
-完整的 prompt、種子、尺寸在 `prompts.json`;下面的表是給你讀的:每張牌畫什麼。
+owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援),圖已經出了(#19):`img/<key>.jpg`,逐張的檢查在 `CHECK.md`,三張對照表是 `sheet-nationalist.jpg`、`sheet-communist.jpg`、`sheet-neutral.jpg`。完整的 prompt、種子、尺寸在 `prompts.json`;下面的表是給你讀的:每張牌畫什麼。覺得哪張畫錯,說牌名和你想要的畫面。
 
 ## 三種風格(你在 #14 挑的),與結尾
 
@@ -34,29 +29,10 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 **`final.json`**:74 筆記錄,每筆包括 `key`(牌 ID)、`model`(模型:qwen/zimage)、`seed`(種子)、`steps`(步數)、`from`(來源)。
 
 **模型統計**:
-- Qwen Image 2.1(25 步):59 張(所有 Qwen 圖像) + 13 張新加(來自 redo 候選)= 72 張
-- Z-Image Turbo(20 步):0 張(從定案中移除) + 2 張新加(67-4、72-4)= 2 張
+- Qwen Image 2.1(25 步):70 張
+- Z-Image Turbo(20 步):4 張
 
-**15 張重出的定案**:
-| 牌 | 牌名 | 候選 | 模型 | 種子 |
-|---|---|---|---|---|
-| 11 | 中蘇友好同盟條約 | 2 | Qwen | 21112 |
-| 12 | 還都南京 | 3 | Qwen | 21123 |
-| 13 | 軍事整編會議 | 3 | Qwen | 21133 |
-| 16 | 闖關東 | 1 | Qwen | 21161 |
-| 17 | 上黨戰役 | 4 | Qwen | 21174 |
-| 24 | 馬歇爾調處 | 1 | Qwen | 21241 |
-| 33 | 取締民盟 | 1 | Qwen | 21331 |
-| 36 | 行憲國大 | 2 | Qwen | 21362 |
-| 37 | 美械整編師 | 4 | Qwen | 21374 |
-| 39 | 孟良崮 | 2 | Qwen | 21392 |
-| 53 | 傅作義守華北 | 3 | Qwen | 21533 |
-| 64 | 新政協 | 4 | Qwen | 21644 |
-| 65 | 和平起義 | 3 | Qwen | 21653 |
-| 67 | 史達林的建議 | 4 | Z-Image | 21674 |
-| 72 | 大公報社評 | 4 | Z-Image | 21724 |
-
-**定案對照表**(`final/sheet-*.jpg`):三張聯絡單,格式同 #19,每格下面標編號與牌名,圖來源改成 `final/`(不標紅字)。
+**定案對照表**(`final-sheets/sheet-*.jpg`):三張聯絡單,格式同 #19,每格下面標編號與牌名,圖來源是 `final/`。
 
 ## 畫面表
 
