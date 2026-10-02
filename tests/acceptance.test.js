@@ -274,7 +274,7 @@ check("72 張牌的事件", () => {
 // and 空運孤城 / 和平起義 / 長春圍城 / 平津戰役 read `isolatedCities` (the cards).
 // 時局 8 張 and 行動回合與手牌依期不對稱 moved to group 4 (#2), with the two support tracks themselves.
 // The two aid cards and 美軍駐華 moved to group 6 (#4).
-check("記分時根據地也算要衝;只有城的要衝推民生", () => (E.DEFAULT_OPTIONS.baseScoring === undefined ? "TODO: regionTally 還只算城的要衝" : ok(true, "baseScoring on")));
+// 記分時根據地也算要衝 moved to group 7 (#5).
 
 // ---------------------------------------------------------------- group 3
 // 補給(機制 A), issue #1. Written before the work was handed out, from the
@@ -1511,6 +1511,83 @@ check("外援牌沒有任何合法用法時不算可用:空手的一方被跳過
     eq(aidOf(held, CCP), null, "手上有牌、蘇援沒有任何用法時 legal 還給蘇援"),
     eq(thrown(() => act(held, CCP, "soviet_aid", "campaign", { target: "tianjin" })) != null, true, "沒有任何用法的蘇援打得出去"),
     ok(true, "蘇聯支持 2 但蘇援沒有地方可用:空手的共軍被跳過,輪到國軍(美援可用);手上有牌時蘇援不出現、手牌照常;美國支持降到 2、天津上海打得到時,共軍就要行動"),
+  );
+});
+
+// ---------------------------------------------------------------- group 7
+// 記分:根據地也算要衝 (issue #5). The rulebook's words, copied by hand (三, 記分; 二, 地圖; 三, 民生軌):
+//   等級照縱橫(存在、優勢、獨佔),但算要衝時,城的要衝和根據地都算。每控制一個要衝或根據地另 +1。
+//   ★ 城的要衝(9 個):奇襲它會推民生;民生惡化時先被封鎖。 根 根據地(5 個):記分時也算要衝。
+//   縱橫的等級:存在 = 控制該區 ≥ 1 據點;優勢 = 控制據點數 > 對手 且 控制要衝數 > 對手;獨佔 = 控制該區全部據點。
+//   why:不這樣的話,要衝全是城,共軍不先打下一座城就拿不到任何一區的優勢。
+// Region values, keys and bases are SPEC above (group 0 holds the product's data to them).
+// Expected levels and totals are worked out by hand from the opening's numbers, in the comments.
+section("7 記分:根據地也算要衝");
+
+const baseTodo = () => (E.DEFAULT_OPTIONS.baseScoring === undefined ? "TODO: DEFAULT_OPTIONS.baseScoring 還沒有;regionTally 還只算城的要衝" : null);
+const tally = (st, region) => { const [c, k] = E.regionTally(st, region); return `共 ${c.level} ${c.total} / 國 ${k.level} ${k.total}`; };
+// 華東中原 with 魯中 (red 5 against blue 2) and 淮海 (red 3 against blue 1) Communist, on top of 冀魯豫:
+// the Communists hold 3 spaces, two of them 根據地; the Nationalists hold 徐州 (★) and 鄭州.
+const EAST_BASES = { luzhong: { r: 5 }, huaihai: { r: 3 } };
+
+check("開局五區的結算:根據地各 +1,而且算進「要衝數 > 對手」", () => {
+  const t = baseTodo(); if (t) return t;
+  const st = position();
+  // 東北 nobody controls anything. 華北 共: 冀中, 太行(根) = 存在 4 + 1; 國: 天津★, 北平★ = 存在 4 + 2 (2 spaces each, no 優勢).
+  // 華東中原 共: 冀魯豫(根) = 存在 4 + 1; 國: 徐州★, 鄭州 = 2 spaces to 1 but 1 要衝 to 1, so 存在 4 + 1, not 優勢.
+  // 西北 共: 陝北(根) = 存在 2 + 1; 國: 西安★ = 存在 2 + 1. 後方 國: 武漢, 南京★, 上海★, 廣州 = 優勢 2 + 2; 共 nothing.
+  const want = { northeast: "共 none 0 / 國 none 0", north: "共 presence 5 / 國 presence 6", east: "共 presence 5 / 國 presence 5", northwest: "共 presence 3 / 國 presence 3", rear: "共 none 0 / 國 domination 4" };
+  for (const [region, w] of Object.entries(want)) { const q = eq(tally(st, region), w, `開局 ${E.REGIONS[region].zh} 的結算`); if (q !== true) return q; }
+  return ok(true, Object.keys(want).map((r) => `${E.REGIONS[r].zh}:${tally(st, r)}`).join(";"));
+});
+
+check("根據地讓共軍拿到優勢:華東中原控制 3 個據點、其中 2 個根據地,對國軍的徐州★、鄭州", () => {
+  const t = baseTodo(); if (t) return t;
+  const st = position(EAST_BASES);
+  const pre = all(same(["jiluyu", "luzhong", "huaihai"].filter((id) => E.controller(st, id) === CCP), ["jiluyu", "luzhong", "huaihai"], "共軍控制的"), same(E.spacesOf("east").filter((id) => E.controller(st, id) === KMT), ["xuzhou", "zhengzhou"], "國軍控制的"));
+  if (pre !== true) return pre;
+  // 共: 3 spaces > 2, 2 要衝 (two 根據地) > 1 → 優勢 8 + 2 = 10. 國: 存在 4 + 1 = 5. Net 5 to the Communists.
+  deal(st, CCP, ["score_east"]);
+  const after = E.apply(st, { type: "headline", side: CCP, card: "score_east" });
+  return all(
+    eq(tally(st, "east"), "共 domination 10 / 國 presence 5", "華東中原的結算"),
+    eq(after.mandate - st.mandate, 5, "共軍打出華東中原記分卡之後民心的變動(正 = 往共軍)"),
+    ok(true, `${tally(st, "east")};記分卡讓民心往共軍 5`),
+  );
+});
+
+check("獨佔照舊是控制全部據點;加分把城的要衝和根據地都算進去(西北:西安★ + 陝北根)", () => {
+  const t = baseTodo(); if (t) return t;
+  const st = position({ xian: { r: 5, b: 0 }, lanzhou: { r: 3, b: 0 } });
+  // 共 controls 陝北, 西安, 蘭州: 獨佔 4 + 1 (西安★) + 1 (陝北 根) = 6.
+  return all(eq(tally(st, "northwest"), "共 control 6 / 國 none 0", "西北的結算"), ok(true, tally(st, "northwest")));
+});
+
+check("根據地只在記分時算要衝:奇襲它不推民生,凋敝時也不被封鎖", () => {
+  const t = baseTodo(); if (t) return t;
+  const S = toAction(enter(6, { hands: [[], KH3] }));
+  const low = E.clone(S); low.weariness = 2;
+  const kt = E.opsOptions(low, KMT).campaignTargets;
+  const a = act(S, KMT, "kunming_incident", "campaign", { target: "jiluyu" });
+  return all(
+    eq(S.weariness, 5, "民生"), eq(rb(S, "jiluyu"), "3/0", "冀魯豫(根據地)紅/藍"),
+    eq(rb(a, "jiluyu"), "1/0", "國軍 2 點奇襲冀魯豫之後 紅/藍"), eq(a.weariness, 5, "奇襲根據地之後的民生"),
+    eq(kt.includes("jiluyu") && kt.includes("luzhong"), true, "凋敝時國軍還能奇襲華東中原的根據地(冀魯豫、魯中)"), eq(kt.includes("jinan") || kt.includes("xuzhou"), false, "凋敝時城的要衝(對照組)沒有被封鎖"),
+    eq(E.SPACES.filter((x) => x.battleground).length, SPEC.cityKeys.length, "battleground 的據點數(只有城的要衝)"),
+    ok(true, "打冀魯豫 3/0→1/0,民生不動;凋敝時根據地照打"),
+  );
+});
+
+check("baseScoring 是一個開關:預設開;關掉時只算城的要衝(縱橫的算法)", () => {
+  const t = baseTodo(); if (t) return t;
+  const off = position({}, { baseScoring: false }), offEast = position(EAST_BASES, { baseScoring: false });
+  // Without the bases: opening 華北 共 存在 4 + 0, 國 存在 4 + 2; 華東中原 國 2 spaces to 1 and 1 要衝 to 0 → 優勢 8 + 1, 共 存在 4;
+  // 西北 共 2, 國 2 + 1. With EAST_BASES: 共 3 spaces but 0 要衝 → 存在 4; 國 存在 4 + 1.
+  return all(
+    eq(E.DEFAULT_OPTIONS.baseScoring, true, "DEFAULT_OPTIONS.baseScoring"), eq(off.options.baseScoring, false, "對照局的選項"),
+    eq(tally(off, "north"), "共 presence 4 / 國 presence 6", "關掉時開局華北"), eq(tally(off, "east"), "共 presence 4 / 國 domination 9", "關掉時開局華東中原"),
+    eq(tally(off, "northwest"), "共 presence 2 / 國 presence 3", "關掉時開局西北"), eq(tally(offEast, "east"), "共 presence 4 / 國 presence 5", "關掉時華東中原(共軍 3 個據點、2 個根據地)"),
+    ok(true, "關掉時根據地不算:開局華東中原是國軍優勢 9 對 4;開著時是 5 對 5"),
   );
 });
 
