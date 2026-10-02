@@ -741,10 +741,32 @@ export function opsOf(st, side, cardId) {
   return Math.max(1, o);
 }
 // Whether `side` may use its aid card now: the option is on, not used this
-// turn, and its support track above 0. Who acts, the bog and 細作 are `play`'s
-// and `legal`'s to read, as they were for the Cauldrons.
-export function aidUsable(st, side) {
+// turn, its support track above 0 (`aidAvailable`), and at least one of 扶植 /
+// 奇襲 / 遊說 can be done with it right now (`aidUses`; orchestrator 裁決 #4:
+// an aid card with nothing it could legally do is not a card to play, so a side
+// with an empty hand is skipped rather than asked to act with no action). Who
+// acts, the bog and 細作 are `play`'s and `legal`'s to read, as they were for
+// the Cauldrons.
+function aidAvailable(st, side) {
   return !!st.options.aid && !!st.aidUsed && !st.aidUsed[side] && ((st.support || [])[side] || 0) > 0;
+}
+// What the aid card could do now, each null when it can do nothing: 扶植 counts
+// only if at least one point is affordable with the card's own ops (蘇援's +1 in
+// the Northeast and 美援's airlift included, i.e. `placeTargets(…, card)` lights
+// something); 奇襲 and 遊說 read the target lists (美軍駐華, the 民生 locks, 受降).
+function aidUses(st, side) {
+  const id = AID[side].id, ops = opsOf(st, side, id), o = opsOptions(st, side, id);
+  return {
+    id, ops,
+    place: o.placeOptions.length && placeTargets(st, side, ops, [], id).lit.size ? { options: o.placeOptions } : null,
+    campaign: o.campaignTargets.length ? { targets: o.campaignTargets } : null,
+    lobby: o.lobbyTargets.length ? { targets: o.lobbyTargets } : null,
+  };
+}
+export function aidUsable(st, side) {
+  if (!aidAvailable(st, side)) return false;
+  const u = aidUses(st, side);
+  return !!(u.place || u.campaign || u.lobby);
 }
 const inNortheast = (id) => SPACE[id].region === "northeast";
 // 蘇援 used all in the Northeast: +1 (#4, orchestrator 裁決 3): a 扶植 whose
@@ -1661,7 +1683,8 @@ function play(st, action) {
     if (aidSide(c) !== side) fail("that aid card is the other side's");
     if (!st.options.aid) fail("no aid cards in this game");
     if (st.aidUsed && st.aidUsed[side]) fail("the aid card is used already this turn");
-    if (!aidUsable(st, side)) fail("the aid card: support is 0");
+    if (!aidAvailable(st, side)) fail("the aid card: support is 0");
+    if (!aidUsable(st, side)) fail("the aid card has nothing it could do now");
     if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
     if (forcedCard(st, side)) fail("you must play the named card");
     if (!["place", "campaign", "lobby"].includes(use)) fail("the aid card: place, campaign or lobby only");
@@ -1811,16 +1834,12 @@ export function legal(st, side) {
     return { id: c, ops, uses };
   });
   // The aid card (#4): null when it may not be used now (option off, used this
-  // turn, support 0, or 細作 names a card; the bog returned above).
+  // turn, support 0, nothing it could do, or 細作 names a card; the bog
+  // returned above). Its `place` is null unless a point is affordable.
   let aid = null;
-  if (!forced && aidUsable(st, side)) {
-    const id = AID[side].id, o = opsOptions(st, side, id);
-    aid = {
-      id, ops: opsOf(st, side, id),
-      place: o.placeOptions.length ? { options: o.placeOptions } : null,
-      campaign: o.campaignTargets.length ? { targets: o.campaignTargets } : null,
-      lobby: o.lobbyTargets.length ? { targets: o.lobbyTargets } : null,
-    };
+  if (!forced && aidAvailable(st, side)) {
+    const u = aidUses(st, side);
+    if (u.place || u.campaign || u.lobby) aid = u;
   }
   return { kind: "action", cards, aid, forced };
 }
