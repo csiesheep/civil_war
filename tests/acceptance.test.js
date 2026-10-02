@@ -272,13 +272,8 @@ check("72 張牌的事件", () => {
 // 孤城的效果 moved to group 3 (#1). What supply still owes, each with the thing it waits for:
 // 美援 may be placed in a cut-off city (外國勢力), turn 7 costs a cut-off city 2 (時局),
 // and 空運孤城 / 和平起義 / 長春圍城 / 平津戰役 read `isolatedCities` (the cards).
-// 時局 8 張 and 行動回合與手牌依期不對稱 moved to group 4 (#2), with the two support tracks
-// themselves (the 時局 move them). What is left of 外國勢力 is keyed on the Nine Cauldrons
-// still being in the state: the two aid cards replace it.
-check("外國勢力:美援、蘇援兩張不換手的外援牌;美軍駐華", () => {
-  const st = E.createGame(1);
-  return st.jiuding !== undefined ? "TODO: 外援仍是縱橫的九鼎(一張、會換手)。含:行動點 = 支持度、美援全部放在城時可以放進孤城、蘇援全部用在東北 +1、美國支持 ≥ 3 時共軍不能奇襲天津與上海" : ok(true, "九鼎不在了");
-});
+// 時局 8 張 and 行動回合與手牌依期不對稱 moved to group 4 (#2), with the two support tracks themselves.
+// The two aid cards and 美軍駐華 moved to group 6 (#4).
 check("記分時根據地也算要衝;只有城的要衝推民生", () => (E.DEFAULT_OPTIONS.baseScoring === undefined ? "TODO: regionTally 還只算城的要衝" : ok(true, "baseScoring on")));
 
 // ---------------------------------------------------------------- group 3
@@ -311,7 +306,7 @@ const zhs = (ids) => ids.map((id) => E.SPACE[id].zh).join("、") || "無";
 const thrown = (fn) => { try { fn(); return null; } catch (e) { return (e && e.message) || String(e); } };
 // edits: { id: { r: red, b: blue } }, either key optional (the opening's number stays).
 function position(edits = {}, options = {}) {
-  let st = E.createGame(11, options);
+  let st = E.createGame(11, { aid: false, ...options }); // no aid cards unless a check asks: an empty hand must have nothing to play
   st = E.apply(st, { type: "choose", side: CCP, choice: st.pending.options.slice(0, SPEC.free.ccp) });
   st = E.apply(st, { type: "choose", side: KMT, choice: st.pending.options.slice(0, SPEC.free.kmt) });
   st = E.clone(st);
@@ -325,7 +320,7 @@ function position(edits = {}, options = {}) {
   for (const id of Object.keys(edits)) if (!SPEC_SPACES[id]) throw new Error(`position: 沒有這個據點 ${id}`);
   st.discard.push(...st.hands[CCP], ...st.hands[KMT]);
   st.hands = [[], []];
-  st.jiuding = { holder: null, faceDown: true }; // nobody has the Cauldrons to play, this turn or a later one
+  if (st.jiuding) st.jiuding = { holder: null, faceDown: true }; // until #4 lands: nobody has the Cauldrons to play, this turn or a later one
   return st;
 }
 // Put these cards in a hand, and nowhere else.
@@ -1258,6 +1253,232 @@ check("homeLockSide 是一個開關:預設 \"opponent\";\"both\" 是縱橫的鎖
     eq(E.campaignLocked(now, "lanzhou", CCP), false, "campaignLocked(蘭州, 共軍) 在動盪時"),
     eq(E.campaignLocked(now, "lanzhou"), true, "campaignLocked(蘭州) 不說是誰打的,在動盪時"),
     ok(true, "預設只鎖對手的本土;homeLockSide: \"both\"、沒有這個 key 的舊局、不說攻方的呼叫,都是西北與後方對雙方都鎖"),
+  );
+});
+
+// ---------------------------------------------------------------- group 6
+// 外援牌與美軍駐華 (issue #4): what is left of 外國勢力 after the two tracks came with #2.
+// The rulebook's words, copied by hand (三, 外國勢力; 三, 補給 3; 三, 回合結構 3; 四, 細則):
+//   1. 外援牌取代縱橫的九鼎,而且不再交給對手。國軍有「美援」,共軍有「蘇援」,都不算手牌。
+//      每回合各可用一次,在自己的行動回合代替一張手牌打出,只能扶植、奇襲、遊說。
+//      行動點 = 當時的支持度;支持度是 0 就不能用。
+//      - 美援全部放在城時,可以放進孤城(空運)。
+//      - 蘇援全部用在東北時,行動點 +1。
+//   2. 美軍駐華:美國支持 ≥ 3 時,共軍不能奇襲天津與上海。
+//   孤城的效果:國軍不能在那裡扶植(美援除外)。標題階段:外援牌不能當標題牌。
+//   細則:外援牌受「本回合所有牌行動點 +1 / −1」的效果影響。支持度是 0 時不能用,即使有 +1。
+//         美軍駐華只擋奇襲,不擋扶植、遊說與事件。第 1 回合東北三座城不能放點,包括事件與外援牌。
+// The rig of groups 3 to 5 asks for games without aid cards (`aid: false`), so that a side with an
+// empty hand has nothing to play and a turn walks out; the checks here ask for them.
+section("6 外援牌與美軍駐華");
+
+const aidTodo = () => (E.AID === undefined ? "TODO: E.AID 還沒有;外援仍是縱橫的九鼎(一張、會換手),沒有美軍駐華" : null);
+const AID_ON = { aid: true };
+const KH3 = ["score_east", "kunming_incident", "sino_soviet_treaty"];
+const aidOf = (st, side) => { const l = E.legal(st, side); return l.kind === "action" ? l.aid ?? null : null; };
+const ids = (xs) => (xs || []).map((x) => (typeof x === "string" ? x : x.id));
+
+check("外援牌:蘇援、美援各一張,不在 72 張牌裡;九鼎不在了;aid 是一個開關", () => {
+  const t = aidTodo(); if (t) return t;
+  const st = E.createGame(3);
+  return all(
+    eq(J(E.AID.map((a) => [a.id, a.zh])), J([["soviet_aid", "蘇援"], ["american_aid", "美援"]]), "E.AID [共軍的, 國軍的]"),
+    eq(E.AID.every((a) => typeof a.en === "string" && a.en.length > 0), true, "兩張都有英文名"),
+    eq(E.CARDS.length, SPEC.deck.total, "牌數"), eq(E.CARDS.some((c) => c.id === "soviet_aid" || c.id === "american_aid"), false, "外援牌混在 72 張牌裡"),
+    eq(st.jiuding, undefined, "st.jiuding(九鼎)"), eq(J(st.aidUsed), "[false,false]", "st.aidUsed"),
+    eq(E.DEFAULT_OPTIONS.aid, true, "DEFAULT_OPTIONS.aid"),
+    ok(true, "蘇援(共軍)、美援(國軍);72 張牌不變;沒有九鼎;aid 預設開"),
+  );
+});
+
+check("美援:行動點 = 美國支持;不算手牌;佔一個行動回合;一回合一次", () => {
+  const t = aidTodo(); if (t) return t;
+  const S = toAction(enter(6, { options: AID_ON, support: [0, 3], hands: [[], KH3] }));
+  const aid = aidOf(S, KMT);
+  const pre = all(eq(S.turn, 6, "回合"), eq(S.actor, KMT, "輪到誰(共軍沒有手牌、蘇聯支持 0,跳過)"), eq(S.round, 1, "第幾個行動回合"), eq(J(S.support), "[0,3]", "支持度"),
+    eq(aid && aid.id, "american_aid", "legal 給國軍的外援牌"), eq(aid && aid.ops, 3, "美援的行動點"));
+  if (pre !== true) return pre;
+  let a = null;
+  const e = thrown(() => { a = act(S, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin"] }); });
+  if (e != null) return `國軍用美援扶植 3 點被拒絕:${e}`;
+  return all(
+    eq(thrown(() => act(S, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin", "tianjin"] })) != null, true, "美援放 4 點(支持度 3)沒有被拒絕"),
+    eq(`${blueOf(a, "xuzhou")},${blueOf(a, "tianjin")}`, "5,4", "徐州、天津的藍"),
+    same(a.hands[KMT], ["kunming_incident", "sino_soviet_treaty"], "國軍的手牌(美援不算手牌)"),
+    eq(a.discard.includes("american_aid") || a.removed.includes("american_aid"), false, "美援進了棄牌堆或被移出遊戲"),
+    eq(J(a.aidUsed), "[false,true]", "st.aidUsed"), eq(a.round, 2, "之後是第幾個行動回合"), eq(a.actor, KMT, "之後輪到誰"),
+    eq(aidOf(a, KMT), null, "同一回合用過之後 legal 還給美援"),
+    eq(thrown(() => act(a, KMT, "american_aid", "place", { points: ["tianjin"] })) != null, true, "同一回合第二次用美援沒有被拒絕"),
+    ok(true, "美援 3 點:徐州 +2、天津 +1;手牌還是 2 張;佔了第 1 個行動回合;這一回合不能再用"),
+  );
+});
+
+check("美援只能扶植、奇襲、遊說;不能當標題牌、不能當事件或行憲", () => {
+  const t = aidTodo(); if (t) return t;
+  const H = enter(6, { options: AID_ON, support: [0, 3], hands: [[], KH3] });
+  const S = toAction(H), aid = aidOf(S, KMT);
+  const pre = all(eq(H.phase, "headline", "phase"), eq(aid && aid.id, "american_aid", "legal 給國軍的外援牌"), eq(rb(S, "jizhong"), "2/0", "冀中 紅/藍"), eq(rb(S, "chasui"), "2/2", "察綏 紅/藍"));
+  if (pre !== true) return pre;
+  let b = null, c = null;
+  const e1 = thrown(() => { b = act(S, KMT, "american_aid", "campaign", { target: "jizhong" }); });
+  if (e1 != null) return `國軍用美援奇襲冀中被拒絕:${e1}`;
+  const e2 = thrown(() => { c = act(S, KMT, "american_aid", "lobby", { target: "chasui" }); });
+  if (e2 != null) return `國軍用美援遊說察綏被拒絕:${e2}`;
+  return all(
+    eq(thrown(() => E.apply(H, { type: "headline", side: KMT, card: "american_aid" })) != null, true, "美援當標題牌沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "american_aid", "event")) != null, true, "美援當事件沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "american_aid", "reform")) != null, true, "美援拿去行憲沒有被拒絕"),
+    eq(ids(aid.campaign && aid.campaign.targets).includes("jizhong"), true, "legal 的美援奇襲目標沒有冀中"), eq(ids(aid.lobby && aid.lobby.targets).includes("chasui"), true, "legal 的美援遊說目標沒有察綏"),
+    eq(rb(b, "jizhong"), "0/1", "美援 3 點奇襲冀中(移除 2、放 1)之後 紅/藍"), eq(J(b.aidUsed), "[false,true]", "奇襲之後的 st.aidUsed"),
+    eq(J(c.aidUsed), "[false,true]", "遊說之後的 st.aidUsed"),
+    ok(true, "奇襲冀中 2/0→0/1、遊說察綏都可以;標題、事件、行憲都被拒絕"),
+  );
+});
+
+check("支持度是 0 就不能用,即使有 +1;「所有牌行動點 ±1」的效果照算,最低 1", () => {
+  const t = aidTodo(); if (t) return t;
+  const at = (us, delta) => {
+    const s = toAction(enter(6, { options: AID_ON, support: [0, us], hands: [[], KH3] }));
+    if (delta) s.effects.push({ kind: "opsAll", target: KMT, delta, until: "turn", card: "probe" }); // what 戡亂動員令 / 美國武器禁運 will add
+    return s;
+  };
+  const zero = at(0, 1), two = at(2, 1), one = at(1, -1), three = at(3, -1);
+  const handOps = (st) => { const c = E.legal(st, KMT).cards.find((x) => x.id === "kunming_incident"); return c && c.ops; };
+  return all(
+    eq(handOps(zero), 3, "+1 的效果對手牌有沒有作用(昆明事變 2 → 3)"), eq(handOps(one), 1, "−1 的效果對手牌(昆明事變 2 → 1)"),
+    eq(aidOf(zero, KMT), null, "美國支持 0、有 +1 時 legal 還給美援"),
+    eq(thrown(() => act(zero, KMT, "american_aid", "place", { points: ["tianjin"] })) != null, true, "美國支持 0、有 +1 時用美援沒有被拒絕"),
+    eq(aidOf(two, KMT) && aidOf(two, KMT).ops, 3, "美國支持 2、+1 時美援的行動點"),
+    eq(thrown(() => act(two, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin"] })), null, "美國支持 2、+1 時美援放 3 點被拒絕"),
+    eq(aidOf(one, KMT) && aidOf(one, KMT).ops, 1, "美國支持 1、−1 時美援的行動點(最低 1)"),
+    eq(aidOf(three, KMT) && aidOf(three, KMT).ops, 2, "美國支持 3、−1 時美援的行動點"),
+    ok(true, "支持 0(+1)不能用;2(+1)是 3 點;1(−1)是 1 點;3(−1)是 2 點"),
+  );
+});
+
+check("蘇援:行動點 = 蘇聯支持;全部用在東北時 +1(扶植每一點都在東北、奇襲的目標在東北)", () => {
+  const t = aidTodo(); if (t) return t;
+  const C = toAction(enter(6, { options: AID_ON, edits: { shenyang: { b: 2 } }, support: [2, 0], hands: [["score_north", "gao_shuxun"], []] }));
+  const aid = aidOf(C, CCP);
+  const pre = all(eq(C.actor, CCP, "輪到誰"), eq(aid && aid.id, "soviet_aid", "legal 給共軍的外援牌"), eq(aid && aid.ops, 2, "蘇援的行動點"),
+    eq(rb(C, "siping"), "0/0", "四平 紅/藍"), eq(rb(C, "beiman"), "1/0", "北滿 紅/藍"), eq(rb(C, "shenyang"), "0/2", "瀋陽 紅/藍"), eq(rb(C, "chasui"), "2/2", "察綏 紅/藍"));
+  if (pre !== true) return pre;
+  let ne = null, mixed = null, hitNe = null, hitOther = null;
+  const e1 = thrown(() => { ne = act(C, CCP, "soviet_aid", "place", { points: ["siping", "siping", "beiman"] }); });
+  if (e1 != null) return `蘇援 2 點、全部放在東北的 3 點被拒絕:${e1}`;
+  const e2 = thrown(() => { mixed = act(C, CCP, "soviet_aid", "place", { points: ["siping", "taihang"] }); });
+  if (e2 != null) return `蘇援 2 點放四平、太行各 1 被拒絕:${e2}`;
+  const e3 = thrown(() => { hitNe = act(C, CCP, "soviet_aid", "campaign", { target: "shenyang" }); hitOther = act(C, CCP, "soviet_aid", "campaign", { target: "chasui" }); });
+  if (e3 != null) return `蘇援奇襲被拒絕:${e3}`;
+  const T2 = E.placeTargets(C, CCP, 2, ["siping", "siping"], "soviet_aid").lit, T3 = E.placeTargets(C, CCP, 2, ["siping", "taihang"], "soviet_aid").lit;
+  return all(
+    eq(`${redOf(ne, "siping")},${redOf(ne, "beiman")}`, "2,2", "四平、北滿的紅(3 點都在東北)"), eq(`${redOf(mixed, "siping")},${redOf(mixed, "taihang")}`, "1,5", "四平、太行的紅"),
+    eq(thrown(() => act(C, CCP, "soviet_aid", "place", { points: ["siping", "siping", "taihang"] })) != null, true, "3 點裡有 1 點不在東北,沒有被拒絕"),
+    eq(thrown(() => act(C, CCP, "soviet_aid", "place", { points: ["siping", "siping", "beiman", "beiman"] })) != null, true, "東北 4 點(2 + 1 = 3)沒有被拒絕"),
+    eq(rb(hitNe, "shenyang"), "1/0", "蘇援奇襲瀋陽(東北,2 + 1:移除 2、放 1)之後 紅/藍"), eq(rb(hitOther, "chasui"), "2/0", "蘇援奇襲察綏(華北,2 點)之後 紅/藍"),
+    eq(T2.has("beiman"), true, "placeTargets:四平放了 2 點之後,北滿(東北的第 3 點)沒有亮"), eq(T2.has("taihang"), false, "placeTargets:四平放了 2 點之後,太行還亮"),
+    eq(T3.size, 0, "placeTargets:四平、太行各 1 點之後還有亮的據點"),
+    eq(E.placeTargets(C, CCP, 2, ["siping", "siping"]).lit.size, 0, "placeTargets 不說是蘇援時,2 點用完還有亮的據點"),
+    ok(true, "蘇援 2 點:四平 2 + 北滿 1 可以(都在東北);四平 1 + 太行 1 可以;混著放 3 點不行;打瀋陽 0/2→1/0,打察綏 2/2→2/0"),
+  );
+});
+
+check("美援全部放在城時可以放進孤城;有一點放在鄉就不行;手牌不行", () => {
+  const t = aidTodo(); if (t) return t;
+  const K = toAction(enter(6, { options: AID_ON, edits: JINAN_CUT, support: [0, 4], hands: [[], KH3] }));
+  const aid = aidOf(K, KMT), card = E.legal(K, KMT).cards.find((x) => x.id === "kunming_incident");
+  const pre = all(same(E.isolatedCities(K), ["jinan"], "孤城"), eq(aid && aid.ops, 4, "美援的行動點"), eq(blueOf(K, "jinan"), 2, "濟南的藍"), eq(E.controller(K, "jizhong"), CCP, "冀中的控制者(每點 2)"));
+  if (pre !== true) return pre;
+  let a = null, plain = null;
+  const e1 = thrown(() => { a = act(K, KMT, "american_aid", "place", { points: ["jinan", "jinan", "xuzhou"] }); });
+  if (e1 != null) return `美援把 2 點放進孤城濟南、1 點放徐州(全部是城)被拒絕:${e1}`;
+  const e2 = thrown(() => { plain = act(K, KMT, "american_aid", "place", { points: ["jizhong", "xuzhou"] }); });
+  if (e2 != null) return `美援放冀中(鄉)和徐州(有補給的城)被拒絕:${e2}`;
+  const T0 = E.placeTargets(K, KMT, 4, [], "american_aid").lit, T1 = E.placeTargets(K, KMT, 4, ["jinan"], "american_aid").lit, T2 = E.placeTargets(K, KMT, 4, ["jizhong"], "american_aid").lit;
+  return all(
+    eq(thrown(() => act(K, KMT, "kunming_incident", "place", { points: ["jinan"] })) != null, true, "用手牌扶植孤城濟南沒有被拒絕"),
+    eq(ids(card.uses.place && card.uses.place.options).includes("jinan"), false, "legal 的手牌扶植選項列了濟南"),
+    eq(ids(aid.place && aid.place.options).includes("jinan"), true, "legal 的美援扶植選項沒有濟南"),
+    eq(`${blueOf(a, "jinan")},${blueOf(a, "xuzhou")}`, "4,4", "濟南、徐州的藍"), eq(blueOf(plain, "jizhong"), 1, "冀中的藍"),
+    eq(thrown(() => act(K, KMT, "american_aid", "place", { points: ["jinan", "jizhong"] })) != null, true, "美援放濟南(孤城)和冀中(鄉)沒有被拒絕"),
+    eq(thrown(() => act(K, KMT, "american_aid", "place", { points: ["jizhong", "jinan"] })) != null, true, "美援放冀中(鄉)和濟南(孤城)沒有被拒絕"),
+    eq(T0.has("jinan") && T0.has("jizhong"), true, "placeTargets(美援):一開始濟南和冀中都要亮"),
+    eq(T1.has("jizhong"), false, "placeTargets(美援):放了濟南之後冀中(鄉)還亮"), eq(T1.has("xuzhou") && T1.has("jinan"), true, "placeTargets(美援):放了濟南之後徐州、濟南要亮"),
+    eq(T2.has("jinan"), false, "placeTargets(美援):放了冀中(鄉)之後濟南(孤城)還亮"), eq(T2.has("xuzhou"), true, "placeTargets(美援):放了冀中之後徐州要亮"),
+    eq(E.placeTargets(K, KMT, 4).lit.has("jinan"), false, "placeTargets 不說是美援時亮了濟南"),
+    ok(true, "美援:濟南 2→4、徐州 3→4(全部是城);冀中 + 徐州可以;孤城和鄉混著放不行;手牌放不進濟南"),
+  );
+});
+
+check("空運只到孤城(有藍的城):沒有藍的城,不論是沒有補給還是共軍控制,美援也放不進去(orchestrator 裁決 #4,待 owner)", () => {
+  const t = aidTodo(); if (t) return t;
+  const mk = (edits) => toAction(enter(6, { options: AID_ON, edits, support: [0, 4], hands: [[], KH3] }));
+  const empty = mk({ taiyuan: { b: 0 }, jinzhong: { r: 4 } }), held = mk({ zhengzhou: { r: 4, b: 2 } }), bare = mk({ zhengzhou: { r: 2, b: 0 } });
+  const pre = all(
+    eq(E.supplied(empty).has("taiyuan"), false, "空的太原在補給範圍內"), eq(E.canPlaceAt(empty, KMT, "taiyuan"), true, "太原在國軍的相鄰範圍內"),
+    same(E.isolatedCities(held), ["zhengzhou"], "鄭州(紅 4 藍 2,共軍控制)是孤城"), eq(E.isolatedCities(bare).length, 0, "鄭州(紅 2 藍 0)不是孤城"), eq(E.controller(bare, "zhengzhou"), CCP, "鄭州(紅 2 藍 0)的控制者"),
+  );
+  if (pre !== true) return pre;
+  let a = null;
+  const e = thrown(() => { a = act(held, KMT, "american_aid", "place", { points: ["zhengzhou", "zhengzhou"] }); });
+  if (e != null) return `美援放進共軍控制、還有藍的鄭州(孤城)被拒絕:${e}`;
+  return all(
+    eq(blueOf(a, "zhengzhou"), 4, "鄭州的藍(2 + 2)"),
+    eq(thrown(() => act(empty, KMT, "american_aid", "place", { points: ["taiyuan"] })) != null, true, "美援放進沒有藍、沒有補給的太原沒有被拒絕"),
+    eq(ids(aidOf(empty, KMT).place && aidOf(empty, KMT).place.options).includes("taiyuan"), false, "legal 的美援扶植選項列了空的太原"),
+    eq(thrown(() => act(bare, KMT, "american_aid", "place", { points: ["zhengzhou"] })) != null, true, "美援放進共軍控制、沒有藍的鄭州沒有被拒絕"),
+    ok(true, "鄭州紅 4 藍 2(孤城)美援放得進去,2→4;空的太原、紅 2 藍 0 的鄭州放不進去"),
+  );
+});
+
+check("美軍駐華:美國支持 ≥ 3 時共軍不能奇襲天津與上海(手牌、蘇援都不行);只擋奇襲;第 7 回合的解鎖不管它", () => {
+  const t = aidTodo(); if (t) return t;
+  const hands = [["score_north", "gao_shuxun", "shangdang_campaign"], []], edits = { tianjin: { r: 1 } };
+  const M = toAction(enter(6, { options: AID_ON, edits, support: [1, 3], hands })), free = toAction(enter(6, { options: AID_ON, edits, support: [1, 2], hands }));
+  const tm = E.opsOptions(M, CCP).campaignTargets, tf = E.opsOptions(free, CCP).campaignTargets;
+  const pre = all(eq(M.actor, CCP, "輪到誰"), eq(J(M.support), "[1,3]", "支持度"), eq(M.weariness, 5, "民生"), eq(rb(free, "tianjin"), "1/3", "天津 紅/藍"),
+    eq(tf.includes("tianjin") && tf.includes("shanghai"), true, "美國支持 2 時共軍可以奇襲天津、上海(對照組)"));
+  if (pre !== true) return pre;
+  let hit = null;
+  const e = thrown(() => { hit = act(free, CCP, "gao_shuxun", "campaign", { target: "tianjin" }); });
+  if (e != null) return `美國支持 2 時共軍奇襲天津被拒絕:${e}`;
+  const seven = toAction(enter(7, { options: AID_ON, support: [2, 4], weariness: 2, hands }));
+  const t7 = E.opsOptions(seven, CCP).campaignTargets;
+  return all(
+    eq(tm.includes("tianjin") || tm.includes("shanghai"), false, "美國支持 3 時共軍的奇襲目標有天津或上海"), eq(tm.includes("beiping") && tm.includes("nanjing"), true, "美國支持 3 時北平、南京照常可以奇襲"),
+    eq(thrown(() => act(M, CCP, "gao_shuxun", "campaign", { target: "tianjin" })) != null, true, "美國支持 3 時共軍用手牌奇襲天津沒有被拒絕"),
+    eq(thrown(() => act(M, CCP, "soviet_aid", "campaign", { target: "shanghai" })) != null, true, "美國支持 3 時共軍用蘇援奇襲上海沒有被拒絕"),
+    eq(ids(E.opsOptions(M, CCP).lobbyTargets).includes("tianjin"), true, "美軍駐華連遊說天津也擋了"), eq(E.placeTargets(M, CCP, 2).lit.has("tianjin"), true, "美軍駐華連扶植天津也擋了"),
+    eq(E.opsOptions(M, KMT).campaignTargets.includes("tianjin"), true, "國軍不能奇襲天津裡的紅"),
+    eq(rb(hit, "tianjin"), "1/1", "美國支持 2 時共軍 2 點奇襲天津之後 紅/藍"),
+    eq(J(seven.support), "[3,4]", "第 7 回合的支持度"), eq(t7.includes("tianjin") || t7.includes("shanghai"), false, "第 7 回合美國支持 4,共軍的奇襲目標有天津或上海"), eq(t7.includes("xuzhou") && t7.includes("nanjing"), true, "第 7 回合徐州、南京解鎖"),
+    ok(true, "美國支持 3:天津、上海不在共軍的奇襲目標裡,手牌和蘇援都被拒絕,遊說和扶植照常;支持 2:打得到;第 7 回合(支持 4)仍然擋"),
+  );
+});
+
+check("外援牌不換手;空手的一方有外援牌就要行動;每回合重置;aid: false 時沒有外援牌", () => {
+  const t = aidTodo(); if (t) return t;
+  const st = enter(6, { options: AID_ON, support: [1, 3] }); // nobody holds a card
+  const lc = E.legal(st, CCP);
+  const pre = all(eq(st.turn, 6, "回合"), eq(lc.kind, "action", "空手、有蘇援的共軍在第 1 個行動回合"), eq(lc.cards && lc.cards.length, 0, "共軍的手牌數"),
+    eq(lc.aid && lc.aid.id, "soviet_aid", "legal 給共軍的外援牌"), eq(lc.aid && lc.aid.ops, 1, "蘇援的行動點"));
+  if (pre !== true) return pre;
+  let a = null, b = null;
+  const e1 = thrown(() => { a = act(st, CCP, "soviet_aid", "place", { points: ["taihang"] }); });
+  if (e1 != null) return `共軍用蘇援在太行放 1 點被拒絕:${e1}`;
+  const lk = aidOf(a, KMT);
+  const e2 = thrown(() => { b = act(a, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin"] }); });
+  if (e2 != null) return `國軍用美援扶植 3 點被拒絕:${e2}`;
+  const off = toAction(enter(6, { support: [1, 3], hands: [[], KH3] })); // the rig's default: aid: false
+  return all(
+    eq(thrown(() => act(st, CCP, "american_aid", "place", { points: ["taihang"] })) != null, true, "共軍用美援沒有被拒絕"),
+    eq(lk && lk.id, "american_aid", "共軍用完蘇援之後,legal 給國軍的外援牌"), eq(lk && lk.ops, 3, "美援的行動點"),
+    eq(thrown(() => act(a, KMT, "soviet_aid", "place", { points: ["tianjin"] })) != null, true, "國軍用蘇援沒有被拒絕"),
+    eq(b.turn, 7, "兩邊都用完之後走到的回合"), eq(J(b.aidUsed), "[false,false]", "第 7 回合開始後的 st.aidUsed"), eq(J(b.support), "[2,3]", "第 7 回合的支持度"),
+    eq(aidOf(b, CCP) && aidOf(b, CCP).ops, 2, "第 7 回合蘇援的行動點"),
+    eq(off.options.aid, false, "對照局的選項"), eq(off.actor, KMT, "aid: false 時空手的共軍被跳過"), eq(aidOf(off, KMT), null, "aid: false 時 legal 還給美援"),
+    eq(thrown(() => act(off, KMT, "american_aid", "place", { points: ["tianjin"] })) != null, true, "aid: false 時用美援沒有被拒絕"),
+    ok(true, "共軍只能用蘇援、國軍只能用美援;空手也要行動;第 7 回合兩張都回來(蘇援 2 點);aid: false 時沒有外援牌"),
   );
 });
 
