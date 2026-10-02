@@ -43,6 +43,11 @@
 //     id, side)`); 民心 owed at this turn's 結算 (`turnEndVp`, paid in
 //     `endTurnChecks`); a turn with no 孤城 attrition (`noAttrition`, read by
 //     `attritionLoss`). With these all 72 cards have their events.
+// And in M2:
+//   - #13 three switches for the control cells (DEFAULT_OPTIONS): `situations`
+//     (the one reading of the 時局 in effect, `situationNow`; the support
+//     tracks' fixed moves are `SUPPORT_SCHEDULE`, outside it), `rounds` (the
+//     hand sizes and action rounds, `eraLimits`), `garrison` (`garrisoned`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -104,6 +109,25 @@ export const ERAS = [
   { id: "turning",  zh: "易勢期", en: "Turning era",  from: 4, hand: [9, 9], rounds: [7, 7] },
   { id: "decisive", zh: "決戰期", en: "Decisive era", from: 7, hand: [9, 8], rounds: [7, 6] },
 ];
+// `rounds: "symmetric"` (#13, the control cell for the asymmetric rounds):
+// Zongheng's numbers, the same for both sides -- hand 8 and 6 action rounds in
+// turns 1 to 3, hand 9 and 7 from turn 4. The decks still follow `ERAS`.
+export const SYMMETRIC_ERAS = [
+  { from: 1, hand: 8, rounds: 6 },
+  { from: 4, hand: 9, rounds: 7 },
+];
+// The one reading of turn `turn`'s hand sizes and action rounds, each
+// [Communists, Nationalists]: `startTurn` and the refill read only this. Any
+// value of `rounds` other than "symmetric" (an absent key included) is `ERAS`.
+export function eraLimits(st, turn = st.turn) {
+  const t = Math.max(1, turn);
+  if (st.options.rounds === "symmetric") {
+    const s = SYMMETRIC_ERAS.filter((e) => t >= e.from).pop();
+    return { hand: [s.hand, s.hand], rounds: [s.rounds, s.rounds] };
+  }
+  const e = eraOf(t);
+  return { hand: e.hand.slice(), rounds: e.rounds.slice() };
+}
 // 時局 (mechanism F, rulebook 三): eight, in a fixed order, one per turn, face up
 // from the start. What each does is read from the turn number (`situationOf`)
 // wherever the rule applies; nothing of it is kept in `st.effects`.
@@ -118,6 +142,18 @@ export const SITUATIONS = [
   { turn: 8, id: "peace_talks",       zh: "和談",     en: "The Peace Talks",        year: "1949" },
 ];
 export function situationOf(turn) { return SITUATIONS.find((s) => s.turn === turn) || null; }
+// The 時局 in effect now (#13): the ONE question every rule of a 時局 asks
+// (`sovietHeld`, `situationUnlocks` so `campaignLocked`, `situationCampaignMod`
+// so `campaignMod`, `truceBroken`, `jumpOpen`, `reformAdvance`, `attritionLoss`,
+// the free placements in `startGame`, `situationStep`). Turn 0 is the setup,
+// which is turn 1's free placement (受降). With `situations: false` it is null
+// on every turn: none of the eight has an effect of its own. `situationOf` is
+// the data and answers either way; the support tracks' fixed moves do not ask
+// this (`SUPPORT_SCHEDULE`, they are 外國勢力's).
+export function situationNow(st) {
+  if (st.options.situations === false) return null;
+  return situationOf(Math.max(1, st.turn));
+}
 // The reform track's numbers (threshold, 先到 / 後到, the perk), the same for
 // both sides. Its box names are each side's own (#9): `reformName`.
 export const REFORM = [
@@ -212,7 +248,20 @@ export function reformName(side, box) {
 // or absent is Zongheng's count (city keys only): the control arm for the
 // region values (open item 7), and what a game made before #5 plays. See
 // `regionTally`.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true };
+// #13, three switches for M2's control cells (orchestrator 裁決 #13 says what
+// "off" means; the defaults are the rules). Unlike the keys above, an ABSENT
+// key plays as the rule (a game made before #13 keeps the rules it had):
+// `situations`: false and only false turns off every effect of the eight 時局
+// (`situationNow` answers null): no free placements and no Soviet occupation in
+// turn 1, no withdrawal and no truce penalty in turn 2, no 奇襲 modifiers, no
+// jump, no 行憲 hook, no 民生 unlock and a 孤城 loss of 1 in turn 7, no 和談.
+// The support tracks' fixed moves stay (`SUPPORT_SCHEDULE`: 外國勢力, H's), and
+// so do the hand sizes and rounds (that is `rounds`).
+// `rounds`: "symmetric" gives both sides Zongheng's numbers (`SYMMETRIC_ERAS`);
+// anything else is the era's own [Communists, Nationalists] (`eraLimits`).
+// `garrison`: false and only false removes 美軍駐華 (`garrisoned`); #4 kept it
+// out of `aid`, so H's control cell is `aid: false` with `garrison: false`.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true, situations: true, rounds: "asymmetric", garrison: true };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -388,8 +437,8 @@ export function capOf(st, id) { return SPACE[id].stability + st.options.cap; }
 // put a point there by any means (四, 細則: 「包括事件與外援牌」), so `place()`
 // itself refuses -- unlike supply, which bars only the 扶植 action -- and nobody
 // may 奇襲 them. The Northeast's villages are open. Turn 0 is the setup, which
-// is turn 1's free placement.
-export function sovietHeld(st, id) { return st.turn <= 1 && SPACE[id].region === "northeast" && SPACE[id].kind === "city"; }
+// is turn 1's free placement (`situationNow` reads it so).
+export function sovietHeld(st, id) { return situationNow(st)?.id === "surrender" && SPACE[id].region === "northeast" && SPACE[id].kind === "city"; }
 // Place up to n points, never above the cap; returns how many landed.
 export function place(st, side, id, n = 1) {
   if (sovietHeld(st, id)) return 0;
@@ -523,7 +572,7 @@ export function eventCampaignTargets(st, side, list, opts) {
 // and the Nationalists anywhere are locked as before. A protection (`isProtected`)
 // is another rule and still holds. Without `side`, no 時局 unlocks anything.
 function situationUnlocks(st, side, id) {
-  const sit = situationOf(st.turn);
+  const sit = situationNow(st);
   return side === CCP && SPACE[id].kind === "city" && !!sit && (sit.id === "decisive_battle" || sit.id === "peace_talks");
 }
 // 本土 (#3, owner 裁決(#2)「只鎖對手的本土,照規則書」): with `homeLockSide:
@@ -773,7 +822,7 @@ export function reformAdvance(st, side, n = 1) {
     // an event, moves 民心 1 their way, and then the Communists put 1 point in a
     // city with blue (not bound by adjacency). Their choice waits in the plan
     // right after the step being executed (the reform, or the event).
-    if (side === KMT && situationOf(st.turn)?.id === "constitution" && st.winner == null) {
+    if (side === KMT && situationNow(st)?.id === "constitution" && st.winner == null) {
       vp(st, KMT, 1);
       if (st.winner != null) return;
       st.plan.splice(1, 0, { do: "constitution", side: CCP, choices: [] });
@@ -856,8 +905,9 @@ function airliftOk(st, id) {
 // through the same target list (the card that ignores it, 平津戰役, will say so).
 export const GARRISON = ["tianjin", "shanghai"];
 export const GARRISON_SUPPORT = 3;
+// `garrison: false` (#13): no 美軍駐華 at all; every reader asks here.
 export function garrisoned(st, id) {
-  return GARRISON.includes(id) && ((st.support || [])[KMT] || 0) >= GARRISON_SUPPORT;
+  return st.options.garrison !== false && GARRISON.includes(id) && ((st.support || [])[KMT] || 0) >= GARRISON_SUPPORT;
 }
 // The 時局's modifiers (#2) come first, each for the side and the kind of
 // target the rulebook names and no other: 全面進攻 the Nationalists +1;
@@ -865,7 +915,7 @@ export function garrisoned(st, id) {
 // Communists +1 on a village; 決戰 the Communists +1 on a city. (`campaign`
 // keeps the total at 0 or more.)
 function situationCampaignMod(st, side, target) {
-  const sit = situationOf(st.turn), sp = SPACE[target];
+  const sit = situationNow(st), sp = SPACE[target];
   if (!sit) return 0;
   switch (sit.id) {
     case "general_offensive": return side === KMT ? 1 : 0;
@@ -914,7 +964,7 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
 // toward the other side, and costs 美國支持 1 if it was the Nationalists. Once a
 // turn, for the first only (orchestrator 裁決 #2, flagged to the owner).
 function truceBroken(st, side) {
-  if (situationOf(st.turn)?.id !== "truce" || st.winner != null) return;
+  if (situationNow(st)?.id !== "truce" || st.winner != null) return;
   if (!st.situationUsed || st.situationUsed.truce) return;
   st.situationUsed = { ...st.situationUsed, truce: true };
   log(st, { type: "truceBroken", side });
@@ -1061,7 +1111,7 @@ export function placePoints(st, side, points, ops, card) {
 }
 // Whether the Communists still have 戰略反攻's jump this turn.
 function jumpOpen(st, side) {
-  return side === CCP && situationOf(st.turn)?.id === "counteroffensive" && !(st.situationUsed && st.situationUsed.jump);
+  return side === CCP && situationNow(st)?.id === "counteroffensive" && !(st.situationUsed && st.situationUsed.jump);
 }
 
 // ---------- decks and hands ----------
@@ -1129,7 +1179,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-8"; // #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition` ("2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-02"; // #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1170,9 +1220,13 @@ function startGame(seed, options) {
   // CIVIL WAR: the free placement is turn 1's 時局 (受降): each side places over
   // its own list of spaces, not bound by adjacency. The Communists place first,
   // as Qin did in Zongheng (the rulebook does not give an order: flagged).
+  // With `situations: false` (#13) there is no 受降 and so no free placement:
+  // the game goes straight to turn 1.
   st.plan = [
-    { do: "setup", side: CCP, n: SETUP.ccp.free, spaces: SETUP.ccp.freeIn, choices: [] },
-    { do: "setup", side: KMT, n: SETUP.kmt.free, spaces: SETUP.kmt.freeIn, choices: [] },
+    ...(situationNow(st)?.id === "surrender" ? [
+      { do: "setup", side: CCP, n: SETUP.ccp.free, spaces: SETUP.ccp.freeIn, choices: [] },
+      { do: "setup", side: KMT, n: SETUP.kmt.free, spaces: SETUP.kmt.freeIn, choices: [] },
+    ] : []),
     { do: "startTurn" },
   ];
   return run(st);
@@ -1388,7 +1442,7 @@ function startTurn(st) {
       log(st, { type: "era", era: era.id });
     }
   }
-  st.rounds = era.rounds.slice();
+  st.rounds = eraLimits(st).rounds;
   st.round = 0;
   st.reformUsed = [0, 0]; st.perkUsed = [false, false]; st.forced = [null, null]; st.revealed = [false, false];
   st.headline = [null, null];
@@ -1402,11 +1456,11 @@ function startTurn(st) {
   st.plan.splice(1, 0, { do: "situation", stage: "start", choices: [] }, { do: "deal" });
 }
 function dealHands(st) {
-  const era = eraOf(st.turn);
+  const { hand } = eraLimits(st);
   // Alternate draws so a mid-deal reshuffle is fair. Each side up to its own hand size.
   for (let guard = 0; guard < 40; guard++) {
     let dealt = 0;
-    for (const side of [CCP, KMT]) if (st.hands[side].length < era.hand[side]) dealt += draw(st, side, 1);
+    for (const side of [CCP, KMT]) if (st.hands[side].length < hand[side]) dealt += draw(st, side, 1);
     if (!dealt) break;
   }
   st.phase = "headline";
@@ -1420,20 +1474,33 @@ function dealHands(st) {
 // hand plays exactly like one reached in play.
 const NE = (kind) => SPACES.filter((s) => s.region === "northeast" && (!kind || s.kind === kind)).map((s) => s.id);
 function situationAsk(st, step, side, spec) {
-  return ask(st, { ...step, side }, { ...spec, tag: "situation", situation: situationOf(st.turn).id });
+  return ask(st, { ...step, side }, { ...spec, tag: "situation", situation: situationNow(st).id });
+}
+// The support tracks' fixed moves at the start of a turn (rulebook 三, 外國勢力:
+// 美國支持 −1 in turn 3, 蘇聯支持 +1 in turn 5, 美國支持 +1 in turn 6 if the
+// Nationalists' 行憲軌 is at 2 or more, 蘇聯支持 +1 in turn 7, 美國支持 −2 in
+// turn 8). They are 外國勢力's, not the 時局's (orchestrator 裁決 #13), so they
+// follow the turn number and do not ask `situationNow`: `situations: false`
+// keeps them.
+export const SUPPORT_SCHEDULE = [
+  { turn: 3, side: KMT, delta: -1 },
+  { turn: 5, side: CCP, delta: 1 },
+  { turn: 6, side: KMT, delta: 1, kmtReform: 2 },
+  { turn: 7, side: CCP, delta: 1 },
+  { turn: 8, side: KMT, delta: -2 },
+];
+function supportSchedule(st) {
+  for (const m of SUPPORT_SCHEDULE) {
+    if (m.turn === st.turn && (m.kmtReform == null || st.reform[KMT] >= m.kmtReform)) moveSupport(st, m.side, m.delta);
+  }
 }
 function situationStep(st, step) {
-  const sit = situationOf(st.turn);
-  if (!sit) return true;
+  const sit = situationNow(st);
   if (step.stage === "start") {
-    log(st, { type: "situation", id: sit.id });
+    if (sit) log(st, { type: "situation", id: sit.id });
     // The track moves first: 和談's −2 is in before the offer.
-    if (sit.id === "general_offensive") moveSupport(st, KMT, -1);
-    if (sit.id === "counteroffensive") moveSupport(st, CCP, 1);
-    if (sit.id === "constitution" && st.reform[KMT] >= 2) moveSupport(st, KMT, 1);
-    if (sit.id === "decisive_battle") moveSupport(st, CCP, 1);
-    if (sit.id === "peace_talks") moveSupport(st, KMT, -2);
-    step.stage = sit.id === "truce" ? "withdrawCcp" : sit.id === "peace_talks" ? "offer" : "done";
+    supportSchedule(st);
+    step.stage = !sit ? "done" : sit.id === "truce" ? "withdrawCcp" : sit.id === "peace_talks" ? "offer" : "done";
   }
   // 停戰, 蘇軍撤離: with 蘇聯支持 ≥ 2 the Communists first put 2 points in ONE
   // space of the Northeast (city or village, up to the cap; orchestrator 裁決 #2,
@@ -2027,7 +2094,7 @@ function placeBarred(st, side) {
 // `noAttrition` effect, gone with the turn's other effects right after).
 function attritionLoss(st) {
   if (!st.options.supply || st.effects.some((e) => e.kind === "noAttrition")) return 0;
-  return situationOf(st.turn)?.id === "decisive_battle" ? 2 : 1;
+  return situationNow(st)?.id === "decisive_battle" ? 2 : 1;
 }
 // At the end of the turn, after the capital check (so a capital that moved
 // supplies already): read the 孤城 once, each loses `attritionLoss` (not below
