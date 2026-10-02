@@ -4,18 +4,166 @@
 // printed ops, whether the event removes the card (`remove`), the year for the
 // rules page, the rulebook's Chinese text, and `effect`.
 //
-// PHASE 0: THIS FILE IS DATA ONLY. No card event is implemented. Every card
-// that is not a scoring card carries `todo: true` and an `effect` that throws,
-// loudly, so that a game which reaches an event stops instead of quietly doing
-// nothing. Writing the 67 events (and a test for each) is M1.
+// `effect(st, side, ch, step)`, as in Zongheng: `side` is the event's owner (the
+// player for a neutral card), `ch` the choices made so far. An effect that needs
+// a decision returns a spec; the engine parks it in `pending` and re-runs the
+// effect with the choice appended once it is made, so stage k of an effect runs
+// exactly when `ch.length === k`. A spec with nothing to choose from (no options,
+// or `n` 0, and `min` 0) resolves itself as "nothing" (`noTarget`).
 //
-// The two aid cards (美援, 蘇援) are not in the deck and not in this file yet.
+// M1, in three batches. #6: the 24 events of 接收期 (orchestrator 裁決 #6):
+//   - placements go through `E.place()`: not bound by adjacency, not by supply,
+//     up to the cap (the rest vanishes), and nothing into 受降's Northeast cities
+//     (`sovietHeld`), which are not even offered;
+//   - 「最多 N」 asks for min(N, what can be chosen), no fewer; 「各放 / 各移除」
+//     picks are distinct, 「可分散」 ones may repeat;
+//   - a free 奇襲 uses the printed ops plus the card's own bonus (not the 「所有牌
+//     行動點 ±1」 effects), over the targets the side could 奇襲 as an action,
+//     within the card's list (`E.eventCampaignTargets`); 民生 is pushed by the
+//     player acting (`st.phasing`); no target, nothing;
+//   - a sided card's choices are its owner's, a neutral card's the player's.
+// The cards of the other two eras still carry `todo: true` and an `effect` that
+// throws, loudly, so that a game which reaches one stops instead of quietly
+// doing nothing.
+import * as E from "./engine.js";
+import { SPACES, STATES, REGIONS, SCORED_REGIONS } from "./board.js";
 
 const C = 0, K = 1, N = null;
 
 const notYet = (id) => () => { throw new Error(`card event not implemented yet: ${id} (M1)`); };
 const scoring = (id, num, zh, en, region, era) => ({ id, num, zh, en, era, side: null, ops: 0, remove: false, scoring: region, text: `${zh}:結算${zh.slice(0, -2)}。`, effect: () => null });
-const card = (id, num, zh, en, era, side, ops, remove, year, text) => ({ id, num, zh, en, era, side, ops, remove, year, text, todo: true, effect: notYet(id) });
+// A card whose event is written (in EFFECTS below) has it; any other is `todo`.
+const card = (id, num, zh, en, era, side, ops, remove, year, text) => (EFFECTS[id]
+  ? { id, num, zh, en, era, side, ops, remove, year, text, effect: EFFECTS[id] }
+  : { id, num, zh, en, era, side, ops, remove, year, text, todo: true, effect: notYet(id) });
+
+// ---------- helpers for the events ----------
+const spaces = (pred) => SPACES.filter(pred).map((s) => s.id);
+const inNE = (s) => s.region === "northeast";
+const withRoom = (st, side, list) => list.filter((id) => E.infOf(st, id)[side] < E.capOf(st, id));
+// Where an event may put `side`'s points: room under the cap, and not 受降's Northeast cities.
+const placeable = (st, side, list) => withRoom(st, side, list).filter((id) => !E.sovietHeld(st, id));
+// Pick k distinct spaces, k = min(n, how many there are): 「最多 N」, and 「任 N」 short of spaces.
+const pickN = (who, n, options, extra = {}) => {
+  const k = Math.min(n, options.length);
+  return { kind: "points", who, n: k, min: k, distinct: true, options, ...extra };
+};
+const pick = (who, options, extra = {}) => pickN(who, 1, options, extra);
+// The free 奇襲 (orchestrator 裁決 #6, 4), for this batch and the next two.
+// `ops` is the printed ops plus the card's own bonus; `list` the card's spaces;
+// `opts` what the card says it ignores (`{ locks: false }`, `{ garrison: false }`).
+function freeCampaign(st, side, ch, list, ops, opts) {
+  if (!ch.length) return pick(side, E.eventCampaignTargets(st, side, list, opts));
+  const [t] = ch[0];
+  if (t) E.campaign(st, side, t, ops, { pusher: st.phasing });
+  return null;
+}
+const CAPITALS = Object.values(STATES).map((s) => s.capital); // 本據: 察綏、太原、桂林、蘭州、昆明
+const cities = (pred = () => true) => spaces((s) => s.kind === "city" && pred(s));
+const support = (st, side) => (st.support || [])[side] || 0;
+const until = (id, side, e) => ({ card: id, side, ...e, until: "turn" }); // 「本回合」「持續至回合結束」: gone at 結算's 「本回合的效果結束」
+
+// The events, by card id. The table at the bottom takes a card's event from here;
+// a card with none here is still `todo`. The decisions and their shapes are the
+// table of orchestrator 裁決 #6.
+const EFFECTS = {
+  // ---------- 接收期・國軍 ----------
+  // Up to 3 cities outside the Northeast with no red (and room for blue): each +1.
+  surrender_order(st, side, ch) {
+    if (!ch.length) return pickN(K, 3, placeable(st, K, cities((s) => !inNE(s) && E.infOf(st, s.id)[C] === 0)), { side: K });
+    for (const id of ch[0]) E.place(st, K, id, 1);
+  },
+  // Two cities with room: each +2, or +1 while 美國支持 is under 3.
+  airlift(st, side, ch) {
+    if (!ch.length) return pickN(K, 2, placeable(st, K, cities()), { side: K });
+    const n = support(st, K) >= 3 ? 2 : 1;
+    for (const id of ch[0]) E.place(st, K, id, n);
+  },
+  kunming_incident(st) { E.place(st, K, "kunming", 3); },
+  // Up to 3 cities with room: each +1; then 民心 1 to the Communists, 美國支持 −1.
+  takeover_officials(st, side, ch) {
+    if (!ch.length) return pickN(K, 3, placeable(st, K, cities()), { side: K });
+    for (const id of ch[0]) E.place(st, K, id, 1);
+    E.vp(st, C, 1);
+    E.moveSupport(st, K, -1);
+  },
+  // One city with blue: no 奇襲 and no 遊說 there this turn (`protect` bars both).
+  japanese_garrisons(st, side, ch) {
+    if (!ch.length) return pick(K, cities((s) => E.infOf(st, s.id)[K] > 0));
+    const [id] = ch[0];
+    if (id) E.addEffect(st, until("japanese_garrisons", K, { kind: "protect", space: id }));
+  },
+  sino_soviet_treaty(st) { E.moveSupport(st, C, -1); E.vp(st, K, 1); },
+  // The box first (on turn 6 it sets off 行憲's 時局, after this event), then the two points.
+  return_to_nanjing(st) {
+    E.reformAdvance(st, K, 1);
+    if (st.winner != null) return;
+    E.place(st, K, "nanjing", 1);
+    E.place(st, K, "shanghai", 1);
+  },
+  reorganisation_conference(st) { for (const id of CAPITALS) E.place(st, K, id, 1); },
+  // A free 奇襲 on any space of the Northeast, the printed 3 ops +1.
+  siping_taken(st, side, ch) { return freeCampaign(st, K, ch, spaces(inNE), CARD.siping_taken.ops + 1); },
+  zhangjiakou_taken(st) { E.remove(st, C, "chasui", 2); E.place(st, K, "chasui", 2); },
+
+  // ---------- 接收期・共軍 ----------
+  // 3 points among the Northeast's villages, repeats allowed, as many as there is room for.
+  into_manchuria(st, side, ch) {
+    const options = placeable(st, C, spaces((s) => inNE(s) && s.kind === "village"));
+    if (!ch.length) {
+      const room = options.reduce((r, id) => r + E.capOf(st, id) - E.infOf(st, id)[C], 0);
+      return { kind: "points", who: C, n: 3, min: Math.min(3, room), side: C, options };
+    }
+    for (const id of ch[0]) E.place(st, C, id, 1);
+  },
+  shangdang_campaign(st) { E.remove(st, K, "jinzhong", 2); E.place(st, C, "taihang", 1); },
+  // 冀魯豫 or 冀中, blue or not: up to 2 blue off, then 1 red.
+  gao_shuxun(st, side, ch) {
+    if (!ch.length) return pick(C, ["jiluyu", "jizhong"]);
+    const [id] = ch[0];
+    if (id) { E.remove(st, K, id, 2); E.place(st, C, id, 1); }
+  },
+  soviet_arms(st) { E.moveSupport(st, C, 1); E.place(st, C, "beiman", 2); },
+  may_fourth_directive(st) {
+    E.reformAdvance(st, C, 1);
+    E.addEffect(st, until("may_fourth_directive", C, { kind: "opsAll", target: C, delta: 1 }));
+  },
+  // `opsOf` keeps a card at 1 at least.
+  arms_embargo(st) {
+    E.moveSupport(st, K, -1);
+    E.addEffect(st, until("arms_embargo", C, { kind: "opsAll", target: K, delta: -1 }));
+  },
+
+  // ---------- 接收期・中立 (`side` is the player) ----------
+  chongqing_talks(st, side) { E.vp(st, side, 1); E.recover(st, 1); },
+  january_truce(st, side) {
+    E.recover(st, 2);
+    E.addEffect(st, until("january_truce", side, { kind: "campaign", who: "both", delta: -1, regions: null }));
+  },
+  // The pairing is `play()`'s (engine.js, `MARSHALL`); alone, as an event, it does nothing.
+  marshall_mission() { return null; },
+  pcc_resolutions(st, side) { E.reformAdvance(st, side, 1); E.moveSupport(st, K, 1); },
+  // Only 奇襲, only the cities: 遊說 and the villages go on (`campaignBan`).
+  soviets_delay(st, side) { E.addEffect(st, until("soviets_delay", side, { kind: "campaignBan", region: "northeast", spaceKind: "city" })); },
+  soviet_removals(st) {
+    for (const id of cities(inNE)) { E.remove(st, C, id, 1); E.remove(st, K, id, 1); }
+    E.moveSupport(st, C, -1);
+  },
+  // A region: in each of its cities that one side controls, that side −1 (never
+  // below 1). A city nobody controls, and the villages, are left alone.
+  inflation(st, side, ch) {
+    if (!ch.length) return { kind: "option", who: side, options: SCORED_REGIONS.map((r) => ({ id: r, label: REGIONS[r].zh })) };
+    for (const id of cities((s) => s.region === ch[0])) {
+      const c = E.controller(st, id);
+      if (c != null && E.infOf(st, id)[c] > 1) E.remove(st, c, id, 1);
+    }
+  },
+  // The whole Northeast, cities and villages: no 奇襲 this turn.
+  june_truce(st, side) {
+    E.addEffect(st, until("june_truce", side, { kind: "campaignBan", region: "northeast", spaceKind: null }));
+    E.recover(st, 1);
+  },
+};
 
 export const CARDS = [
   // The three fronts of 1946 score in the first era; the Northwest and the Rear from the second.
