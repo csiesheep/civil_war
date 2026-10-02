@@ -28,10 +28,16 @@
 //     ops = its support track (`opsOf`), 蘇援 +1 all in the Northeast
 //     (`aidBonus`), 美援's airlift into a 孤城 (`airliftOk`, `placeTargets` /
 //     `placePoints` / `opsOptions` take the card); and 美軍駐華 (`garrisoned`).
+//   - #5 base areas count as 要衝 when a region scores (`baseScoring`, `regionTally`).
+//   - #6 the hooks the 24 cards of 接收期 need (their events are in cards.js):
+//     one test of "may `side` 奇襲 this space" (`canCampaign`), read by
+//     `opsOptions` and by an event's free 奇襲 (`eventCampaignTargets`); the
+//     `campaignBan` effect (`campaignBanned`, also checked by `doOps`); and
+//     Zongheng's 說客 pairing is 馬歇爾調處's (`MARSHALL`, `marshallPairs`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (scoring with base areas, every card event) is not done: that is
-// the rest of M1. The Phase 0
+// differently (the events of 易勢期 and 決戰期) is not done: that is the rest
+// of M1. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
@@ -465,6 +471,30 @@ export function edge(st, side, id) {
   return e;
 }
 export function isProtected(st, id) { return st.effects.some((e) => e.kind === "protect" && e.space === id); }
+// #6: a lasting effect that bars every 奇襲 on a kind of space in a region, for
+// both sides, and nothing else (遊說, 扶植 and events go on): `region`, and
+// `spaceKind` "city" or null for cities and villages alike. 蘇軍延期撤兵 bars the
+// Northeast's cities, 六月東北停戰 the whole Northeast. 日軍留守 is `protect`,
+// which bars 遊說 too.
+export function campaignBanned(st, id) {
+  const sp = SPACE[id];
+  return st.effects.some((e) => e.kind === "campaignBan" && e.region === sp.region && (!e.spaceKind || e.spaceKind === sp.kind));
+}
+// Whether `side` may 奇襲 `id` now: the one test `opsOptions` (so `legal()`) and
+// an event's free 奇襲 read (`eventCampaignTargets`); `doOps` checks the same
+// things one by one, each with its own refusal. Enemy influence there; not 受降's
+// Northeast cities; not 美軍駐華 against the Communists; not locked by 民生; not
+// protected; not barred by a `campaignBan`. A card that says it ignores the
+// locks or 美軍駐華 turns that one test off (`locks: false`, `garrison: false`).
+export function canCampaign(st, side, id, { locks = true, garrison = true } = {}) {
+  return infOf(st, id)[other(side)] > 0 && !sovietHeld(st, id) && !(garrison && side === CCP && garrisoned(st, id))
+    && !(locks && campaignLocked(st, id, side)) && !isProtected(st, id) && !campaignBanned(st, id);
+}
+// An event's free 奇襲 (orchestrator 裁決 #6, 4): the targets are the ones the
+// side could 奇襲 as an action (`canCampaign`), within the card's own list.
+export function eventCampaignTargets(st, side, list, opts) {
+  return list.filter((id) => canCampaign(st, side, id, opts));
+}
 
 // ---------- weariness ----------
 // `side` is who attacks (#2). 決戰 and 和談 (turns 7 and 8): a Communist 奇襲 on
@@ -1075,7 +1105,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-5"; // #5: baseScoring, base areas count as 要衝 when a region scores ("2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-6"; // #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan` ("2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1561,6 +1591,7 @@ function doOps(st, side, card, ops, choice) {
     if (side === CCP && garrisoned(st, t)) fail("campaign: 美軍駐華 -- the Communists may not raid it while 美國支持 is 3 or more");
     if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
+    if (campaignBanned(st, t)) fail("campaign: no 奇襲 there this turn (an event)");
     campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
@@ -1677,6 +1708,12 @@ function headline(st, action) {
   return run(st);
 }
 
+// 馬歇爾調處 (#6) is Zongheng's 說客: played with an enemy card from the same hand
+// (one action round), that card's ops, its event not set off, both discarded.
+// While 美國支持 is 0 it pairs with nothing: `legal()` offers no pair and `play`
+// refuses one, so the card is only its own 1 op. Alone as an event it does nothing.
+const MARSHALL = "marshall_mission";
+function marshallPairs(st) { return ((st.support || [])[KMT] || 0) > 0; }
 function play(st, action) {
   if (st.phase !== "action" || st.pending) fail("not an action round");
   const side = action.side;
@@ -1750,18 +1787,20 @@ function play(st, action) {
   } else if (["place", "campaign", "lobby"].includes(use)) {
     const payload = { use, points: action.points, target: action.target };
     const enemy = card.side != null && card.side !== side;
-    const paired = c === "shuoke" && action.pair;
+    const paired = c === MARSHALL && action.pair;
     // The player chooses whether an enemy card's ops or its event comes first
     // (owner's ruling, #71). A missing or unknown order used to fall silently
     // into ops-first, so an old client, a bug or a hand-made room message could
-    // skip the choice (#73). 說客's pair has no event, so it needs no order.
+    // skip the choice (#73). 馬歇爾調處's pair has no event, so it needs no order.
     if (enemy && !paired && action.order !== "opsFirst" && action.order !== "eventFirst") {
       fail("an enemy card needs an order: opsFirst or eventFirst");
     }
     if (paired) {
-      // 說客: the paired enemy card's ops, no event, both discarded.
+      // 馬歇爾調處 (Zongheng's 說客): the paired enemy card's ops, no event, both
+      // discarded. Not while 美國支持 is 0: the card is then 1 op alone (#6).
       const pair = CARD[action.pair];
-      if (!h.includes(action.pair) || pair.side !== other(side)) fail("說客: pair an enemy card from your hand");
+      if (!marshallPairs(st)) fail("馬歇爾調處: 美國支持 is 0, the card is 1 op alone");
+      if (!pair || !h.includes(action.pair) || pair.side !== other(side)) fail("馬歇爾調處: pair an enemy card from your hand");
       h.splice(h.indexOf(action.pair), 1);
       const pops = opsOf(st, side, action.pair);
       validateOps(st, side, action.pair, pops, payload);
@@ -1782,9 +1821,9 @@ function play(st, action) {
       steps.push({ do: "finishCard", card: c, side, triggered: enemy }, { do: "endAction" });
     }
   } else fail(`play: bad use ${use}`);
-  // 說客's pair is named (#115): its ops are the move's ops and it goes to the
-  // discard pile, so a log without it read as 說客 played alone.
-  log(st, { type: "play", side, card: c, use, ...(c === "shuoke" && action.pair ? { pair: action.pair } : {}) });
+  // 馬歇爾調處's pair is named (#115): its ops are the move's ops and it goes to
+  // the discard pile, so a log without it read as the card played alone.
+  log(st, { type: "play", side, card: c, use, ...(c === MARSHALL && action.pair ? { pair: action.pair } : {}) });
   // Event first, the ops are chosen only after the event, and may go to any
   // use then: the `use` above is only what the play said. The ops step writes
   // the real one back into this entry (#115: the log read 「扶植 4」 for a raid).
@@ -1812,7 +1851,7 @@ export function opsOptions(st, side, card) {
   const airlift = card === "american_aid" ? (id) => airliftOk(st, id) : () => false;
   const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && (!barred(s.id) || airlift(s.id)) && !sovietHeld(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
-  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id, side) && !sovietHeld(st, s.id) && !isProtected(st, s.id) && !(side === CCP && garrisoned(st, s.id))).map((s) => s.id);
+  const campaignTargets = SPACES.filter((s) => canCampaign(st, side, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
   const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
     .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
@@ -1843,7 +1882,7 @@ export function legal(st, side) {
       reform: reformUsesLeft(st, side) > 0 && card.ops >= reformThreshold(st, side),
       enemy: card.side != null && card.side !== side,
     };
-    if (c === "shuoke") uses.pair = h.filter((x) => CARD[x].side === other(side));
+    if (c === MARSHALL) uses.pair = marshallPairs(st) ? h.filter((x) => CARD[x].side === other(side)) : [];
     return { id: c, ops, uses };
   });
   // The aid card (#4): null when it may not be used now (option off, used this
