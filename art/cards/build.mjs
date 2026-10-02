@@ -13,6 +13,11 @@ const CIVIL = STYLE.com_oil.replace(", soldiers in earthy grey and khaki cotton 
 const TAIL = "Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere.";
 const NOTEXT = "No text, no characters, no seals, no writing.";
 const AID = { american_aid: ["K", "nat_closeup", "美援", 0], soviet_aid: ["C", "com_oil", "蘇援", 0] };
+// Seeds that were changed by a re-render (#19: seed + 1000 * n after a hard defect in the picture); every other card keeps 16001 + its index.
+const RESEED = {
+  surrender_order: 19006, league_banned: 17033, chen_cheng: 19034, new_consultative_conference: 19064, beiping_talks: 17066,
+  japanese_garrisons: 17010, sino_soviet_treaty: 17011, mobilisation_order: 17032, ta_kung_pao: 17072, soviet_aid: 17074,
+};
 const meta = new Map();
 for (const c of E.CARDS) meta.set(c.id, { zh: c.zh, num: c.num, year: c.year, side: c.side === 1 ? "K" : c.side === 0 ? "C" : "N" });
 for (const a of E.AID) meta.set(a.id, { zh: a.zh, num: "—", year: null, side: AID[a.id][0] });
@@ -25,7 +30,7 @@ order.forEach((id, i) => {
   const m = meta.get(id), style = styleOf(m, id), civil = !!s[3];
   if (civil && style !== "com_oil") throw new Error("civil on a non-Communist card " + id);
   const head = civil ? CIVIL : STYLE[style];
-  out.push({ key: id, zh: m.zh, side: m.side, style, w: 768, h: 1024, seed: 16001 + i, scene_zh: s[2], prompt: `${head} Scene: ${s[1]} ${NOTEXT} ${TAIL}` });
+  out.push({ key: id, zh: m.zh, side: m.side, style, w: 768, h: 1024, seed: RESEED[id] ?? 16001 + i, scene_zh: s[2], prompt: `${head} Scene: ${s[1]} ${NOTEXT} ${TAIL}` });
 });
 if (out.length !== 74 || SCENES.length !== 74) throw new Error("count " + out.length + "/" + SCENES.length);
 fs.writeFileSync(dir + "prompts.json", JSON.stringify(out, null, 2) + "\n");
@@ -36,7 +41,7 @@ const sec = (title, pred) => `### ${title}\n\n| 編號 | 牌名 | 陣營 | 年 |
 const isScoreOrAid = (e) => e.key.startsWith("score_") || e.key.endsWith("_aid");
 const md = `# 74 張牌的圖 prompt(#16)
 
-owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援),**還沒有出任何一張圖**。完整的 prompt、種子、尺寸在 \`prompts.json\`;下面的表是給你讀的:每張牌畫什麼。覺得哪張畫錯,說牌名和你想要的畫面。
+owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援),圖已經出了(#19):\`img/<key>.jpg\`,逐張的檢查在 \`CHECK.md\`,三張對照表是 \`sheet-nationalist.jpg\`、\`sheet-communist.jpg\`、\`sheet-neutral.jpg\`。完整的 prompt、種子、尺寸在 \`prompts.json\`;下面的表是給你讀的:每張牌畫什麼。覺得哪張畫錯,說牌名和你想要的畫面。
 
 ## 三種風格(你在 #14 挑的),與結尾
 
@@ -48,7 +53,7 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 
 第一輪出圖(#17,十張牌 × 兩個模型)之後,所有畫面都改過:飛機的機徽寫成「藍底白色十二芒日」、機身橄欖綠或銀色,不畫星;共軍的旗一律寫「素面紅旗,沒有星、徽、字」;國旗每次寫全(紅地、藍角、白色十二芒日);國軍軍服卡其或橄欖綠、美式鋼盔、軍官軍帽,共軍軍服灰或卡其棉布、布帽、綁腿;有名字的人物都寫了外貌(頭、臉、衣服),不單靠名字。每則畫面後面都有一句「No text, no characters, no seals, no writing.」。
 
-每一則的形狀:\`<風格文字> Scene: <畫面與年代細節> <結尾>\`,全英文,沒有要求圖裡出現任何字。種子 = 16000 + 該牌在 prompts.json 的序號。尺寸 768 × 1024。
+每一則的形狀:\`<風格文字> Scene: <畫面與年代細節> <結尾>\`,全英文,沒有要求圖裡出現任何字。種子 = 16000 + 該牌在 prompts.json 的序號;出圖時有硬傷的牌換過種子(原種子 + 1000、+ 2000 或 + 3000,見 \`build.mjs\` 的 \`RESEED\` 與 \`CHECK.md\`),\`prompts.json\` 裡的種子就是交付那張圖用的種子。尺寸 768 × 1024。
 
 ## 怎麼出其中一張(之後出圖的人)
 
