@@ -10,8 +10,8 @@ const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 
 // Play a whole game with random legal actions. Returns the final state and
 // the number of actions taken. Throws when nobody can act, when the product
-// offers no action, when an offered action is refused, or when the game does
-// not end: each of those is what the fuzz is looking for.
+// offers no action, when an offered action is refused or crashes, or when the
+// game does not end: each of those is what the fuzz is looking for.
 export function playRandomGame(seed, options = {}, { maxActions = 4000, onStep } = {}) {
   const rng = E.makeRng(seed ^ 0x9e3779b9);
   let st = E.createGame(seed, options);
@@ -24,7 +24,9 @@ export function playRandomGame(seed, options = {}, { maxActions = 4000, onStep }
     const action = randomAction(st, side, rng);
     if (!action) throw new Error(`game ${seed}: no action for side ${side} (turn ${st.turn}, phase ${st.phase})`);
     try { st = E.apply(st, action); }
-    catch (e) { throw new Error(`game ${seed}, turn ${st.turn}, phase ${st.phase}: the engine refused ${JSON.stringify(action)}: ${e && e.message}`); }
+    // The engine throws a plain Error both when it refuses an action and when something inside it
+    // breaks (a card's event, say), so the message says both; what it threw tells which.
+    catch (e) { throw new Error(`game ${seed}, turn ${st.turn}, phase ${st.phase}: the engine refused or crashed on ${JSON.stringify(action)}: ${e && e.message}`); }
     if (onStep) onStep(st, action);
   }
   return { st, actions: n };

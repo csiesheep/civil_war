@@ -46,7 +46,7 @@ test("fuzz: random legal games", () => {
   const events = Object.entries(total.events).sort((a, b) => a[1] - b[1]);
   console.log(`結束的方式 ${JSON.stringify(total.reasons)}`);
   console.log(`結束的回合 ${JSON.stringify(total.turns)}`);
-  console.log(`事件 ${events.length} 種都結算過;最少的三種 ${events.slice(0, 3).map(([k, n]) => `${k} ${n}`).join("、")}`);
+  console.log(`事件 67 種裡結算過 ${events.length} 種;最少的三種 ${events.slice(0, 3).map(([k, n]) => `${k} ${n}`).join("、")}`);
   if (total.rerun) console.log(`有 ${total.rerun} 個區塊第一次沒有結果,重跑了一次`);
   for (const e of total.errors.slice(0, 10)) console.log(`失敗 · 種子 ${e.seed} · ${e.kind}: ${e.message}`);
   for (const s of total.replayMismatch.slice(0, 10)) console.log(`失敗 · 種子 ${s} · 從種子與動作重播,結果和原局不同`);
