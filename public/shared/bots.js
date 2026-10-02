@@ -8,6 +8,7 @@
 // normal = one ply plus noise; hard = one ply, then the other side's best
 // reply on the top few, less noise.
 import * as E from "./engine.js";
+import { randomAction, randomPoints, randomOps, randomChoice } from "./random.js";
 
 const { CCP, KMT, SPACES, SPACE, STATES, SCORED_REGIONS, CARD, ERA_DECKS, ERAS, JIUDING } = E;
 export const LEVELS = ["easy", "normal", "hard"];
@@ -685,105 +686,9 @@ function bestHeadline(view, side, cards, rng, level) {
 }
 
 // ---------- random play (easy, and the fuzz driver) ----------
-export function randomPoints(st, side, ops, rng) {
-  const trial = E.clone(st); trial.log = [];
-  const reach = E.reachFrom(trial, side);
-  const points = [];
-  let left = ops;
-  for (let i = 0; i < ops; i++) {
-    const cands = SPACES.filter((s) => E.canPlaceAt(trial, side, s.id, reach) && E.infOf(trial, s.id)[side] < E.capOf(trial, s.id) && E.placeCost(trial, side, s.id) <= left);
-    if (!cands.length) break;
-    const id = pickOne(cands, rng).id;
-    left -= E.placeCost(trial, side, id);
-    E.place(trial, side, id, 1);
-    points.push(id);
-    if (left <= 0) break;
-  }
-  return points;
-}
-export function randomOps(st, side, ops, allowed, rng) {
-  const o = E.opsOptions(st, side);
-  const uses = allowed.filter((u) => (u === "place" ? o.placeOptions.length : u === "campaign" ? o.campaignTargets.length : o.lobbyTargets.length) > 0);
-  if (!uses.length) return null;
-  const use = pickOne(uses, rng);
-  if (use === "place") return { use, points: randomPoints(st, side, ops, rng) };
-  if (use === "campaign") return { use, target: pickOne(o.campaignTargets, rng) };
-  return { use, target: pickOne(o.lobbyTargets, rng).id };
-}
-export function randomChoice(st, p, rng) {
-  switch (p.kind) {
-    case "points": {
-      const n = p.min + (p.n > p.min ? rng.int(p.n - p.min + 1) : 0);
-      const counts = {}, out = [];
-      for (let i = 0; i < n; i++) {
-        const cands = p.options.filter((id) => roomFor(p, st, p.side, id, counts) > 0);
-        if (!cands.length) break;
-        const id = pickOne(cands, rng);
-        counts[id] = (counts[id] || 0) + 1; out.push(id);
-      }
-      return out;
-    }
-    case "card": {
-      const min = p.min ?? 1, max = p.n ?? 1;
-      const n = min + (max > min ? rng.int(max - min + 1) : 0);
-      const pool = p.options.slice(), out = [];
-      while (out.length < n && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
-      return out;
-    }
-    case "option": return pickOne(p.options, rng).id;
-    case "ops": return randomOps(st, p.who, p.ops, p.allowed, rng);
-    default: throw new Error(`randomChoice: ${p.kind}`);
-  }
-}
-export function randomAction(st, side, rng) {
-  const L = E.legal(st, side);
-  switch (L.kind) {
-    case "pending": return { type: "choose", side, choice: randomChoice(st, L.pending, rng) };
-    case "headline": return { type: "headline", side, card: pickOne(L.cards, rng) };
-    case "action": {
-      if (L.bog && L.bog.length) return { type: "play", side, card: pickOne(L.bog, rng), use: "bog" };
-      const scoring = L.cards.find((c) => CARD[c.id].scoring);
-      if (scoring) return { type: "play", side, card: scoring.id, use: "event" };
-      const opts = [];
-      // 說客 alone as its event is a dead play (#115): only when nothing else is legal.
-      const dead = L.cards.some((c) => c.id === "shuoke") ? { type: "play", side, card: "shuoke", use: "event" } : null;
-      for (const c of L.cards) {
-        const u = c.uses;
-        if (c.id !== "shuoke") opts.push({ type: "play", side, card: c.id, use: "event" });
-        if (u.reform) opts.push({ type: "play", side, card: c.id, use: "reform" });
-        const order = () => (u.enemy ? (rng.next() < 0.5 ? "eventFirst" : "opsFirst") : undefined);
-        if (u.place) opts.push(() => { const o = order(); return { type: "play", side, card: c.id, use: "place", order: o, points: o === "eventFirst" ? undefined : randomPoints(st, side, u.place.ops, rng) }; });
-        if (u.campaign) opts.push(() => ({ type: "play", side, card: c.id, use: "campaign", order: order(), target: pickOne(u.campaign.targets, rng) }));
-        if (u.lobby) opts.push(() => ({ type: "play", side, card: c.id, use: "lobby", order: order(), target: pickOne(u.lobby.targets, rng).id }));
-        if (u.pair && u.pair.length) opts.push(() => {
-          const pair = pickOne(u.pair, rng);
-          const ops = randomOps(st, side, E.opsOf(st, side, pair), ["place", "campaign", "lobby"], rng);
-          return ops ? { type: "play", side, card: c.id, pair, ...ops } : null;
-        });
-      }
-      if (L.jiuding) {
-        const j = L.jiuding;
-        if (j.place) opts.push(() => ({ type: "play", side, card: JIUDING, use: "place", points: randomPoints(st, side, 4, rng) }));
-        if (j.campaign) opts.push(() => ({ type: "play", side, card: JIUDING, use: "campaign", target: pickOne(j.campaign.targets, rng) }));
-        if (j.lobby) opts.push(() => ({ type: "play", side, card: JIUDING, use: "lobby", target: pickOne(j.lobby.targets, rng).id }));
-      }
-      // A pair with no ops to spend comes back null: draw again from the rest.
-      // #123: same rejection for a play that would collapse the realm on
-      // this side right now (dropSelfCollapse's own comment, above) -- easy
-      // is pure random with no evaluation at all, so it is the level most
-      // likely to walk into one with a safe card sitting right next to it.
-      const riskGate = st.weariness <= COLLAPSE_RISK_WEARINESS;
-      while (opts.length) {
-        const i = rng.int(opts.length), o = opts[i];
-        const a = typeof o === "function" ? o() : o;
-        if (a && (!riskGate || !E.actionWouldCollapse(st, side, a))) return a;
-        opts.splice(i, 1);
-      }
-      return dead;
-    }
-    default: return null;
-  }
-}
+// #9: the random player is its own module now (random.js); these are the same
+// functions, re-exported, so that there is one copy of it.
+export { randomAction, randomPoints, randomOps, randomChoice };
 
 // Every candidate with its value, best first: for tests, debugging and hints.
 export function scoreCandidates(view, side, rng, level = "normal") {
