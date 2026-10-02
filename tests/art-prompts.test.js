@@ -14,7 +14,7 @@
 // Three verdicts per check; everything answers 尚未實作 until art/cards/prompts.json exists.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { R, section, check, eq, ok, nonEmpty, summary } from "./harness.js";
 import * as E from "../public/shared/engine.js";
@@ -127,6 +127,51 @@ check("給 owner 看的對照表 art/cards/README.md:每一張牌的名字都在
   if (!existsSync(TABLE)) return "art/cards/README.md 還沒有";
   const t = readFileSync(TABLE, "utf8"), missing = WANT.filter((w) => !t.includes(w.zh)).map((w) => w.zh);
   return ok(!missing.length, missing.length ? `表裡找不到:${first(missing)}` : `74 張牌的名字都在表裡(${t.length} 個字元)`);
+});
+
+section("A4 圖(#19 Qwen Image 2.1;#20 Z-Image Turbo,給 owner 一張一張挑)");
+
+// Width and height of a JPEG from its frame header (no dependency); null when the file is not one.
+const jpegSize = (file) => {
+  const b = readFileSync(file);
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null;
+  for (let i = 2; i + 9 < b.length; i += 2 + b.readUInt16BE(i + 2)) {
+    if (b[i] !== 0xff) return null;
+    const m = b[i + 1];
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return [b.readUInt16BE(i + 7), b.readUInt16BE(i + 5)];
+  }
+  return null;
+};
+const imagesIn = (dir, what) => {
+  const names = readdirSync(dir), bad = [];
+  for (const w of WANT) {
+    const f = dir + "/" + w.key + ".jpg";
+    if (!existsSync(f)) { bad.push(`${w.zh}:沒有圖`); continue; }
+    const s = jpegSize(f);
+    if (!s || s[0] !== SIZE[0] || s[1] !== SIZE[1]) bad.push(`${w.zh}:${s ? s.join(" × ") : "不是 JPEG"}`);
+  }
+  const extra = names.filter((n) => !WANT.some((w) => w.key + ".jpg" === n));
+  return all(eq(WANT.length, 74, "應該有的張數"), ok(!bad.length, bad.length ? first(bad) : ""), ok(!extra.length, extra.length ? `多出來的檔案:${first(extra)}` : ""),
+    ok(true, `${what} 74 張,檔名是牌的 id,都是 768 × 1024`));
+};
+
+check("Qwen Image 2.1 的圖:art/cards/img/ 底下一張牌一張,768 × 1024,沒有多的", () => {
+  if (TODO) return TODO;
+  const dir = here("../art/cards/img");
+  return existsSync(dir) ? imagesIn(dir, "Qwen Image 2.1") : "TODO: art/cards/img/ 還沒有";
+});
+
+check("Z-Image Turbo 的圖:art/cards/img-zimage/ 底下一張牌一張,768 × 1024;zimage.json 記下每一張的種子與步數", () => {
+  if (TODO) return TODO;
+  const dir = here("../art/cards/img-zimage"), rec = here("../art/cards/zimage.json");
+  if (!existsSync(dir) || !existsSync(rec)) return "TODO: art/cards/img-zimage/ 與 art/cards/zimage.json 還沒有";
+  const Z = JSON.parse(readFileSync(rec, "utf8")), bad = [];
+  for (const w of WANT) {
+    const z = Array.isArray(Z) ? Z.filter((e) => e.key === w.key) : [];
+    if (z.length !== 1) bad.push(`${w.zh}:zimage.json 裡有 ${z.length} 筆`);
+    else if (!Number.isInteger(z[0].seed) || !Number.isInteger(z[0].steps)) bad.push(`${w.zh}:種子 ${z[0].seed}、步數 ${z[0].steps}`);
+  }
+  return all(eq(Array.isArray(Z) ? Z.length : -1, 74, "zimage.json 的筆數"), ok(!bad.length, bad.length ? first(bad) : ""), imagesIn(dir, "Z-Image Turbo"));
 });
 
 // ---------------------------------------------------------------- verdict
