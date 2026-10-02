@@ -1,0 +1,141 @@
+{
+  "models": {
+    "qwen": {
+      "name": "Qwen Image 2.1",
+      "workflow": "workflow_api_qwen.json (from art/explore/14/r3/workflow_api.json)",
+      "host": "http://127.0.0.1:8188",
+      "steps": 25,
+      "cfg": 1,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "prefix": "civil_war_17_qwen_",
+      "file": "<key>__qwen.jpg"
+    },
+    "zimage8": {
+      "name": "Z-Image Turbo, 8 steps",
+      "workflow": "workflow_api_zimage.json",
+      "host": "http://127.0.0.1:8188",
+      "steps": 8,
+      "cfg": 1,
+      "sampler": "res_multistep",
+      "scheduler": "simple",
+      "shift": 3,
+      "prefix": "civil_war_17_z8_",
+      "file": "<key>__zimage8.jpg"
+    },
+    "zimage20": {
+      "name": "Z-Image Turbo, 20 steps",
+      "workflow": "workflow_api_zimage.json",
+      "host": "http://127.0.0.1:8188",
+      "steps": 20,
+      "cfg": 1,
+      "sampler": "res_multistep",
+      "scheduler": "simple",
+      "shift": 3,
+      "prefix": "civil_war_17_z20_",
+      "file": "<key>__zimage20.jpg"
+    }
+  },
+  "cards": [
+    {
+      "key": "airlift",
+      "zh": "美軍空運",
+      "style": "nat_closeup",
+      "w": 768,
+      "h": 1024,
+      "seed": 16007,
+      "scene_zh": "1945 年 10 月清晨,國軍士兵排隊登上橄欖綠的美製 C-47 運輸機(機身只有小小的青天白日機徽),美軍空運國軍到北平。",
+      "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A low-angle view up at an olive-drab American C-47 transport parked on a grass airfield outside Beiping at dawn, only a small blue-and-white sun roundel of the Chinese air force on its fuselage and nothing else painted on it, a long line of Nationalist soldiers in steel helmets and padded khaki uniforms with rifles and bedrolls climbing the ramp, an American crew chief in a flight jacket helping them up, more C-47s lined up behind in golden mist, wooden crates and jeeps beside them. China, October 1945, American-built C-47 in olive drab metal, not painted in flag colours, no jets. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "hu_takes_yanan",
+      "zh": "胡宗南佔延安",
+      "style": "nat_closeup",
+      "w": 768,
+      "h": 1024,
+      "seed": 16030,
+      "scene_zh": "1947 年 3 月延安:國軍開進延安,寶塔山旁升起國旗,胡宗南騎馬走在最前面,窯洞與黃土山坡。",
+      "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The loess hills of northern Shaanxi in March 1947: Nationalist soldiers in padded khaki-grey uniforms march up a dirt road into Yan'an, the tall brick pagoda on the hilltop above rows of cave dwellings, the Republic of China flag (blue canton with a white twelve-rayed sun on a red field, no yellow star) raised beside the pagoda, General Hu Zongnan, a stocky officer with a small moustache in a Nationalist general's uniform, on a horse in the foreground looking up, patches of last snow on the yellow slopes. China, March 1947, yellow earth, wool uniforms, rifles and mules, no modern buildings. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "return_to_nanjing",
+      "zh": "還都南京",
+      "style": "nat_closeup",
+      "w": 768,
+      "h": 1024,
+      "seed": 16012,
+      "scene_zh": "1946 年 5 月 5 日還都南京:蔣介石與宋美齡並肩登上中山陵石階,群眾揮舞青天白日旗,春天。",
+      "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: Chiang Kai-shek in a military uniform with his cap in his hand and Madame Chiang in a blue qipao climbing the steps side by side, an honour guard, a throng of cheering civilians waving small Republic of China flags, plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "chiang_steps_down",
+      "zh": "蔣下野",
+      "style": "nat_closeup",
+      "w": 768,
+      "h": 1024,
+      "seed": 16055,
+      "scene_zh": "1949 年 1 月浙江溪口清晨:蔣介石穿長袍、手拿禮帽,獨自走下松林溪邊石徑回老家(蔣下野)。",
+      "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: Xikou in Zhejiang on a misty morning: Chiang Kai-shek in a plain dark long gown, a felt hat held in his hand, walks alone down a stone path beside a stream through pine woods and early plum blossom toward a white-walled ancestral house, one aide with a leather case following at a respectful distance, the sky pale rose and grey, low-angle stern profile. Xikou, January 1949, no signboards. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "into_manchuria",
+      "zh": "闖關東",
+      "style": "com_oil",
+      "w": 768,
+      "h": 1024,
+      "seed": 16016,
+      "scene_zh": "1945 年 10 月山海關:共軍部隊與幹部穿過關門進入東北,舉著素面紅旗(「闖關東」我畫成共軍進入東北,不是民間移民)。",
+      "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Shanhaiguan Pass, where the Great Wall meets the sea: a long column of Communist soldiers and cadres in padded grey and khaki cotton uniforms with leg wrappings, rifles and bedrolls marching through the great arched gate of the grey brick fortress heading north-east, mule carts with ammunition, a plain red flag carried at the front, the rust-brown Great Wall climbing the hills behind and a strip of blue sea, autumn dust. Northeast China gateway, October 1945, plain red flag with no star and no emblem, grey and khaki cloth uniforms, no modern vehicles. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "dabie_march",
+      "zh": "挺進大別山",
+      "style": "com_oil",
+      "w": 768,
+      "h": 1024,
+      "seed": 16040,
+      "scene_zh": "1947 年 8 月大別山暴雨中:共軍士兵高舉槍與背包,涉過齊腰深的河水,騾子游在旁邊,背後是青色山嶺(挺進大別山)。",
+      "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: A flooded river in the Dabie Mountains in heavy summer rain: a long line of Communist soldiers in grey cotton uniforms wading waist-deep across the brown water, rifles and packs held overhead, pack mules swimming beside them, a plain red flag raised on a pole, steep green mountains in grey rain behind, mud on the bank. Anhui and Hubei, August 1947, plain red flag with no star, grey and khaki cloth uniforms and straw sandals, no boats. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "land_law",
+      "zh": "土地法大綱",
+      "style": "com_oil",
+      "w": 768,
+      "h": 1024,
+      "seed": 16041,
+      "scene_zh": "1947 年 10 月金黃的穀田:農民在新分到的地上釘木樁、拉繩丈量,老農跪著捧起一把土(土地法大綱:耕者有其田)。",
+      "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, warm red light over everything. Scene: A golden millet field in a bright autumn afternoon: a line of peasants in blue cotton jackets, men and women, hammer wooden boundary stakes into the earth to mark their new plots, a cadre in a grey cotton jacket stretches a measuring rope between two stakes, an old farmer kneels to hold a handful of earth, children running between the stalks, red flags on poles, mud-brick village behind. North China, October 1947, no soldiers, no signboards, no readable papers. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "liaoshen_campaign",
+      "zh": "遼瀋戰役",
+      "style": "com_oil",
+      "w": 768,
+      "h": 1024,
+      "seed": 16057,
+      "scene_zh": "1948 年 10 月 14 日夜錦州:共軍衝過被砲火轟開的城牆缺口,火光映紅夜空(遼瀋戰役的錦州總攻)。",
+      "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: The assault on the walled city of Jinzhou at night: Communist soldiers in grey cotton uniforms climb through a smashed breach in the brick city wall past rope ladders, artillery muzzle flashes and fires painting the sky blood red, a red flag carried at the front, steel-helmeted defenders' sandbags torn apart, thick smoke. Jinzhou, Northeast China, 14 October 1948, plain red flag with no star, grey and khaki cloth uniforms. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "chongqing_talks",
+      "zh": "重慶談判",
+      "style": "real_tech",
+      "w": 768,
+      "h": 1024,
+      "seed": 16022,
+      "scene_zh": "1945 年 8 月 28 日重慶九龍坡機場:戴白色遮陽帽的毛澤東走下飛機,赫爾利與張治中握手迎接,周恩來在後(重慶談判)。",
+      "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: Jiulongpo airfield outside Chongqing on 28 August 1945: Mao Zedong in a white pith helmet and a grey Zhongshan suit stands at the foot of the steps of a silver C-47 transport with Zhou Enlai behind him, receiving a handshake from American ambassador Patrick Hurley in a dark suit and Nationalist General Zhang Zhizhong in uniform, a crowd and press photographers with flashbulb cameras, misty green mountains and the river valley behind. Chongqing, August 1945, silver aircraft with only a small roundel, no signboards. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    },
+    {
+      "key": "inflation",
+      "zh": "通貨膨脹",
+      "style": "real_tech",
+      "w": 768,
+      "h": 1024,
+      "seed": 16028,
+      "scene_zh": "1948 年城市米店門口:長長的人龍,有人推著獨輪車裝滿一捆捆鈔票,有人背著一大袋鈔票買米(通貨膨脹)。",
+      "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A rice shop in a city street with a long queue of desperate townspeople, a man pushing a wheelbarrow piled high with bundles of banknotes, another man carrying a huge sack stuffed with paper money, sacks of rice inside the shop, plain bare wooden shop fronts with no signboards and no hanging signs. China, 1948, cloth gowns, straw baskets, Chinese paper money bundled with paper bands, banknotes with no readable characters, no modern cars. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+    }
+  ]
+}
