@@ -10,6 +10,7 @@ COLS, ROWS, W, H, G, GAP = 4, 3, 360, 480, 30, 12
 CW = 2 * W + GAP
 HEAD, TAG, LAB, DEF = 70, 64, 66, 40
 CH = TAG + H + LAB + DEF
+ROWS = (len(jobs) + COLS - 1) // COLS
 sheet = Image.new('RGB', (G + COLS * (CW + G), HEAD + G + ROWS * (CH + G)), (255, 255, 255))
 d = ImageDraw.Draw(sheet)
 d.text((G, 16), 'A = Qwen Image 2.1     B = Z-Image Turbo', fill=(0, 0, 0), font=title)
@@ -25,6 +26,6 @@ for i, j in enumerate(jobs):
             d.text((xx, y + TAG + H + LAB + 4), ' '.join(bad), fill=RED, font=mid)
     ly = y + TAG + H + 6
     d.text((x, ly), j['num'], fill=(0, 0, 0), font=big)
-    d.text((x + d.textlength(j['num'], font=big) + 16, ly + 12), j['zh'], fill=(20, 20, 20), font=mid)
+    if j['zh'] != j['num']: d.text((x + d.textlength(j['num'], font=big) + 16, ly + 12), j['zh'], fill=(20, 20, 20), font=mid)
 sheet.save(out, quality=88)
 print(out, sheet.size)
