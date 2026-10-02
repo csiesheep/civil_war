@@ -1581,13 +1581,17 @@ check("根據地只在記分時算要衝:奇襲它不推民生,凋敝時也不�
 check("baseScoring 是一個開關:預設開;關掉時只算城的要衝(縱橫的算法)", () => {
   const t = baseTodo(); if (t) return t;
   const off = position({}, { baseScoring: false }), offEast = position(EAST_BASES, { baseScoring: false });
+  const noKey = position(); delete noKey.options.baseScoring;
   // Without the bases: opening 華北 共 存在 4 + 0, 國 存在 4 + 2; 華東中原 國 2 spaces to 1 and 1 要衝 to 0 → 優勢 8 + 1, 共 存在 4;
   // 西北 共 2, 國 2 + 1. With EAST_BASES: 共 3 spaces but 0 要衝 → 存在 4; 國 存在 4 + 1.
   return all(
     eq(E.DEFAULT_OPTIONS.baseScoring, true, "DEFAULT_OPTIONS.baseScoring"), eq(off.options.baseScoring, false, "對照局的選項"),
     eq(tally(off, "north"), "共 presence 4 / 國 presence 6", "關掉時開局華北"), eq(tally(off, "east"), "共 presence 4 / 國 domination 9", "關掉時開局華東中原"),
     eq(tally(off, "northwest"), "共 presence 2 / 國 presence 3", "關掉時開局西北"), eq(tally(offEast, "east"), "共 presence 4 / 國 presence 5", "關掉時華東中原(共軍 3 個據點、2 個根據地)"),
-    ok(true, "關掉時根據地不算:開局華東中原是國軍優勢 9 對 4;開著時是 5 對 5"),
+    // A game created before #5 has no such key in its options: it keeps Zongheng's counting (silent under an
+    // injected defect while #5 was verified; the probe saw it).
+    eq(tally(noKey, "east"), "共 presence 4 / 國 domination 9", "選項裡沒有 baseScoring 的舊局,開局華東中原"),
+    ok(true, "關掉時根據地不算:開局華東中原是國軍優勢 9 對 4;開著時是 5 對 5;沒有這個 key 的舊局照關掉算"),
   );
 });
 
