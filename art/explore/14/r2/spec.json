@@ -1,0 +1,83 @@
+{
+  "factions": {
+    "nat": ["nat_calendar", "nat_poster", "nat_pictorial"],
+    "com": ["com_woodcut", "com_poster", "com_oil"],
+    "other": ["real_press", "real_color", "real_film"]
+  },
+  "styles": {
+    "nat_calendar": "A 1940s Shanghai calendar-poster (yuefenpai) lithograph, soft pastel colours in smooth airbrushed gouache, gentle gradients, delicate fine outlines, polished idealised figures, warm rosy tones, an ornamental frame border with floral corner motifs, glossy commercial print finish.",
+    "nat_poster": "A 1940s Republic of China government propaganda poster, flat bold graphic design in blue, white and red, the national flag of the Republic of China (red field with a blue canton bearing a white twelve-rayed sun) prominent, strong clean geometric shapes, a large bold traditional Chinese headline in heavy lettering across the top.",
+    "nat_pictorial": "A page from a 1940s Chinese pictorial news magazine, cream newsprint, a coarse halftone-printed black-and-white photograph with a thin black border, a bold traditional Chinese headline in large type above it and a small caption line below, thin ruled lines, slightly yellowed paper.",
+    "com_woodcut": "A 1940s Yan'an revolutionary woodcut print in the Lu Xun Art Academy manner, bold black and white knife-cut lines, thick contours, strong contrast, simplified powerful shapes, rough hand-printed paper, a plain red flag as the only touch of red.",
+    "com_poster": "A 1940s liberated-area propaganda poster in the New Year print manner, flat saturated red and yellow colours, thick black outlines, simple folk-art figures, a plain red flag, a dominant red background, a bold slogan in large traditional Chinese characters.",
+    "com_oil": "A heavy realist revolutionary history oil painting, thick impasto brushwork, dramatic warm light with deep reds and earth browns, monumental composition, determined figures, a plain red flag in the wind, visible canvas texture.",
+    "real_press": "A yellowed 1940s black-and-white press photograph, silver gelatin print, heavy film grain, low contrast, scratches and dust, vignetted corners, candid documentary composition.",
+    "real_color": "A hand-coloured 1940s photograph, a black-and-white photo with soft translucent hand-tinted colours, muted pastel tones, slightly faded, fine grain, early colour print look.",
+    "real_film": "A cinematic film still from a 1940s-period drama shot on 35mm, realistic natural lighting, shallow depth of field, rich natural colours, subtle film grain, wide anamorphic-style framing."
+  },
+  "cards": {
+    "airlift": {
+      "faction": "nat",
+      "scene": "an airfield with a twin-engine C-47 transport aircraft carrying the Republic of China sun emblem on its wing, a line of Nationalist soldiers in steel helmets and padded uniforms boarding up the ramp, wooden crates beside it, other transport aircraft behind",
+      "period": "China 1945, American-built C-47, steel helmets, no jets, no modern vehicles.",
+      "text": {
+        "nat_calendar": "A decorative title cartouche at the top reads exactly “勝利還都”.",
+        "nat_poster": "The headline across the top reads exactly “美機空運”.",
+        "nat_pictorial": "The headline above the photograph reads exactly “美機空運國軍”. The caption line below the photograph reads exactly “國軍官兵登機待運”."
+      }
+    },
+    "hu_takes_yanan": {
+      "faction": "nat",
+      "scene": "the loess hills of northern Shaanxi with rows of cave dwellings and the tall brick pagoda of Yan'an on the hilltop, the Republic of China flag raised beside the pagoda, Nationalist soldiers marching up a dirt road into the town, a general in a Nationalist army uniform resembling Hu Zongnan on horseback in front",
+      "period": "China 1947, yellow earth, cave dwellings, wool uniforms, rifles and mules, no modern buildings.",
+      "text": {
+        "nat_calendar": "A decorative title cartouche at the top reads exactly “克復延安”. The flag by the pagoda is the Republic of China flag: red field, blue canton in the upper corner with a white twelve-rayed sun, and no yellow star.",
+        "nat_poster": "The headline across the top reads exactly “收復延安”.",
+        "nat_pictorial": "The headline above the photograph reads exactly “國軍進入延安”. The caption line below the photograph reads exactly “國軍部隊開入延安城”. The flag by the pagoda shows a white sun in its upper corner, no star."
+      }
+    },
+    "into_manchuria": {
+      "faction": "com",
+      "scene": "a long column of Communist soldiers and cadres in padded cotton uniforms with leg wrappings marching north across a snowy plain beside a steam locomotive pulling open wagons full of troops, a plain red flag carried at the front, a thatched village in the distance",
+      "period": "Northeast China 1945, coal-fired steam locomotive, cloth uniforms, plain red flag only, no modern vehicles.",
+      "text": {
+        "com_woodcut": "A banner in the picture reads exactly “挺進東北”.",
+        "com_poster": "The slogan across the top reads exactly “到東北去”. The flag is a plain red cloth with no star and no emblem on it.",
+        "com_oil": ""
+      }
+    },
+    "dabie_march": {
+      "faction": "com",
+      "scene": "a night river crossing: Communist soldiers in cloth uniforms with leg wrappings and straw sandals pushing wooden boats off a dark shore, a long line of marching men with rifles winding down a mountain path to the water, a plain red flag held up in the lead boat, steep mountains and a moon behind",
+      "period": "China 1947, wooden flat-bottomed boats, rifles, pack mules, plain red flag only, no motorboats.",
+      "text": {
+        "com_woodcut": "A long white cloth banner on a pole in the lead boat carries two large bold black characters reading exactly “渡河”.",
+        "com_poster": "The slogan across the top reads exactly “挺進大別山”.",
+        "com_oil": ""
+      }
+    },
+    "chongqing_talks": {
+      "faction": "other",
+      "scene": "the 1945 Chongqing negotiations: Chiang Kai-shek in a plain military tunic and Mao Zedong in a grey cadre suit and cap shaking hands in a reception hall, Zhou Enlai and Patrick Hurley standing beside them, press photographers with flashbulbs, a window showing a foggy mountain city behind",
+      "period": "Chongqing, August 1945, wooden furniture, suits and military tunics, flashbulb cameras.",
+      "text": {
+        "real_press": "A cloth banner on the wall behind them reads exactly “和平建國”.",
+        "real_color": "A cloth banner on the wall behind them reads exactly “和平建國”.",
+        "real_film": ""
+      }
+    },
+    "inflation": {
+      "faction": "other",
+      "scene": "a rice shop in a city street with a long queue of desperate townspeople, a wooden price board hung above the door, a man pushing a wheelbarrow piled high with bundles of banknotes, another man carrying a huge sack stuffed with paper money, sacks of rice inside the shop",
+      "period": "China 1948, cloth gowns, straw baskets, banknotes of the Republic of China, no modern cars.",
+      "text": {
+        "real_press": "The wooden price board above the door reads exactly “白米 每石 三百萬元”.",
+        "real_color": "The wooden price board above the door reads exactly “白米 每石 八百萬元”. The banknotes are Chinese paper money with ornate brown and green borders, bundled with paper bands.",
+        "real_film": "The wooden price board above the door reads exactly “白米 五百萬元”. The banknotes are Chinese paper money with ornate brown and green borders, in bundles tied with paper bands, not American dollars."
+      }
+    }
+  },
+  "tail_text": "Any writing in the picture is only the quoted Chinese, written correctly in traditional characters, and there is no other writing anywhere.",
+  "tail_notext": "No text anywhere in the picture.",
+  "seeds": { "airlift": 24010, "hu_takes_yanan": 24020, "into_manchuria": 24030, "dabie_march": 24040, "chongqing_talks": 24050, "inflation": 24060 }
+}
