@@ -183,7 +183,12 @@ export const REFORM = [
 // card at all (nor the Cauldrons); the control arm for the aid cards' strength,
 // and what lets a side with an empty hand really have nothing to play. 美軍駐華
 // (`garrisoned`) is the support track's, not the card's: this does not touch it.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true };
+// `baseScoring` (#5): true counts the base areas (根據地) as 要衝 when a region
+// scores, both for 優勢 and for the +1 each, as this game's rulebook says. false
+// or absent is Zongheng's count (city keys only): the control arm for the
+// region values (open item 7), and what a game made before #5 plays. See
+// `regionTally`.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -641,11 +646,19 @@ export function checkMarkers(st) {
   }
   if (probe.home) probe.home(st, "check");
 }
+// `bg` is the number of 要衝 that count for scoring: the city keys
+// (`battleground`) and, under `baseScoring` (#5), the base areas (`base`) too
+// -- both in 優勢's "more 要衝 than the other side" and in the +1 each. Only
+// here: a base area is still not `battleground`, so attacking it does not push
+// 民生 and 凋敝 does not lock it (`campaign`, `campaignLocked`).
+function scoringKey(st, id) {
+  return SPACE[id].battleground || (st.options.baseScoring === true && SPACE[id].base === true);
+}
 export function regionTally(st, region) {
   const ids = spacesOf(region), R = REGIONS[region];
   const res = [CCP, KMT].map((side) => {
     const ctl = ids.filter((id) => controller(st, id) === side);
-    return { spaces: ctl.length, bg: ctl.filter((id) => SPACE[id].battleground).length, ids: ctl };
+    return { spaces: ctl.length, bg: ctl.filter((id) => scoringKey(st, id)).length, ids: ctl };
   });
   return [CCP, KMT].map((i) => {
     const me = res[i], op = res[1 - i];
@@ -1062,7 +1075,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-4"; // #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華 ("2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-5"; // #5: baseScoring, base areas count as 要衝 when a region scores ("2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
