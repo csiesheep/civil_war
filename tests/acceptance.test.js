@@ -1243,13 +1243,21 @@ check("homeLockSide 是一個開關:預設 \"opponent\";\"both\" 是縱橫的鎖
   const t = lockTodo(); if (t) return t;
   const both = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: { homeLockSide: "both" } });
   const c = E.opsOptions(both, CCP).campaignTargets, k = E.opsOptions(both, KMT).campaignTargets;
+  const now = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4 }), noKey = E.clone(now);
+  delete noKey.options.homeLockSide;
   return all(
     eq(E.DEFAULT_OPTIONS.homeLockSide, "opponent", "DEFAULT_OPTIONS.homeLockSide"),
     eq(both.options.homeLockSide, "both", "這一局的選項"),
     eq(c.includes("lanzhou") || c.includes("xian"), false, "\"both\" 時動盪下共軍還能奇襲西北"), eq(c.includes("nanjing"), false, "\"both\" 時動盪下共軍能奇襲後方"),
     eq(k.includes("wuhan"), false, "\"both\" 時動盪下國軍還能奇襲後方"), eq(k.includes("shanbei"), false, "\"both\" 時動盪下國軍能奇襲西北"),
     eq(c.includes("xuzhou") && k.includes("jizhong"), true, "\"both\" 時動盪下其他區照常"),
-    ok(true, "預設只鎖對手的本土;homeLockSide: \"both\" 時西北、後方對雙方都鎖"),
+    // Two holes BE reported at delivery, each seen red once it had a check: a game whose options have no such
+    // key (one created before #3) keeps the old rule, and a caller that does not say who attacks gets the old rule too.
+    eq(E.opsOptions(noKey, CCP).campaignTargets.includes("lanzhou"), false, "選項裡沒有 homeLockSide 的舊局,動盪下共軍還能奇襲西北"),
+    eq(E.opsOptions(noKey, KMT).campaignTargets.includes("wuhan"), false, "選項裡沒有 homeLockSide 的舊局,動盪下國軍還能奇襲後方"),
+    eq(E.campaignLocked(now, "lanzhou", CCP), false, "campaignLocked(蘭州, 共軍) 在動盪時"),
+    eq(E.campaignLocked(now, "lanzhou"), true, "campaignLocked(蘭州) 不說是誰打的,在動盪時"),
+    ok(true, "預設只鎖對手的本土;homeLockSide: \"both\"、沒有這個 key 的舊局、不說攻方的呼叫,都是西北與後方對雙方都鎖"),
   );
 });
 
