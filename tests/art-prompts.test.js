@@ -174,6 +174,82 @@ check("Z-Image Turbo 的圖:art/cards/img-zimage/ 底下一張牌一張,768 × 1
   return all(eq(Array.isArray(Z) ? Z.length : -1, 74, "zimage.json 的筆數"), ok(!bad.length, bad.length ? first(bad) : ""), imagesIn(dir, "Z-Image Turbo"));
 });
 
+section("A5 owner 挑的圖(#21)");
+
+// The owner's answer of 2026-10-02 to the 74 pairs of #20, copied by hand from the conversation:
+// A = the Qwen image, B = the Z-Image one, X = neither, render again.
+const PICKS = "1A 2A 3A 4A 5A 6A 7A 8A 9A 10A 11X 12X 13X 14A 15A 16X 17X 18A 19A 20A 21A 22A 23A 24X 25A 26A 27A 28A 29A 30A 31A 32A 33X 34A 35A 36X 37X 38A 39X 40A 41A 42A 43A 44A 45A 46B 47A 48B 49A 50A 51A 52A 53X 54A 55A 56A 57A 58A 59A 60A 61A 62A 63A 64X 65X 66A 67X 68A 69A 70A 71A 72X 美援A 蘇援A";
+const keyOfLabel = (n) => (n === "美援" ? "american_aid" : n === "蘇援" ? "soviet_aid" : (E.CARDS.find((c) => String(c.num) === n) || {}).id);
+const PICK = new Map(PICKS.split(" ").map((t) => { const m = /^(\d+|美援|蘇援)([ABX])$/.exec(t); return [keyOfLabel(m[1]), m[2]]; }));
+const REDO = WANT.filter((w) => PICK.get(w.key) === "X");
+// orchestrator 裁決(#21): the redo of these five may change the scene, because what is wrong is known and a new
+// seed does not cure it (lettering on a document or a doorplate, stars on the flags, a person missing);
+// the other ten keep the prompt of prompts.json word for word and only take new seeds.
+const MAY_REWRITE = ["sino_soviet_treaty", "marshall_mission", "league_banned", "new_consultative_conference", "stalins_advice"];
+const same = (a, b) => existsSync(a) && existsSync(b) && readFileSync(a).equals(readFileSync(b));
+const dirOf = (p) => here("../art/cards/" + p);
+
+check("owner 的答案:74 張各有一個,A 57、B 2、X 15", () => {
+  const n = (c) => [...PICK.values()].filter((v) => v === c).length;
+  return all(eq(PICK.size, 74, "有答案的牌"), ok(WANT.every((w) => PICK.has(w.key)), "每一張牌都有答案"), eq(`${n("A")},${n("B")},${n("X")}`, "57,2,15", "[A, B, X] 的張數"));
+});
+
+check("art/cards/final/:挑 A 的是 img/ 那一張、挑 B 的是 img-zimage/ 那一張(逐位元組相同),final.json 記下模型、種子、步數;X 的要等重出的候選被挑中才進來", () => {
+  if (TODO) return TODO;
+  const rec = dirOf("final.json"), dir = dirOf("final");
+  if (!existsSync(rec) || !existsSync(dir)) return "TODO: art/cards/final/ 與 art/cards/final.json 還沒有";
+  const F = JSON.parse(readFileSync(rec, "utf8")), Z = JSON.parse(readFileSync(dirOf("zimage.json"), "utf8")), bad = [];
+  let fromRedo = 0;
+  for (const w of WANT) {
+    const f = Array.isArray(F) ? F.filter((e) => e.key === w.key) : [], p = PICK.get(w.key), file = dir + "/" + w.key + ".jpg";
+    if (p === "X" && !f.length) { if (existsSync(file)) bad.push(`${w.zh}:final.json 沒有這張,final/ 卻有圖`); continue; }
+    if (f.length !== 1) { bad.push(`${w.zh}:final.json 裡有 ${f.length} 筆`); continue; }
+    const e = f[0];
+    if (p === "X") { // filled later from a redo candidate the owner picked
+      const src = dirOf(String(e.from || ""));
+      if (!/^redo\/[a-z_]+__c[1-4]\.jpg$/.test(String(e.from)) || !same(file, src)) bad.push(`${w.zh}:X 的牌要來自 redo/ 的候選(from = ${e.from}),而且逐位元組相同`);
+      else fromRedo++;
+      continue;
+    }
+    const want = p === "A" ? { model: "qwen", seed: byKey.get(w.key).seed, steps: 25, from: "img/" + w.key + ".jpg" } : { model: "zimage", seed: (Z.find((z) => z.key === w.key) || {}).seed, steps: 20, from: "img-zimage/" + w.key + ".jpg" };
+    if (e.model !== want.model || e.seed !== want.seed || e.steps !== want.steps) bad.push(`${w.zh}:owner 挑 ${p},final.json 寫的是 ${e.model} / ${e.seed} / ${e.steps}(應該是 ${want.model} / ${want.seed} / ${want.steps})`);
+    else if (!same(file, dirOf(want.from))) bad.push(`${w.zh}:final/ 的圖和 ${want.from} 不是同一個檔案`);
+  }
+  const extra = readdirSync(dir).filter((n) => !WANT.some((w) => w.key + ".jpg" === n));
+  return all(ok(!bad.length, bad.length ? first(bad) : ""), ok(!extra.length, extra.length ? `多出來的檔案:${first(extra)}` : ""),
+    ok(true, `A 57 張與 B 2 張都在 final/、和挑中的檔案逐位元組相同;X 的 15 張裡 ${fromRedo} 張已經由重出的候選補上`));
+});
+
+check("X 的 15 張各有 4 張重出的候選(art/cards/redo/、redo.json):新種子;只有那 5 張可以改畫面,其餘 prompt 一字不改", () => {
+  if (TODO) return TODO;
+  const rec = dirOf("redo.json"), dir = dirOf("redo");
+  if (!existsSync(rec) || !existsSync(dir)) return "TODO: art/cards/redo/ 與 art/cards/redo.json 還沒有";
+  const D = JSON.parse(readFileSync(rec, "utf8")), bad = [], used = new Set(P.map((e) => e.seed)), seeds = [];
+  let rewritten = 0;
+  for (const w of REDO) {
+    const mine = Array.isArray(D) ? D.filter((e) => e.key === w.key) : [], orig = byKey.get(w.key).prompt;
+    if (mine.length !== 4 || [1, 2, 3, 4].some((c) => mine.filter((e) => e.c === c).length !== 1)) { bad.push(`${w.zh}:候選要剛好 4 張(c = 1 到 4),現在 ${mine.length} 張`); continue; }
+    for (const e of mine) {
+      const model = w.style === "real_tech" && e.c === 4 ? "zimage" : "qwen", steps = model === "qwen" ? 25 : 20, tag = `${w.zh} 候選 ${e.c}`;
+      if (e.model !== model || e.steps !== steps) bad.push(`${tag}:${e.model} / ${e.steps} 步(應該是 ${model} / ${steps})`);
+      if (!Number.isInteger(e.seed) || used.has(e.seed) || seeds.includes(e.seed)) bad.push(`${tag}:種子 ${e.seed}(不是整數、和 prompts.json 的種子相同、或重複)`);
+      seeds.push(e.seed);
+      const heads = w.style === "com_oil" ? [STYLE.com_oil, COM_OIL_CIVIL] : [STYLE[w.style]];
+      if (typeof e.prompt !== "string" || !heads.some((h) => e.prompt.startsWith(h + " Scene: ")) || !e.prompt.endsWith(" " + TAIL) || /[㐀-鿿]/.test(e.prompt)) bad.push(`${tag}:prompt 的開頭、結尾不是固定文字,或裡面有中文字`);
+      else if (e.prompt !== orig) {
+        if (!MAY_REWRITE.includes(w.key)) bad.push(`${tag}:prompt 和 prompts.json 的不同(這張只能換種子)`);
+        else if (sceneOf(e).length < 120 || !/\b19(3\d|4\d)\b/.test(sceneOf(e))) bad.push(`${tag}:改過的畫面太短或沒有寫年代`);
+        else rewritten++;
+      }
+      const f = dir + "/" + w.key + "__c" + e.c + ".jpg", s = existsSync(f) ? jpegSize(f) : null;
+      if (!s || s[0] !== SIZE[0] || s[1] !== SIZE[1]) bad.push(`${tag}:${existsSync(f) ? (s ? s.join(" × ") : "不是 JPEG") : "沒有圖"}`);
+    }
+  }
+  const stray = (Array.isArray(D) ? D : []).filter((e) => !REDO.some((w) => w.key === e.key)).map((e) => e.key);
+  return all(eq(REDO.length, 15, "X 的張數"), eq(Array.isArray(D) ? D.length : -1, 60, "redo.json 的筆數"), ok(!stray.length, stray.length ? `不是 X 的牌:${first(stray)}` : ""),
+    ok(!bad.length, bad.length ? first(bad) : `15 張各 4 張候選,共 60 張,都是 768 × 1024;其中 ${rewritten} 張候選用了改過的畫面`));
+});
+
 // ---------------------------------------------------------------- verdict
 test("art prompts: the guard", () => {
   const s = summary();
