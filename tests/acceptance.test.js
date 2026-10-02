@@ -294,11 +294,11 @@ check("記分時根據地也算要衝;只有城的要衝推民生", () => (E.DEF
 //   孤城掉點可能讓國軍失去控制、失去整編標記,或讓共軍達成易幟:掉完點立即檢查標記。
 //   國軍遷都後,補給源跟著換成廣州。南京丟了之後,它不再是補給源。
 //
-// Two readings the rulebook does not spell out, ruled by the orchestrator on #1
-// and flagged there for the owner (each is one check below, so a different
-// ruling flips one check):
+// Three readings the rulebook does not spell out. The orchestrator ruled them on #1 first;
+// the owner confirmed all three there on 2026-10-01 (owner 裁決 #1). Each is one check below:
 //   - 「隨時依盤面判定」 is read point by point inside one 扶植, the way cost and cap are;
-//   - a city with no blue and no supply cannot take its first blue point from 扶植 either.
+//   - a city with no blue and no supply cannot take its first blue point from 扶植 either;
+//   - a city the Communists control is itself on its path: never in supply.
 //
 // Every position is the rulebook's opening (SPEC_SPACES above), then edited by
 // hand; none is read from the product. Both hands are emptied so that one `run`
@@ -405,7 +405,7 @@ check("隨時依盤面判定:同一次扶植裡先把路打通,下一點就能�
   );
 });
 
-check("沒有藍也沒有補給的城:國軍的第一點也放不進去(orchestrator 裁決 #1,待 owner)", () => {
+check("沒有藍也沒有補給的城:國軍的第一點也放不進去(owner 裁決 #1)", () => {
   const t = supplyTodo(); if (t) return t;
   // 太原 emptied, both its neighbours Communist (太行 already; 晉中 red 4 against blue 2, 安定 2). 鄭州 emptied too, but supplied through 淮海.
   const edits = { taiyuan: { b: 0 }, jinzhong: { r: 4 }, zhengzhou: { b: 0 } };
@@ -425,9 +425,9 @@ check("沒有藍也沒有補給的城:國軍的第一點也放不進去(orchestr
 
 // Added after #1 was delivered: BE reported it, and no check held it. It follows from two things
 // together, the Phase 0 reading (`supplied` counts the city itself as part of the path) and
-// ruling 3 above (the ban asks `supplied`). Both wait for the owner; the other reading, in which
-// the city itself is not part of its own path, turns every expectation in this check around.
-check("共軍控制的城不在補給範圍內:國軍不能扶植進去(連空城),裡面的藍每回合掉 1(Phase 0 的讀法,待 owner)", () => {
+// ruling 3 above (the ban asks `supplied`). The owner kept both (owner 裁決 #1, 2026-10-01); the other
+// reading, in which the city itself is not part of its own path, turns every expectation in this check around.
+check("共軍控制的城不在補給範圍內:國軍不能扶植進去(連空城),裡面的藍每回合掉 1(owner 裁決 #1)", () => {
   const t = supplyTodo(); if (t) return t;
   // 鄭州 (安定 2) held by the Communists with red 2 and no blue; every neighbour but 冀魯豫 is open and supplied.
   const empty = { zhengzhou: { r: 2, b: 0 } }, st = position(empty), off = position(empty, { supply: false });
@@ -1157,6 +1157,99 @@ check("和談:共軍拒絕則民心往國軍移 2、照常進行;國軍不提、
     eq(passed.pending, null, "國軍不提之後還有待決定"), eq(passed.mandate, m0, "國軍不提之後的民心"), eq(J(passed.rounds), "[7,6]", "國軍不提之後的 st.rounds"), same(passed.hands[KMT], KH, "國軍不提之後的手牌"), eq(passed.phase, "headline", "phase"),
     eq(few.turn, 8, "回合"), eq(few.pending, null, "國軍只有 1 張不是記分卡的牌,卻被問了"), eq(few.phase, "headline", "phase"), eq(J(few.rounds), "[7,6]", "st.rounds"),
     ok(true, `拒絕:民心 −2(往國軍)、行動回合 ${J(refused.rounds)}、順序 ${roundsOf(w, 8)};不提:什麼都不動;只有 1 張可棄:不問`),
+  );
+});
+
+// ---------------------------------------------------------------- group 5
+// 民生的封鎖只鎖對手的本土 (issue #3). owner 裁決(#2, 2026-10-01): 「只鎖對手的本土,照規則書」.
+// The rulebook's words, copied by hand (三, 民生軌; 二, 地圖):
+//   封鎖(只限奇襲):動盪以下不可奇襲對手的本土(西北、後方);通膨以下再加上華北;凋敝再加上所有城的要衝。
+//   本土:共軍是西北,國軍是後方。
+// The engine came from Zongheng, whose rulebook reads 「不可對本土奇襲」: both home regions, for both
+// sides. The difference is whether a side may attack inside its OWN home region from 動盪 down.
+// (The readings of #2 themselves, 撤離 in one space and free of adjacency, the first attack once
+// with events counting, the jump once a turn into one village, were confirmed by the owner the same day.)
+section("5 民生封鎖:只鎖對手的本土");
+
+const lockTodo = () => (E.DEFAULT_OPTIONS.homeLockSide === undefined ? "TODO: DEFAULT_OPTIONS.homeLockSide 還沒有;兩個本土對雙方都鎖(縱橫的規則)" : null);
+// Red put in two cities of 後方 so that the Nationalists have something to attack at home: 武漢 (no 要衝) and 南京 (a 要衝).
+const HOME_EDITS = { wuhan: { r: 1 }, nanjing: { r: 1 } };
+// What each side may attack at each 民生 level, from the rulebook's sentence. [space, why, 復員 5, 動盪 4, 通膨 3, 凋敝 2]
+const LOCK_TABLE = {
+  [CCP]: [
+    ["lanzhou",  "西北(自己的本土)的城",       true, true,  true,  true],
+    ["xian",     "西北(自己的本土)城的要衝",   true, true,  true,  false],
+    ["wuhan",    "後方(對手的本土)的城",       true, false, false, false],
+    ["nanjing",  "後方(對手的本土)城的要衝",   true, false, false, false],
+    ["chasui",   "華北的鄉",                   true, true,  false, false],
+    ["xuzhou",   "華東中原城的要衝",           true, true,  true,  false],
+    ["zhengzhou", "華東中原的城",              true, true,  true,  true],
+  ],
+  [KMT]: [
+    ["wuhan",    "後方(自己的本土)的城",       true, true,  true,  true],
+    ["nanjing",  "後方(自己的本土)城的要衝",   true, true,  true,  false],
+    ["shanbei",  "西北(對手的本土)的鄉",       true, false, false, false],
+    ["jizhong",  "華北的鄉",                   true, true,  false, false],
+    ["luzhong",  "華東中原的鄉",               true, true,  true,  true],
+  ],
+};
+
+check("各級民生下誰可以奇襲哪裡:動盪以下只鎖對手的本土,自己的本土照打", () => {
+  const t = lockTodo(); if (t) return t;
+  let n = 0;
+  for (const [col, w] of [[2, 5], [3, 4], [4, 3], [5, 2]]) {
+    const st = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: w });
+    if (st.turn !== 6 || st.weariness !== w) return `沒有走到第 6 回合、民生 ${w} 的盤面(turn ${st.turn},民生 ${st.weariness})`;
+    for (const side of [CCP, KMT]) {
+      const targets = E.opsOptions(st, side).campaignTargets;
+      for (const row of LOCK_TABLE[side]) {
+        if (!(E.infOf(st, row[0])[1 - side] > 0)) return `${E.SPACE[row[0]].zh} 沒有對手的點,這一格沒有東西可打`;
+        const q = eq(targets.includes(row[0]), row[col], `${E.WEARINESS_NAMES[w]}(${w})時${sideZh(side)}能不能奇襲${E.SPACE[row[0]].zh}(${row[1]})`);
+        if (q !== true) return q;
+        n++;
+      }
+    }
+  }
+  // 決戰 unlocks cities for the Communists only: the Nationalists are still kept out of 西北 on turn 7.
+  const seven = enter(7, { edits: HOME_EDITS, hands: STOP, weariness: 4 });
+  return all(
+    eq(seven.turn, 7, "回合"), eq(E.opsOptions(seven, KMT).campaignTargets.includes("shanbei"), false, "第 7 回合動盪時國軍能奇襲陝北"),
+    eq(E.opsOptions(seven, KMT).campaignTargets.includes("wuhan"), true, "第 7 回合動盪時國軍不能奇襲武漢(自己的本土)"),
+    ok(true, `${n} 格都對:動盪起共軍打不了後方、國軍打不了西北;蘭州、西安對共軍,武漢、南京對國軍仍然打得到(要衝到凋敝才鎖)`),
+  );
+});
+
+check("經過 apply:動盪時共軍奇襲蘭州、國軍奇襲武漢可以;共軍打南京、國軍打陝北被拒絕", () => {
+  const t = lockTodo(); if (t) return t;
+  const S = toAction(enter(6, { edits: HOME_EDITS, weariness: 4, hands: [["score_north", "gao_shuxun", "shangdang_campaign"], ["score_east", "kunming_incident", "sino_soviet_treaty"]] }));
+  const pre = all(eq(S.turn, 6, "回合"), eq(S.weariness, 4, "民生"), eq(rb(S, "lanzhou"), "0/2", "蘭州 紅/藍"), eq(rb(S, "wuhan"), "1/3", "武漢 紅/藍"));
+  if (pre !== true) return pre;
+  const no1 = thrown(() => act(S, CCP, "gao_shuxun", "campaign", { target: "nanjing" }));
+  let a = null, b = null;
+  const e1 = thrown(() => { a = act(S, CCP, "gao_shuxun", "campaign", { target: "lanzhou" }); });
+  if (e1 != null) return `動盪時共軍奇襲蘭州(自己的本土)被拒絕:${e1}`;
+  const no2 = thrown(() => act(a, KMT, "kunming_incident", "campaign", { target: "shanbei" }));
+  const e2 = thrown(() => { b = act(a, KMT, "kunming_incident", "campaign", { target: "wuhan" }); });
+  if (e2 != null) return `動盪時國軍奇襲武漢(自己的本土)被拒絕:${e2}`;
+  return all(
+    eq(no1 != null, true, "動盪時共軍奇襲南京(後方)沒有被拒絕"), eq(no2 != null, true, "動盪時國軍奇襲陝北(西北)沒有被拒絕"),
+    eq(rb(a, "lanzhou"), "0/0", "共軍 2 點奇襲蘭州之後 紅/藍"), eq(rb(b, "wuhan"), "0/4", "國軍 2 點奇襲武漢(移除 1、放 1)之後 紅/藍"),
+    eq(b.weariness, 4, "兩次奇襲之後的民生(都不是要衝)"),
+    ok(true, `共軍打蘭州 0/2→0/0、國軍打武漢 1/3→0/4;共軍打南京(「${no1}」)、國軍打陝北(「${no2}」)被拒絕`),
+  );
+});
+
+check("homeLockSide 是一個開關:預設 \"opponent\";\"both\" 是縱橫的鎖法(兩個本土對雙方都鎖)", () => {
+  const t = lockTodo(); if (t) return t;
+  const both = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: { homeLockSide: "both" } });
+  const c = E.opsOptions(both, CCP).campaignTargets, k = E.opsOptions(both, KMT).campaignTargets;
+  return all(
+    eq(E.DEFAULT_OPTIONS.homeLockSide, "opponent", "DEFAULT_OPTIONS.homeLockSide"),
+    eq(both.options.homeLockSide, "both", "這一局的選項"),
+    eq(c.includes("lanzhou") || c.includes("xian"), false, "\"both\" 時動盪下共軍還能奇襲西北"), eq(c.includes("nanjing"), false, "\"both\" 時動盪下共軍能奇襲後方"),
+    eq(k.includes("wuhan"), false, "\"both\" 時動盪下國軍還能奇襲後方"), eq(k.includes("shanbei"), false, "\"both\" 時動盪下國軍能奇襲西北"),
+    eq(c.includes("xuzhou") && k.includes("jizhong"), true, "\"both\" 時動盪下其他區照常"),
+    ok(true, "預設只鎖對手的本土;homeLockSide: \"both\" 時西北、後方對雙方都鎖"),
   );
 });
 
