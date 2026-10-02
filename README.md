@@ -13,7 +13,7 @@ No game yet. What exists:
 - the Worker and the placeholder page;
 - the map (29 spaces: 17 cities, 12 villages) and the 72 cards **as data** (no card event is implemented);
 - an engine that can set a game up and say what each side may do first;
-- the first guard, `tests/acceptance.js`, with its constants copied from the rulebook.
+- the first guard, `tests/acceptance.test.js`, with its constants copied from the rulebook.
 
 The rules are in the owner's vault: `Projects/civil_war/civil_war - rulebook.md` (batch 1), `civil_war plan.md` (decisions, milestones), `civil_war - mechanisms.md` (the mechanisms still to come).
 
@@ -44,7 +44,7 @@ npm test                 # the first guard, as a node test
 npm run dev              # http://localhost:8787/civil_war/
 ```
 
-The guard as a page: serve the repo root (`bash tools/orch.sh serve .`) and open `tests/index.html`, or `tests/index.html?json=1` for the machine-readable verdict.
+The guard prints one line per check (通過 / 失敗 / 尚未實作) and a `VERDICT` line; anything under 失敗 fails the test.
 
 ## Deploy
 

@@ -1,3 +1,21 @@
+// CIVIL WAR, PHASE 0. This file is Zongheng's engine (csiesheep/zongheng at
+// 686b439), copied, the seats renamed (QIN/CHU -> CCP/KMT), and then changed
+// in exactly these places so that a game of this map can be set up:
+//   - the eras, the 民生 level names, the default options;
+//   - the capitals and home regions now come from board.js;
+//   - `campaignLocked` reads the main front from the region data;
+//   - `startGame` reads the whole setup from board.js; the free placement is
+//     the turn-1 時局 (受降), over a list of spaces rather than of regions;
+//   - 洛邑 yields nothing (there is no such space);
+//   - the export module is not imported;
+//   - `supplied` / `isolatedCities` at the end are new (rulebook 三, 補給), and
+//     nothing calls them yet.
+// EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
+// Zongheng's rulebook and issue numbers. What the rulebook of this game says
+// differently (supply's effects, 時局, the two aid cards, asymmetric rounds,
+// scoring with base areas, every card event) is not done: that is M1. This
+// slice was written and checked by one session only (TEAM.md).
+//
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
 // Object. Deterministic: the seeded RNG lives in the state, so a game replays
 // from seed + actions, which is what makes the tests and the harness cheap.
@@ -20,6 +38,7 @@
 export * from "./board.js";
 import {
   SPACES, SPACE, REGIONS, SCORED_REGIONS, STATES, SETUP, spacesOf, spacesOfState,
+  HOME_REGION, HOME_CAPITAL, MOVED_CAPITAL,
 } from "./board.js";
 import { CARDS, CARD, ERA_DECKS } from "./cards.js";
 export { CARDS, CARD, ERA_DECKS };
@@ -30,13 +49,16 @@ export const other = (s) => 1 - s;
 export const MIN_PLAYERS = 2, MAX_PLAYERS = 2;
 export const JIUDING = "jiuding";
 export const MANDATE_TO_WIN = 20;
-export const WEARINESS_NAMES = { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" };
+export const WEARINESS_NAMES = { 5: "復員", 4: "動盪", 3: "通膨", 2: "凋敝", 1: "崩潰" };
 // Era: the deck shuffled in before that turn's refill; hand size and action
 // rounds follow the era (rulebook 三, 回合結構).
+// NOT YET THE RULEBOOK: it gives each side its own hand size and rounds per era
+// (Nationalists 9/7, 9/7, 8/6; Communists 8/6, 9/7, 9/7). These are Zongheng's
+// symmetric numbers; the asymmetry is M1.
 export const ERAS = [
-  { id: "reform",   zh: "變法期", en: "Reform era",   from: 1, hand: 8, rounds: 6 },
-  { id: "alliance", zh: "縱橫期", en: "Alliance era", from: 4, hand: 9, rounds: 7 },
-  { id: "conquest", zh: "兼併期", en: "Conquest era", from: 7, hand: 9, rounds: 7 },
+  { id: "takeover", zh: "接收期", en: "Takeover era", from: 1, hand: 8, rounds: 6 },
+  { id: "turning",  zh: "易勢期", en: "Turning era",  from: 4, hand: 9, rounds: 7 },
+  { id: "decisive", zh: "決戰期", en: "Decisive era", from: 7, hand: 9, rounds: 7 },
 ];
 export const REFORM = [
   { box: 1, zh: "徙木立信", ops: 2, first: 1, second: 0, perk: null },
@@ -100,7 +122,11 @@ export const REFORM = [
 // with 1 in 臨淄 and 1 in 薊; see startGame) becomes the default. An absent key
 // is 0, so a save or an export whose own options predate this has no foothold
 // and keeps it that way (createGame merges once; `replay` does not merge).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 };
+// CIVIL WAR: the comments above are Zongheng's history of its own options.
+// This game drops the ones that named Zongheng's cards and spaces (hangu,
+// wuguo, westBonus, yue, qinFarStart, comp), sets `luoyi` to 0 (no such
+// space), and starts from 遷都 (`homeFall: "move"`), as its rulebook says.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -129,10 +155,8 @@ function lobbyEligible(st, side, id) {
   return !(R && R.own && a[side] <= 0);
 }
 export const HOME_FALL = ["none", "lose", "lose-turn", "lose-majority", "move"];
-export const HOME_REGION = ["west", "south"];
-export const HOME_CAPITAL = ["guanzhong", "ying"];
-// Under "move", where a fallen capital goes (遷都: Chu moved to 陳 in 278 BC).
-export const MOVED_CAPITAL = ["hanzhong", "chencai"];
+// CIVIL WAR: HOME_REGION, HOME_CAPITAL and MOVED_CAPITAL (遷都: 陝北 -> 太行,
+// 南京 -> 廣州) are board data now; `export *` above re-exports them.
 export function homeCapital(st, side) { return (st.capital && st.capital[side]) || HOME_CAPITAL[side]; }
 // Each side's home capital now and who holds it against its owner (control; under
 // lose-majority also `aheadBy`, the enemy when it has more influence there).
@@ -352,7 +376,7 @@ export function isProtected(st, id) { return st.effects.some((e) => e.kind === "
 export function campaignLocked(st, id) {
   const sp = SPACE[id], w = st.weariness;
   if (w <= st.options.homeLock && REGIONS[sp.region].home) return true;
-  if (w <= 3 && (sp.region === "jin" || sp.region === "zhou")) return true;
+  if (w <= 3 && REGIONS[sp.region].front) return true;
   if (w <= 2 && sp.battleground) return true;
   return false;
 }
@@ -798,7 +822,7 @@ function startGame(seed, options) {
     turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: CCP, phasing: CCP,
     inf: {}, mandate: 0, weariness: 5,
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
-    mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: true,
+    mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: false, // CIVIL WAR: no 洛邑
     jiuding: { holder: KMT, faceDown: false },
     draw: [], discard: [], removed: [], later: {},
     hands: [[], []], headline: [null, null],
@@ -814,24 +838,19 @@ function startGame(seed, options) {
   for (const side of [CCP, KMT]) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
-  ensure(st, "hangu")[CCP] = st.options.hangu;
-  // #135 (D1, 遠交): `qinFarStart: n` -- Qin's fixed setup also puts n in 臨淄 and
-  // n in 薊, before the free placement. 1 by default since #142; absent (a game
-  // created before #142) or 0 is the setup without it, and stays so.
-  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[CCP] = st.options.qinFarStart;
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
-  const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
-  if (st.options.scoringSplit === "v2") {
-    decks.reform = decks.reform.filter((c) => c !== "score_west").concat("score_east");
-    decks.alliance = decks.alliance.filter((c) => c !== "score_east").concat("score_west");
-  }
-  st.draw = shuffle(rng, decks.reform);
-  st.later = { alliance: decks.alliance, conquest: decks.conquest };
+  // CIVIL WAR: the first era's deck is drawn from; the other two wait in
+  // `later` under their era ids, which `startTurn` shuffles in at turns 4 and 7.
+  const [first, ...rest] = ERAS.map((e) => e.id);
+  st.draw = shuffle(rng, ERA_DECKS[first].slice());
+  st.later = Object.fromEntries(rest.map((id) => [id, ERA_DECKS[id].slice()]));
   st.rngState = rng.getState();
+  // CIVIL WAR: the free placement is turn 1's 時局 (受降): each side places over
+  // its own list of spaces, not bound by adjacency. The Communists place first,
+  // as Qin did in Zongheng (the rulebook does not give an order: flagged).
   st.plan = [
-    { do: "setup", side: CCP, n: SETUP.ccp.free, regions: SETUP.ccp.freeIn, choices: [] },
-    { do: "setup", side: KMT, n: SETUP.kmt.free, regions: SETUP.kmt.freeIn, choices: [] },
-    { do: "setup", side: KMT, n: st.options.comp, regions: null, choices: [] },
+    { do: "setup", side: CCP, n: SETUP.ccp.free, spaces: SETUP.ccp.freeIn, choices: [] },
+    { do: "setup", side: KMT, n: SETUP.kmt.free, spaces: SETUP.kmt.freeIn, choices: [] },
     { do: "startTurn" },
   ];
   return run(st);
@@ -862,7 +881,9 @@ function exec(st, step) {
     case "setup": {
       if (step.n <= 0) return true;
       if (!step.choices.length) {
-        const options = step.regions
+        const options = step.spaces
+          ? step.spaces.filter((id) => infOf(st, id)[step.side] < capOf(st, id))
+          : step.regions
           ? SPACES.filter((s) => step.regions.includes(s.region)).map((s) => s.id)
           : SPACES.filter((s) => infOf(st, s.id)[step.side] > 0).map((s) => s.id);
         return ask(st, step, { kind: "points", n: step.n, min: step.n, options, side: step.side, tag: "setup" });
@@ -1500,7 +1521,29 @@ export function view(st, side) {
   return v;
 }
 
-// #137: the download's JSON, built from a view (what the client holds) and
-// what the view does not know. Pure and DOM-free (browser and Node alike);
-// the one clock it reads is `new Date()` when `meta.exportedAt` is not given.
-export { exportGame } from "./export.js";
+// CIVIL WAR: Zongheng's export module (the download's JSON) is not copied yet.
+
+// ---------- supply (CIVIL WAR; rulebook 三, 補給) ----------
+// Sources: every port the Nationalists control, and their current capital.
+// A space is supplied when a path of adjacent spaces, none of them controlled
+// by the Communists, leads from it to a source; the source itself is on the
+// path, so a capital the Communists control supplies nothing.
+// PHASE 0: only the reading exists. Nothing calls these yet: the ban on
+// placing in a cut-off city and the loss at the end of the turn are M1.
+export function supplySources(st) {
+  const capital = homeCapital(st, KMT);
+  return SPACES.filter((s) => (s.port && controller(st, s.id) === KMT) || s.id === capital).map((s) => s.id);
+}
+export function supplied(st) {
+  const open = (id) => controller(st, id) !== CCP;
+  const queue = supplySources(st).filter(open), seen = new Set(queue);
+  while (queue.length) {
+    for (const a of SPACE[queue.shift()].adj) if (!seen.has(a) && open(a)) { seen.add(a); queue.push(a); }
+  }
+  return seen;
+}
+// 孤城: the cities with Nationalist influence that no source reaches.
+export function isolatedCities(st) {
+  const ok = supplied(st);
+  return SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && !ok.has(s.id)).map((s) => s.id);
+}
