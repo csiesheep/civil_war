@@ -15,6 +15,8 @@
 // Group 2 lists what the rulebook asks for and the engine does not have yet,
 // each keyed on the thing that will exist when it is built. The orchestrator
 // replaces each of them with real checks BEFORE the work is handed out.
+// Group 3 onward are those real checks, one group per issue. Each still answers
+// 尚未實作 until the thing it is keyed on exists, and from then on it is judged.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { R, section, check, eq, ok, nonEmpty, summary } from "./harness.js";
@@ -267,14 +269,317 @@ check("72 張牌的事件", () => {
   const left = E.CARDS.filter((c) => c.todo).length;
   return left ? `TODO: ${left} 張牌的事件還沒做(打出事件會直接報錯)` : ok(true, "67 張都有事件");
 });
-check("孤城的效果:不能扶植、回合結算藍 −1", () => (E.DEFAULT_OPTIONS.supply === undefined ? "TODO: 只有 isolatedCities 這個讀數,還沒有接進扶植與回合結算" : ok(true, `supply = ${E.DEFAULT_OPTIONS.supply}`)));
-check("時局 8 張", () => (E.SITUATIONS === undefined ? "TODO: 還沒有時局;目前只有第 1 回合的免費放置,寫死在開局裡" : eq(E.SITUATIONS.length, 8, "時局張數")));
+// 孤城的效果 moved to group 3 (#1). What supply still owes, each with the thing it waits for:
+// 美援 may be placed in a cut-off city (外國勢力), turn 7 costs a cut-off city 2 (時局),
+// and 空運孤城 / 和平起義 / 長春圍城 / 平津戰役 read `isolatedCities` (the cards).
+check("時局 8 張", () => (E.SITUATIONS === undefined ? "TODO: 還沒有時局;目前只有第 1 回合的免費放置,寫死在開局裡。含:第 7 回合孤城結算藍 −2" : eq(E.SITUATIONS.length, 8, "時局張數")));
 check("外國勢力:美國支持 4、蘇聯支持 1,兩張外援牌", () => {
   const st = E.createGame(1);
-  return st.support === undefined ? "TODO: 還沒有支持度軌;外援仍是縱橫的九鼎(一張、會換手)" : all(eq(st.support[KMT], 4, "美國支持"), eq(st.support[CCP], 1, "蘇聯支持"));
+  return st.support === undefined ? "TODO: 還沒有支持度軌;外援仍是縱橫的九鼎(一張、會換手)。含:美援全部放在城時可以放進孤城" : all(eq(st.support[KMT], 4, "美國支持"), eq(st.support[CCP], 1, "蘇聯支持"));
 });
 check("行動回合與手牌依期不對稱(國 9/7、9/7、8/6;共 8/6、9/7、9/7)", () => (typeof E.ERAS[0].hand === "number" ? "TODO: 還是縱橫的對稱數字(8/6、9/7、9/7)" : ok(true, JSON.stringify(E.ERAS.map((e) => [e.hand, e.rounds])))));
 check("記分時根據地也算要衝;只有城的要衝推民生", () => (E.DEFAULT_OPTIONS.baseScoring === undefined ? "TODO: regionTally 還只算城的要衝" : ok(true, "baseScoring on")));
+
+// ---------------------------------------------------------------- group 3
+// 補給(機制 A), issue #1. Written before the work was handed out, from the
+// rulebook's own words (三, 補給; 三, 回合結構 5; 四, 細則), copied here by hand:
+//
+//   1. 補給源:國軍控制的港(上海、廣州、天津、錦州),加上國軍目前的首都。
+//   2. 有藍的城,要能沿著相鄰關係走到一個補給源,路上每個據點都不在共軍控制下,
+//      否則是孤城。無人控制的據點可以通過。隨時依盤面判定。
+//   3. 孤城的效果:國軍不能在那裡扶植(美援除外);回合結算時藍 −1。
+//   4. 鄉不檢查補給。共軍不檢查補給。
+//   結算,依序:手上有記分卡者敗 → 遷都判定 → 孤城藍 −1 → 民生回復 1 → 「本回合」的效果結束 → …
+//   孤城掉點可能讓國軍失去控制、失去整編標記,或讓共軍達成易幟:掉完點立即檢查標記。
+//   國軍遷都後,補給源跟著換成廣州。南京丟了之後,它不再是補給源。
+//
+// Two readings the rulebook does not spell out, ruled by the orchestrator on #1
+// and flagged there for the owner (each is one check below, so a different
+// ruling flips one check):
+//   - 「隨時依盤面判定」 is read point by point inside one 扶植, the way cost and cap are;
+//   - a city with no blue and no supply cannot take its first blue point from 扶植 either.
+//
+// Every position is the rulebook's opening (SPEC_SPACES above), then edited by
+// hand; none is read from the product. Both hands are emptied so that one `run`
+// walks the turn out to its 結算 without any card event (none exists yet).
+section("3 補給(機制 A)");
+
+const supplyTodo = () => (E.DEFAULT_OPTIONS.supply === undefined ? "TODO: DEFAULT_OPTIONS.supply 還沒有;只有 isolatedCities 這個讀數,沒有接進扶植與回合結算" : null);
+const blueOf = (st, id) => E.infOf(st, id)[KMT], redOf = (st, id) => E.infOf(st, id)[CCP];
+const zhs = (ids) => ids.map((id) => E.SPACE[id].zh).join("、") || "無";
+const thrown = (fn) => { try { fn(); return null; } catch (e) { return (e && e.message) || String(e); } };
+// edits: { id: { r: red, b: blue } }, either key optional (the opening's number stays).
+function position(edits = {}, options = {}) {
+  let st = E.createGame(11, options);
+  st = E.apply(st, { type: "choose", side: CCP, choice: st.pending.options.slice(0, SPEC.free.ccp) });
+  st = E.apply(st, { type: "choose", side: KMT, choice: st.pending.options.slice(0, SPEC.free.kmt) });
+  st = E.clone(st);
+  st.inf = {};
+  for (const [id, [, , stability, blue, red]] of Object.entries(SPEC_SPACES)) {
+    const e = edits[id] || {};
+    const r = e.r ?? red, b = e.b ?? blue;
+    if (r > stability + 2 || b > stability + 2) throw new Error(`position: ${id} 超過上限(紅 ${r} 藍 ${b},上限 ${stability + 2})`);
+    st.inf[id] = [r, b];
+  }
+  for (const id of Object.keys(edits)) if (!SPEC_SPACES[id]) throw new Error(`position: 沒有這個據點 ${id}`);
+  st.discard.push(...st.hands[CCP], ...st.hands[KMT]);
+  st.hands = [[], []];
+  st.jiuding = { holder: KMT, faceDown: true }; // nobody has the Cauldrons to play this turn
+  return st;
+}
+// Put these cards in a hand, and nowhere else.
+function deal(st, side, cards) {
+  for (const pile of ["draw", "discard", "removed"]) st[pile] = st[pile].filter((c) => !cards.includes(c));
+  st.hands[side] = cards.slice();
+}
+// Walk the turn out from where it stands. Returns the state after 結算.
+const settle = (st) => E.run(E.clone(st));
+// The walk really got through turn 1's 結算 and into turn 2 (or to the end of the game).
+const settled = (st, what) => {
+  if (!st.log.some((l) => l.type === "endTurn" && l.turn === 1)) return `${what}:第 1 回合沒有走到結算(turn ${st.turn},phase ${st.phase},winner ${st.winner},reason ${st.reason})`;
+  return true;
+};
+const attritions = (st) => st.log.filter((l) => l.type === "attrition");
+const blueMap = (st) => Object.fromEntries(Object.keys(SPEC_SPACES).map((id) => [id, blueOf(st, id)]));
+const redMap = (st) => Object.fromEntries(Object.keys(SPEC_SPACES).map((id) => [id, redOf(st, id)]));
+// The spaces whose number differs between two maps, as "濟南 2→1".
+const diff = (a, b) => Object.keys(a).filter((id) => a[id] !== b[id]).map((id) => `${E.SPACE[id].zh} ${a[id]}→${b[id]}`).join("、") || "無";
+
+// 魯中 red 5 against blue 2 (安定 3) is Communist; 冀魯豫 already is. 濟南 touches nothing else.
+const JINAN_CUT = { luzhong: { r: 5 } };
+
+check("孤城:國軍不能在那裡扶植(placeTargets、placePoints、opsOptions 三處一致)", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT), off = position(JINAN_CUT, { supply: false });
+  const pre = all(
+    same(E.isolatedCities(st), ["jinan"], "這個盤面的孤城"),
+    eq(E.controller(st, "luzhong"), CCP, "魯中的控制者"), eq(E.controller(st, "jiluyu"), CCP, "冀魯豫的控制者"),
+    eq(blueOf(st, "jinan"), 2, "濟南的藍"),
+    // The control arm: without the rule 濟南 is an ordinary target, so reach and cap are not what removes it.
+    eq(E.placeTargets(off, KMT, 3).lit.has("jinan"), true, "supply 關掉時濟南可以扶植"),
+  );
+  if (pre !== true) return pre;
+  const lit = E.placeTargets(st, KMT, 3).lit, opts = E.opsOptions(st, KMT).placeOptions.map((o) => o.id);
+  const err = thrown(() => E.placePoints(E.clone(st), KMT, ["jinan"], 3));
+  return all(
+    eq(lit.has("jinan"), false, "placeTargets 亮了孤城濟南"),
+    eq(lit.has("xuzhou"), true, "placeTargets 沒有亮有補給的徐州"),
+    eq(opts.includes("jinan"), false, "opsOptions 列了孤城濟南"),
+    eq(opts.includes("xuzhou"), true, "opsOptions 沒有列徐州"),
+    ok(err != null, err == null ? "placePoints 讓國軍把點放進了孤城濟南" : `濟南是孤城:不亮、不列、placePoints 拒絕(「${err}」);徐州照常`),
+  );
+});
+
+check("鄉不檢查補給;共軍不檢查補給", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT);
+  const pre = all(same(E.isolatedCities(st), ["jinan"], "孤城"), eq(E.supplied(st).has("luzhong"), false, "魯中在補給範圍內"), eq(blueOf(st, "luzhong"), 2, "魯中的藍"));
+  if (pre !== true) return pre;
+  const kmt = E.placeTargets(st, KMT, 3), ccp = E.placeTargets(st, CCP, 1);
+  const a = E.clone(st), b = E.clone(st);
+  return all(
+    eq(kmt.lit.has("luzhong"), true, "國軍可以扶植被切斷的鄉(魯中)"), eq(kmt.costs.luzhong, 2, "魯中在共軍控制下,每點的花費"),
+    eq(thrown(() => E.placePoints(a, KMT, ["luzhong"], 3)), null, "國軍在魯中放 1 點被拒絕"), eq(blueOf(a, "luzhong"), 3, "放完之後魯中的藍"),
+    eq(ccp.lit.has("jinan"), true, "共軍可以扶植孤城濟南"),
+    eq(thrown(() => E.placePoints(b, CCP, ["jinan"], 1)), null, "共軍在濟南放 1 點被拒絕"), eq(redOf(b, "jinan"), 1, "放完之後濟南的紅"),
+    ok(true, "國軍照常放進被切斷的魯中(2 點換 1);共軍照常放進孤城濟南"),
+  );
+});
+
+check("隨時依盤面判定:同一次扶植裡先把路打通,下一點就能放進原本的孤城", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT);
+  // One blue point in 魯中 (2 ops: it is Communist) makes it red 5 / blue 3, nobody's; 濟南 then reaches 徐州 and 南京.
+  const opened = E.clone(st); E.place(opened, KMT, "luzhong", 1);
+  const pre = all(same(E.isolatedCities(st), ["jinan"], "一開始的孤城"), eq(E.controller(opened, "luzhong"), null, "魯中多 1 藍之後的控制者"), eq(E.isolatedCities(opened).length, 0, "魯中多 1 藍之後的孤城數"));
+  if (pre !== true) return pre;
+  const next = E.placeTargets(st, KMT, 3, ["luzhong"]);
+  const a = E.clone(st), b = E.clone(st);
+  const good = thrown(() => E.placePoints(a, KMT, ["luzhong", "jinan"], 3)), bad = thrown(() => E.placePoints(b, KMT, ["jinan", "luzhong"], 3));
+  return all(
+    eq(E.placeTargets(st, KMT, 3).lit.has("jinan"), false, "第一點就亮了濟南"),
+    eq(next.lit.has("jinan"), true, "魯中放了 1 點之後,濟南沒有亮"), eq(next.left, 1, "魯中放了 1 點之後剩下的行動點"), eq(next.costs.jinan, 1, "濟南每點的花費"),
+    eq(good, null, "先魯中後濟南(3 點)被拒絕"), eq(blueOf(a, "jinan"), 3, "先魯中後濟南之後濟南的藍"), eq(blueOf(a, "luzhong"), 3, "先魯中後濟南之後魯中的藍"),
+    ok(bad != null, bad == null ? "先濟南後魯中沒有被拒絕:濟南放點的那一刻還是孤城" : `先魯中(2 點)後濟南(1 點)可以;反過來被拒絕(「${bad}」)`),
+  );
+});
+
+check("沒有藍也沒有補給的城:國軍的第一點也放不進去(orchestrator 裁決 #1,待 owner)", () => {
+  const t = supplyTodo(); if (t) return t;
+  // 太原 emptied, both its neighbours Communist (太行 already; 晉中 red 4 against blue 2, 安定 2). 鄭州 emptied too, but supplied through 淮海.
+  const edits = { taiyuan: { b: 0 }, jinzhong: { r: 4 }, zhengzhou: { b: 0 } };
+  const st = position(edits), off = position(edits, { supply: false });
+  const pre = all(
+    eq(blueOf(st, "taiyuan"), 0, "太原的藍"), eq(E.supplied(st).has("taiyuan"), false, "太原在補給範圍內"), eq(E.canPlaceAt(st, KMT, "taiyuan"), true, "太原在國軍的相鄰範圍內(晉中有藍)"),
+    eq(E.supplied(st).has("zhengzhou"), true, "鄭州在補給範圍內"), eq(E.canPlaceAt(st, KMT, "zhengzhou"), true, "鄭州在國軍的相鄰範圍內"),
+    eq(E.placeTargets(off, KMT, 2).lit.has("taiyuan"), true, "supply 關掉時太原可以扶植"),
+  );
+  if (pre !== true) return pre;
+  const lit = E.placeTargets(st, KMT, 2).lit, err = thrown(() => E.placePoints(E.clone(st), KMT, ["taiyuan"], 2));
+  return all(
+    eq(lit.has("taiyuan"), false, "placeTargets 亮了沒有補給的空城太原"), eq(lit.has("zhengzhou"), true, "placeTargets 沒有亮有補給的空城鄭州"),
+    ok(err != null, err == null ? "placePoints 讓國軍把第一點放進了沒有補給的太原" : `空的太原沒有補給:不亮、拒絕(「${err}」);空的鄭州有補給:照常`),
+  );
+});
+
+check("經過 apply:打一張牌扶植進孤城被拒絕,legal 不列它;先打通就可以", () => {
+  const t = supplyTodo(); if (t) return t;
+  let st = position(JINAN_CUT);
+  deal(st, KMT, ["score_north", "surrender_order"]); // a headline that needs no event, then a Nationalist 3-ops card
+  st = E.apply(st, { type: "headline", side: KMT, card: "score_north" });
+  const l = E.legal(st, KMT);
+  if (l.kind !== "action") return `國軍沒有走到行動回合(legal = ${l.kind},phase ${st.phase})`;
+  const card = l.cards.find((c) => c.id === "surrender_order");
+  if (!card || !card.uses.place) return `受降令沒有扶植這個用法(${JSON.stringify(card && card.uses)})`;
+  const opts = card.uses.place.options.map((o) => o.id);
+  const play = (points) => E.apply(st, { type: "play", side: KMT, card: "surrender_order", use: "place", points });
+  const err = thrown(() => play(["jinan"]));
+  let after = null;
+  const good = thrown(() => { after = play(["luzhong", "jinan"]); });
+  if (good != null) return `先魯中後濟南被拒絕:${good}`;
+  return all(
+    eq(card.ops, 3, "受降令的行動點"), eq(opts.includes("jinan"), false, "legal 的扶植選項列了孤城濟南"), eq(opts.includes("xuzhou"), true, "legal 的扶植選項沒有徐州"),
+    eq(err != null, true, "打受降令在濟南扶植沒有被拒絕"),
+    eq(blueOf(after, "jinan"), 3, "先魯中後濟南,回合走完之後濟南的藍(路通了,結算不掉點)"), eq(blueOf(after, "luzhong"), 3, "魯中的藍"),
+    settled(after, "打完牌之後"),
+    ok(true, `打受降令直接扶植濟南被拒絕(「${err}」);魯中、濟南各 1 點可以,回合結算後濟南藍 3`),
+  );
+});
+
+check("事件與免費放置不是扶植:place() 本身不看補給", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT);
+  const pre = same(E.isolatedCities(st), ["jinan"], "孤城"); if (pre !== true) return pre;
+  return all(eq(E.place(st, KMT, "jinan", 1), 1, "place() 放進孤城的點數"), eq(blueOf(st, "jinan"), 3, "濟南的藍"), ok(true, "place(國軍, 濟南, 1) 放了 1 點"));
+});
+
+check("回合結算:孤城藍 −1;別的城不動,被切斷的鄉不掉,紅不動", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT);
+  const pre = all(same(E.isolatedCities(st), ["jinan"], "孤城"), eq(blueOf(st, "luzhong"), 2, "魯中的藍(被切斷的鄉)"));
+  if (pre !== true) return pre;
+  const after = settle(st);
+  const others = Object.keys(SPEC_SPACES).filter((id) => id !== "jinan" && blueOf(st, id) > 0);
+  const moved = others.filter((id) => blueOf(after, id) !== blueOf(st, id));
+  return all(
+    settled(after, "結算"), nonEmpty(others.length, "濟南以外有藍的據點"),
+    eq(blueOf(after, "jinan"), 1, "結算後濟南的藍"),
+    eq(blueOf(after, "luzhong"), 2, "結算後魯中的藍(鄉不檢查補給)"),
+    eq(moved.length, 0, `濟南以外有 ${moved.length} 個據點的藍變了(${diff(blueMap(st), blueMap(after))})`),
+    eq(diff(redMap(st), redMap(after)), "無", "紅的變動"),
+    ok(true, `濟南 2→1;其餘 ${others.length} 個有藍的據點不動(含被切斷的魯中);紅不動`),
+  );
+});
+
+check("回合結算:每座孤城各掉 1,掉到 0 為止;留下一筆 attrition 紀錄", () => {
+  const t = supplyTodo(); if (t) return t;
+  // 濟南 down to its last point; 西安 Communist (red 5, no blue) cuts 蘭州, whose only neighbour it is.
+  const st = position({ ...JINAN_CUT, jinan: { b: 1 }, xian: { r: 5, b: 0 } });
+  const pre = same(E.isolatedCities(st), ["jinan", "lanzhou"], "孤城"); if (pre !== true) return pre;
+  const after = settle(st), logs = attritions(after), quiet = attritions(settle(position()));
+  return all(
+    settled(after, "結算"),
+    eq(blueOf(after, "jinan"), 0, "結算後濟南的藍"), eq(blueOf(after, "lanzhou"), 1, "結算後蘭州的藍"),
+    eq(total(after, KMT), total(st, KMT) - 2, `藍的合計(${diff(blueMap(st), blueMap(after))})`),
+    eq(logs.length, 1, "attrition 紀錄的筆數"),
+    eq(JSON.stringify(logs[0] && Object.entries(logs[0].losses || {}).sort()), JSON.stringify([["jinan", 1], ["lanzhou", 1]]), "attrition 紀錄的 losses"),
+    eq(quiet.length, 0, "開局盤面(沒有孤城)的 attrition 紀錄筆數"),
+    ok(true, "濟南 1→0、蘭州 2→1,合計 −2;log 一筆 { type: \"attrition\", losses: { jinan: 1, lanzhou: 1 } };沒有孤城時不記"),
+  );
+});
+
+check("掉完點立即檢查標記:共軍因此控制蘭州,馬易幟,民心 +2", () => {
+  const t = supplyTodo(); if (t) return t;
+  const edits = { xian: { r: 5, b: 0 }, lanzhou: { r: 3, b: 1 } };
+  const st = position(edits);
+  const pre = all(same(E.isolatedCities(st), ["lanzhou"], "孤城"), eq(E.controller(st, "lanzhou"), null, "結算前蘭州的控制者"), eq(Object.keys(st.mie).length, 0, "結算前的易幟"), eq(st.mandate, 0, "結算前的民心"));
+  if (pre !== true) return pre;
+  const after = settle(st), off = settle(position(edits, { supply: false }));
+  return all(
+    settled(after, "結算"), settled(off, "supply 關掉的結算"),
+    eq(off.mie.ma, undefined, "supply 關掉時馬的易幟(對照組)"),
+    eq(blueOf(after, "lanzhou"), 0, "結算後蘭州的藍"), eq(E.controller(after, "lanzhou"), CCP, "結算後蘭州的控制者"),
+    eq(after.mie.ma, true, "馬的易幟標記"), eq(after.mandate, SPEC.powers.ma[2], "民心"),
+    ok(true, `蘭州 1→0,共軍控制,馬易幟,民心 ${after.mandate}`),
+  );
+});
+
+check("掉完點立即檢查標記:共軍因此控制昆明,滇的整編移除", () => {
+  const t = supplyTodo(); if (t) return t;
+  // 桂林 Communist cuts 昆明. The 整編 marker was won earlier (blue at the cap) and stays until the Communists control the seat.
+  const edits = { guilin: { r: 5, b: 0 }, kunming: { r: 3, b: 1 } };
+  const sealed = (options) => { const s = position(edits, options); s.seals.dian = true; s.sealVp.dian = true; return s; };
+  const st = sealed();
+  const pre = all(same(E.isolatedCities(st), ["kunming"], "孤城"), eq(E.controller(st, "kunming"), null, "結算前昆明的控制者"));
+  if (pre !== true) return pre;
+  const after = settle(st), off = settle(sealed({ supply: false }));
+  return all(
+    settled(after, "結算"), settled(off, "supply 關掉的結算"),
+    eq(off.seals.dian, true, "supply 關掉時滇的整編(對照組)"),
+    eq(blueOf(after, "kunming"), 0, "結算後昆明的藍"), eq(E.controller(after, "kunming"), CCP, "結算後昆明的控制者"),
+    eq(after.seals.dian, undefined, "滇的整編標記"),
+    ok(true, "昆明 1→0,共軍控制,滇的整編移除"),
+  );
+});
+
+check("順序:遷都判定在孤城之前;遷都後補給源是廣州,南京不再是", () => {
+  const t = supplyTodo(); if (t) return t;
+  // 南京 Communist (red 4, no blue), and no port in Nationalist control. Before the capital moves there is no
+  // source at all, so every city with blue is cut off; after it moves, 廣州 supplies all of them.
+  const st = position({ nanjing: { r: 4, b: 0 }, shanghai: { b: 2 }, tianjin: { b: 2 }, guangzhou: { b: 1 } });
+  const blueCities = Object.keys(SPEC_SPACES).filter((id) => SPEC_SPACES[id][0] === "city" && blueOf(st, id) > 0);
+  const pre = all(
+    eq(E.controller(st, "nanjing"), CCP, "南京的控制者"), same(E.supplySources(st), ["nanjing"], "結算前的補給源"),
+    nonEmpty(blueCities.length, "有藍的城"), same(E.isolatedCities(st), blueCities, "結算前的孤城(遷都之前每一座都是)"),
+  );
+  if (pre !== true) return pre;
+  const after = settle(st);
+  const r = all(
+    settled(after, "結算"),
+    eq(E.homeCapital(after, KMT), SPEC.moved.kmt, "結算後國軍的首都"), eq(after.mandate, 3, "民心(遷都,共軍 +3)"),
+    same(E.supplySources(after), ["guangzhou"], "結算後的補給源"),
+    eq(diff(blueMap(st), blueMap(after)), "無", "藍的變動(遷都之後沒有孤城)"),
+    eq(attritions(after).length, 0, "attrition 紀錄的筆數"),
+  );
+  if (r !== true) return r;
+  const back = E.clone(after); back.inf.nanjing = [0, 4];
+  return all(
+    eq(E.controller(back, "nanjing"), KMT, "國軍重新控制南京"),
+    same(E.supplySources(back), ["guangzhou"], "國軍拿回南京之後的補給源"),
+    ok(true, `遷都前 ${blueCities.length} 座有藍的城都是孤城;先遷都(南京 → 廣州),廣州供給,沒有一座掉點;南京拿回來也不是補給源`),
+  );
+});
+
+check("順序(log):遷都判定 → 孤城藍 −1 → 回合結束的紀錄 → 終局結算;最後一回合也掉", () => {
+  const t = supplyTodo(); if (t) return t;
+  const st = position(JINAN_CUT, { turns: 1 });
+  st.weariness = 3;
+  const after = settle(st);
+  if (after.winner == null) return `turns: 1 的對局沒有結束(turn ${after.turn},phase ${after.phase})`;
+  const at = (pred) => after.log.findIndex(pred);
+  const cap = after.log.map((l) => l.type).lastIndexOf("capitalCheck"), att = at((l) => l.type === "attrition"), end = at((l) => l.type === "endTurn"), score = at((l) => l.type === "score");
+  return all(
+    eq(blueOf(after, "jinan"), 1, "終局時濟南的藍"),
+    eq(cap >= 0 && att >= 0 && end >= 0 && score >= 0, true, `四種紀錄都要有(capitalCheck ${cap}、attrition ${att}、endTurn ${end}、score ${score})`),
+    eq(cap < att && att < end && end < score, true, `紀錄的順序(capitalCheck ${cap}、attrition ${att}、endTurn ${end}、score ${score})`),
+    eq(after.log[end].weariness, 4, "endTurn 紀錄的民生(3 回復 1)"),
+    ok(true, `log 的位置:遷都判定 ${cap} < 孤城 ${att} < 回合結束 ${end} < 終局結算 ${score}`),
+  );
+});
+
+check("supply 是一個開關:預設開;關掉時兩個效果都沒有,讀數照常", () => {
+  const t = supplyTodo(); if (t) return t;
+  const off = position(JINAN_CUT, { supply: false });
+  const after = settle(off);
+  return all(
+    eq(E.DEFAULT_OPTIONS.supply, true, "DEFAULT_OPTIONS.supply"),
+    same(E.isolatedCities(off), ["jinan"], "supply 關掉時的讀數 isolatedCities"),
+    eq(thrown(() => E.placePoints(E.clone(off), KMT, ["jinan"], 3)), null, "supply 關掉時國軍在濟南扶植被拒絕"),
+    settled(after, "supply 關掉的結算"),
+    eq(blueOf(after, "jinan"), 2, "supply 關掉時結算後濟南的藍"), eq(attritions(after).length, 0, "supply 關掉時的 attrition 紀錄"),
+    ok(true, "supply: false 時濟南可以扶植、結算不掉點;isolatedCities 仍然讀得到濟南"),
+  );
+});
 
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
