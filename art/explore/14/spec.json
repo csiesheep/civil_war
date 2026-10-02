@@ -1,0 +1,35 @@
+{
+  "styles": {
+    "woodcut": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast.",
+    "photo": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera.",
+    "inkwash": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges."
+  },
+  "cards": {
+    "airlift": {
+      "scene": "an airfield on a grey morning with several twin-engine propeller transport aircraft parked on the apron, a line of soldiers in padded cotton uniforms and steel helmets walking up the boarding ramp of one aircraft, crates stacked beside it, seen from a distance",
+      "period": "China 1945, American-built C-47 transport aircraft, steel helmets, canvas duffel bags, wooden crates, no jets, no modern vehicles."
+    },
+    "hu_takes_yanan": {
+      "scene": "a loess plateau in north-west China, terraced yellow hills with rows of cave dwellings dug into the slopes, a tall brick pagoda on a distant hilltop, a column of soldiers in the distance marching up a dirt road into an emptied hill town, empty courtyards, dust in the air",
+      "period": "China 1947, yellow earth, cave dwellings, a Tang-style brick pagoda, soldiers in plain wool uniforms with rifles and mules, no modern buildings."
+    },
+    "into_manchuria": {
+      "scene": "a long column of people in padded cotton coats walking and riding in open railway cars north across a snowy plain, a steam locomotive trailing white smoke, a small farming village with thatched roofs and a lone tree under a cold sky, rail tracks leading to the horizon",
+      "period": "Northeast China 1945, coal-fired steam locomotive, open freight wagons, fur-lined caps, cloth uniforms with leg wrappings, thatched mud-brick farmhouses, no modern vehicles."
+    },
+    "dabie_march": {
+      "scene": "a night river crossing: wooden boats packed with soldiers pushing off from a dark shore, a long line of marching figures with rifles and carrying poles winding down a mountain path toward the water, steep mountains behind, a faint moon over the river",
+      "period": "China 1947, wooden flat-bottomed boats, cloth uniforms with leg wrappings, straw sandals, rifles, pack mules, no motorboats, no modern bridges."
+    },
+    "chongqing_talks": {
+      "scene": "a bare conference room in a mountain city, a long wooden table with two facing rows of empty chairs, tea cups, a window looking out on thick fog over a hillside city of stacked wooden houses and stairways, no people",
+      "period": "Chongqing 1945, wooden furniture, paper-shaded lamp, stone steps, tiled roofs, the Yangtze in fog, no modern buildings."
+    },
+    "inflation": {
+      "scene": "a street in front of a rice shop, a long line of anxious townspeople in plain gowns and jackets pressed against the shop front, a man seen from behind carrying an enormous bundle of paper money wrapped in plain brown paper and tied with string on his back, sacks of rice stacked inside the doorway, a handcart loaded with plain wrapped bundles of paper money",
+      "period": "Shanghai 1948, cloth gowns, straw baskets, plain bare wooden shop fronts with no signboards and no hanging signs, rice sacks, the bundles of money completely wrapped so no printing is visible, no modern cars."
+    }
+  },
+  "tail": "No text, no characters, no seals, no calligraphy, no writing anywhere.",
+  "seeds": { "airlift": 14010, "hu_takes_yanan": 14020, "into_manchuria": 14030, "dabie_march": 14040, "chongqing_talks": 14050, "inflation": 14060 }
+}

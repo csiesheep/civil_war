@@ -1,0 +1,164 @@
+[
+  {
+    "key": "airlift__woodcut",
+    "card": "airlift",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14010,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: an airfield on a grey morning with several twin-engine propeller transport aircraft parked on the apron, a line of soldiers in padded cotton uniforms and steel helmets walking up the boarding ramp of one aircraft, crates stacked beside it, seen from a distance. China 1945, American-built C-47 transport aircraft, steel helmets, canvas duffel bags, wooden crates, no jets, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "airlift__photo",
+    "card": "airlift",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14011,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: an airfield on a grey morning with several twin-engine propeller transport aircraft parked on the apron, a line of soldiers in padded cotton uniforms and steel helmets walking up the boarding ramp of one aircraft, crates stacked beside it, seen from a distance. China 1945, American-built C-47 transport aircraft, steel helmets, canvas duffel bags, wooden crates, no jets, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "airlift__inkwash",
+    "card": "airlift",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14012,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: an airfield on a grey morning with several twin-engine propeller transport aircraft parked on the apron, a line of soldiers in padded cotton uniforms and steel helmets walking up the boarding ramp of one aircraft, crates stacked beside it, seen from a distance. China 1945, American-built C-47 transport aircraft, steel helmets, canvas duffel bags, wooden crates, no jets, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "hu_takes_yanan__woodcut",
+    "card": "hu_takes_yanan",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14020,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: a loess plateau in north-west China, terraced yellow hills with rows of cave dwellings dug into the slopes, a tall brick pagoda on a distant hilltop, a column of soldiers in the distance marching up a dirt road into an emptied hill town, empty courtyards, dust in the air. China 1947, yellow earth, cave dwellings, a Tang-style brick pagoda, soldiers in plain wool uniforms with rifles and mules, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "hu_takes_yanan__photo",
+    "card": "hu_takes_yanan",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14021,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: a loess plateau in north-west China, terraced yellow hills with rows of cave dwellings dug into the slopes, a tall brick pagoda on a distant hilltop, a column of soldiers in the distance marching up a dirt road into an emptied hill town, empty courtyards, dust in the air. China 1947, yellow earth, cave dwellings, a Tang-style brick pagoda, soldiers in plain wool uniforms with rifles and mules, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "hu_takes_yanan__inkwash",
+    "card": "hu_takes_yanan",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14022,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: a loess plateau in north-west China, terraced yellow hills with rows of cave dwellings dug into the slopes, a tall brick pagoda on a distant hilltop, a column of soldiers in the distance marching up a dirt road into an emptied hill town, empty courtyards, dust in the air. China 1947, yellow earth, cave dwellings, a Tang-style brick pagoda, soldiers in plain wool uniforms with rifles and mules, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "into_manchuria__woodcut",
+    "card": "into_manchuria",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14030,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: a long column of people in padded cotton coats walking and riding in open railway cars north across a snowy plain, a steam locomotive trailing white smoke, a small farming village with thatched roofs and a lone tree under a cold sky, rail tracks leading to the horizon. Northeast China 1945, coal-fired steam locomotive, open freight wagons, fur-lined caps, cloth uniforms with leg wrappings, thatched mud-brick farmhouses, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "into_manchuria__photo",
+    "card": "into_manchuria",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14031,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: a long column of people in padded cotton coats walking and riding in open railway cars north across a snowy plain, a steam locomotive trailing white smoke, a small farming village with thatched roofs and a lone tree under a cold sky, rail tracks leading to the horizon. Northeast China 1945, coal-fired steam locomotive, open freight wagons, fur-lined caps, cloth uniforms with leg wrappings, thatched mud-brick farmhouses, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "into_manchuria__inkwash",
+    "card": "into_manchuria",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14032,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: a long column of people in padded cotton coats walking and riding in open railway cars north across a snowy plain, a steam locomotive trailing white smoke, a small farming village with thatched roofs and a lone tree under a cold sky, rail tracks leading to the horizon. Northeast China 1945, coal-fired steam locomotive, open freight wagons, fur-lined caps, cloth uniforms with leg wrappings, thatched mud-brick farmhouses, no modern vehicles. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "dabie_march__woodcut",
+    "card": "dabie_march",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14040,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: a night river crossing: wooden boats packed with soldiers pushing off from a dark shore, a long line of marching figures with rifles and carrying poles winding down a mountain path toward the water, steep mountains behind, a faint moon over the river. China 1947, wooden flat-bottomed boats, cloth uniforms with leg wrappings, straw sandals, rifles, pack mules, no motorboats, no modern bridges. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "dabie_march__photo",
+    "card": "dabie_march",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14041,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: a night river crossing: wooden boats packed with soldiers pushing off from a dark shore, a long line of marching figures with rifles and carrying poles winding down a mountain path toward the water, steep mountains behind, a faint moon over the river. China 1947, wooden flat-bottomed boats, cloth uniforms with leg wrappings, straw sandals, rifles, pack mules, no motorboats, no modern bridges. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "dabie_march__inkwash",
+    "card": "dabie_march",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14042,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: a night river crossing: wooden boats packed with soldiers pushing off from a dark shore, a long line of marching figures with rifles and carrying poles winding down a mountain path toward the water, steep mountains behind, a faint moon over the river. China 1947, wooden flat-bottomed boats, cloth uniforms with leg wrappings, straw sandals, rifles, pack mules, no motorboats, no modern bridges. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "chongqing_talks__woodcut",
+    "card": "chongqing_talks",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14050,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: a bare conference room in a mountain city, a long wooden table with two facing rows of empty chairs, tea cups, a window looking out on thick fog over a hillside city of stacked wooden houses and stairways, no people. Chongqing 1945, wooden furniture, paper-shaded lamp, stone steps, tiled roofs, the Yangtze in fog, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "chongqing_talks__photo",
+    "card": "chongqing_talks",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14051,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: a bare conference room in a mountain city, a long wooden table with two facing rows of empty chairs, tea cups, a window looking out on thick fog over a hillside city of stacked wooden houses and stairways, no people. Chongqing 1945, wooden furniture, paper-shaded lamp, stone steps, tiled roofs, the Yangtze in fog, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "chongqing_talks__inkwash",
+    "card": "chongqing_talks",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14052,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: a bare conference room in a mountain city, a long wooden table with two facing rows of empty chairs, tea cups, a window looking out on thick fog over a hillside city of stacked wooden houses and stairways, no people. Chongqing 1945, wooden furniture, paper-shaded lamp, stone steps, tiled roofs, the Yangtze in fog, no modern buildings. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "inflation__woodcut",
+    "card": "inflation",
+    "style": "woodcut",
+    "w": 768,
+    "h": 1024,
+    "seed": 14060,
+    "prompt": "A 1940s Chinese woodcut print, bold black ink carved with a knife on cream paper, thick black outlines, strong hatching and cross-hatching, large flat areas of solid black, one single accent colour of vermilion red used sparingly, rough hand-printed texture, graphic and high contrast. Scene: a street in front of a rice shop, a long line of anxious townspeople in plain gowns and jackets pressed against the shop front, a man seen from behind carrying an enormous bundle of paper money wrapped in plain brown paper and tied with string on his back, sacks of rice stacked inside the doorway, a handcart loaded with plain wrapped bundles of paper money. Shanghai 1948, cloth gowns, straw baskets, plain bare wooden shop fronts with no signboards and no hanging signs, rice sacks, the bundles of money completely wrapped so no printing is visible, no modern cars. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "inflation__photo",
+    "card": "inflation",
+    "style": "photo",
+    "w": 768,
+    "h": 1024,
+    "seed": 14061,
+    "prompt": "A faded 1940s black-and-white press photograph, silver gelatin print gone yellow-brown, heavy film grain, soft focus, low contrast, small scratches and dust, vignetted corners, candid documentary composition shot on a medium-format camera. Scene: a street in front of a rice shop, a long line of anxious townspeople in plain gowns and jackets pressed against the shop front, a man seen from behind carrying an enormous bundle of paper money wrapped in plain brown paper and tied with string on his back, sacks of rice stacked inside the doorway, a handcart loaded with plain wrapped bundles of paper money. Shanghai 1948, cloth gowns, straw baskets, plain bare wooden shop fronts with no signboards and no hanging signs, rice sacks, the bundles of money completely wrapped so no printing is visible, no modern cars. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  {
+    "key": "inflation__inkwash",
+    "card": "inflation",
+    "style": "inkwash",
+    "w": 768,
+    "h": 1024,
+    "seed": 14062,
+    "prompt": "A Chinese ink wash painting on pale warm rice paper, sparse composition with generous empty space, wet gradients of black ink with light touches of grey-blue and ochre, loose confident brushwork, soft edges. Scene: a street in front of a rice shop, a long line of anxious townspeople in plain gowns and jackets pressed against the shop front, a man seen from behind carrying an enormous bundle of paper money wrapped in plain brown paper and tied with string on his back, sacks of rice stacked inside the doorway, a handcart loaded with plain wrapped bundles of paper money. Shanghai 1948, cloth gowns, straw baskets, plain bare wooden shop fronts with no signboards and no hanging signs, rice sacks, the bundles of money completely wrapped so no printing is visible, no modern cars. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  }
+]
