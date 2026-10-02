@@ -2897,8 +2897,8 @@ check("situations 關掉:沒有撤離的放置、沒有停戰的罰則、奇襲�
     eq(J(s3.support), "[1,3]", "第 3 回合開始後的支持度(時間表照走)"), eq(rb(b, "jizhong"), "0/0", "第 3 回合國軍 2 點奇襲冀中(沒有 +1)之後 紅/藍"),
     eq(J(["shanbei", "luzhong", "jizhong", "dabieshan"].map((id) => E.campaignMod(s4, KMT, id))), J([0, 0, 0, 0]), "第 4 回合國軍奇襲的加減(陝北、魯中、冀中、大別山)"),
     eq(E.canPlaceAt(s5, CCP, "liaoxi"), false, "遼西在共軍的相鄰範圍內"), eq(E.placeTargets(s5, CCP, 3).lit.has("liaoxi"), false, "第 5 回合共軍扶植時遼西亮了(跳躍)"),
-    eq(E.campaignMod(s5, CCP, "dabieshan"), 0, "第 5 回合共軍對鄉(大別山)奇襲的加減"), eq(J(s5.support), "[2,3]", "第 5 回合開始後的支持度(時間表照走)"),
-    ok(true, "第 2 回合不放撤離的點、先動手沒有罰則;第 3、4 回合國軍奇襲不加不減;第 5 回合不能跳、對鄉不加;支持度 4→3、1→2 照走"),
+    eq(E.campaignMod(s5, CCP, "dabieshan"), 0, "第 5 回合共軍對鄉(大別山)奇襲的加減"), eq(J(s5.support), "[2,4]", "第 5 回合開始後的支持度(從開局的 [1,4] 直接進第 5 回合:蘇聯 +1,時間表照走)"),
+    ok(true, "第 2 回合不放撤離的點、先動手沒有罰則;第 3、4 回合國軍奇襲不加不減;第 5 回合不能跳、對鄉不加;支持度的固定變動照走(第 3 回合美 4→3、第 5 回合蘇 1→2)"),
   );
 });
 
@@ -2943,8 +2943,10 @@ check("situations 關掉:空手走完八回合,一個決定都不問;支持度�
 check("rounds: \"symmetric\":兩邊每期的手牌上限與行動回合數相同(縱橫的 8 / 6、9 / 7、9 / 7);共軍先、國軍最後", () => {
   const t = swTodo(); if (t) return t;
   let g = E.createGame(5, SYM);
-  g = E.apply(g, { type: "choose", side: CCP, choice: g.pending.options.slice(0, SPEC.free.ccp) });
-  g = E.apply(g, { type: "choose", side: KMT, choice: g.pending.options.slice(0, SPEC.free.kmt) });
+  for (const [side, n] of [[CCP, SPEC.free.ccp], [KMT, SPEC.free.kmt]]) {
+    const q = pendingIs(g, side, "points", "rounds: symmetric 的開局(時局還開著,免費放置照問)"); if (q !== true) return q;
+    g = E.apply(g, { type: "choose", side, choice: g.pending.options.slice(0, n) });
+  }
   const t4 = enter(4, { refill: true, options: SYM }), t7 = enter(7, { refill: true, options: SYM }), d7 = enter(7, { refill: true });
   let st = position({}, SYM);
   st.draw = []; st.discard = []; st.later = {};
