@@ -22,6 +22,7 @@
 | `public/*.html`、`public/app.js`、`public/landing.js`、`public/rules.js`、`public/style.css`、`public/favicon.svg` | FE |
 | `public/i18n/*`、`README.md` | writer |
 | `public/art/` 與產生它的 prompt | artist |
+| `art/`(探索用的圖、contact sheet 與 prompt;**不在 `public/` 底下,所以不會被部署**) | artist(orchestrator 提案,2026-10-02;owner 還沒確認這一列) |
 | `tests/*.test.js`、`tests/driver.js`、`tests/harness.js`、`tools/`、`TEAM.md` | orchestrator |
 
 - 中文牌文在 `public/shared/cards.js`(BE 的檔案)裡:writer 改牌文是跨界修改,交付時點名。
@@ -30,7 +31,7 @@
   `public/shared/engine.js` 開頭列的那幾處改動、`tests/acceptance.test.js`,都是起手的那一個 session 寫、同一個 session 驗的。
   在那裡找到缺陷,先假設是它錯,回報,不要繞過。
 - `public/shared/engine.js`、`public/shared/bots.js`、`tests/driver.js`、`tests/sim.js` 是從縱橫(csiesheep/zongheng,`686b439`)複製的。
-  第二個 commit 是原樣複製,所以 `git diff 57819be -- <檔案>` 就是這個遊戲改過的全部。`bots.js` 和 `tests/sim.js` 還沒有改寫,不能跑。
+  第二個 commit 是原樣複製,所以 `git diff 57819be -- <檔案>` 就是這個遊戲改過的全部。`bots.js`(隨機玩家以外)和 `tests/sim.js` 還沒有改寫,不能跑:M2 的 #12 與之後的 issue。隨機玩家在 `public/shared/random.js`(#9)。
 - 設計文件在 owner 的 vault:`Projects/civil_war/civil_war - rulebook.md`(第一批的規則與 72 張牌)、
   `civil_war plan.md`(決定、里程碑)、`civil_war - mechanisms.md`(之後的機制)。地圖用 A 版畫法,
   canvas https://claude.ai/artifact/GNg8gPCSdRnRrBZYv5afpc 。brief 會帶上需要的段落。
@@ -107,6 +108,8 @@ orch clean                              land 之前跑:樹上不可以有 FALSIF
 cwd 就是它。每個 `_wt/` 工作樹有 `__MARKER_ORCH.txt`(name + SHA)。
 **這個 repo 的驗收現在是 node 測試,不是頁面**:`node --test tests/acceptance.test.js > log 2>&1; echo $?`,
 再從 log 裡取 `VERDICT` 那一行和 `失敗 ·` 開頭的每一行。等有畫面(M3)再加頁面版。
+另外兩支(一樣先落檔再取判決那一行):`node --test tests/fuzz.test.js`(隨機合法對局兩千局加五個控制組,約兩分鐘;取 `FUZZ-VERDICT` 與 `FUZZ-CELLS-VERDICT`)、
+`node --test tests/bots.test.js`(bot 對局約 150 局,幾分鐘;取 `BOTS-VERDICT`;`BOTS_SCALE=0.25` 快速看一眼)。`npm test` 是 `node --test`,三支都跑。
 `node --test` 不要寫成 `node --test tests/`(Windows 上會出錯)。Node 在這台機器上長時間跑會隨機當掉:失敗的測試先重跑一次再相信。
 `.gitignore` 加 `__MARKER_ORCH.txt`、`__orch_*` 與 `.claude/worktrees/`。建議 alias:`alias orch='bash tools/orch.sh'`。
 ⚠ `orch rm` 之前先離開那個目錄——cwd 在裡面時 Windows 刪不掉。
