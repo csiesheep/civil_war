@@ -1,0 +1,52 @@
+{
+  "factions": {
+    "nat": ["nat_bright", "nat_sunset", "nat_closeup"],
+    "com": ["com_oil", "com_flat", "com_block"],
+    "other": ["real_bw", "real_tech", "real_modern"]
+  },
+  "styles": {
+    "nat_bright": "A vivid 1940s Shanghai calendar-poster (yuefenpai) painting in bright saturated gouache and airbrush, clear sky blue, rich vermilion red, fresh leaf green and golden yellow, crisp smooth shading, polished idealised figures, glossy commercial lithograph look, a wide daylight composition.",
+    "nat_sunset": "A vivid 1940s calendar-poster painting at sunset, a glowing sky of saturated orange, magenta and gold with deep teal shadows, warm rim light on the figures, airbrushed gradients, rich glossy colour, bold contrast, romantic atmosphere.",
+    "nat_closeup": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished.",
+    "com_oil": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything.",
+    "com_flat": "A socialist propaganda poster in flat colour printing, a solid red background and large flat red shapes dominating, simple bold shapes with thick dark outlines, flat tones with no gradients, soldiers in grey and khaki cotton uniforms, folk-print simplicity, striking and graphic.",
+    "com_block": "A socialist propaganda poster in bold colour-block silhouette style, a huge red sun and red sky filling the upper picture, strong diagonal composition, figures as dark and grey silhouettes with simplified shapes, red and black with a little cream, constructivist graphic energy.",
+    "real_bw": "A black-and-white film still from a 1940s studio drama, high-contrast chiaroscuro lighting, deep blacks, fine 35mm film grain, classic Hollywood-era composition, sharp focus on the subject.",
+    "real_tech": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish.",
+    "real_modern": "A frame from a modern prestige historical drama shot on anamorphic lenses, desaturated teal and amber colour grade, shallow depth of field, natural practical lighting, subtle grain, realistic and moody."
+  },
+  "cards": {
+    "airlift": {
+      "faction": "nat",
+      "scene": "an airfield with a twin-engine C-47 transport aircraft carrying the Republic of China sun emblem on its wing, a line of Nationalist soldiers in steel helmets and padded uniforms boarding up the ramp, wooden crates beside it, other transport aircraft behind",
+      "period": "China 1945, American-built C-47, steel helmets, no jets, no modern vehicles."
+    },
+    "hu_takes_yanan": {
+      "faction": "nat",
+      "scene": "the loess hills of northern Shaanxi with rows of cave dwellings and the tall brick pagoda of Yan'an on the hilltop, the Republic of China flag (red field, blue canton with a white twelve-rayed sun, no yellow star) raised beside the pagoda, Nationalist soldiers marching up a dirt road into the town, a general in a Nationalist army uniform on horseback in front",
+      "period": "China 1947, yellow earth, cave dwellings, wool uniforms, rifles and mules, no modern buildings."
+    },
+    "into_manchuria": {
+      "faction": "com",
+      "scene": "a long column of Communist soldiers and cadres in padded cotton uniforms with leg wrappings marching north across a snowy plain beside a steam locomotive pulling open wagons full of troops, a plain red flag carried at the front, a thatched village in the distance",
+      "period": "Northeast China 1945, coal-fired steam locomotive, grey and khaki cloth uniforms, plain red flag with no star and no emblem, no modern vehicles."
+    },
+    "dabie_march": {
+      "faction": "com",
+      "scene": "a night river crossing: Communist soldiers in cloth uniforms with leg wrappings and straw sandals pushing wooden boats off a dark shore, a long line of marching men with rifles winding down a mountain path to the water, a plain red flag held up in the lead boat, steep mountains behind",
+      "period": "China 1947, wooden flat-bottomed boats, rifles, pack mules, grey and khaki cloth uniforms, plain red flag with no star and no emblem, no motorboats."
+    },
+    "chongqing_talks": {
+      "faction": "other",
+      "scene": "the 1945 Chongqing negotiations: Chiang Kai-shek in a plain military tunic and Mao Zedong in a grey cadre suit and cap shaking hands in a reception hall, Zhou Enlai and Patrick Hurley standing beside them, press photographers with flashbulbs, a window showing a foggy mountain city behind",
+      "period": "Chongqing, August 1945, wooden furniture, suits and military tunics, flashbulb cameras."
+    },
+    "inflation": {
+      "faction": "other",
+      "scene": "a rice shop in a city street with a long queue of desperate townspeople, a man pushing a wheelbarrow piled high with bundles of banknotes, another man carrying a huge sack stuffed with paper money, sacks of rice inside the shop, plain bare wooden shop fronts with no signboards and no hanging signs",
+      "period": "China 1948, cloth gowns, straw baskets, Chinese paper money bundled with paper bands, no modern cars."
+    }
+  },
+  "tail": "Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere.",
+  "seeds": { "airlift": 34010, "hu_takes_yanan": 34020, "into_manchuria": 34030, "dabie_march": 34040, "chongqing_talks": 34050, "inflation": 34060 }
+}
