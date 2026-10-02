@@ -1,0 +1,99 @@
+{
+  "451": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "qwen-image-2.1-UC-Q8_0.gguf"
+    }
+  },
+  "452": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "clip": [
+        "453",
+        0
+      ],
+      "prompt": "A 1940s Shanghai calendar-poster (yuefenpai) lithograph, soft pastel colours in smooth airbrushed gouache, gentle gradients, delicate fine outlines, polished idealised figures, warm rosy tones, an ornamental frame border with floral corner motifs, glossy commercial print finish. Scene: an airfield with a twin-engine C-47 transport aircraft carrying the Republic of China sun emblem on its wing, a line of Nationalist soldiers in steel helmets and padded uniforms boarding up the ramp, wooden crates beside it, other transport aircraft behind. A decorative title cartouche at the top reads exactly “勝利還都”. China 1945, American-built C-47, steel helmets, no jets, no modern vehicles. Any writing in the picture is only the quoted Chinese, written correctly in traditional characters, and there is no other writing anywhere.",
+      "negative_prompt": "",
+      "resolution": 1024,
+      "vae": [
+        "454",
+        0
+      ]
+    }
+  },
+  "453": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "454": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "456": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 768,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "457": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "458",
+        0
+      ],
+      "vae": [
+        "454",
+        0
+      ]
+    }
+  },
+  "458": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "451",
+        0
+      ],
+      "positive": [
+        "452",
+        0
+      ],
+      "negative": [
+        "452",
+        1
+      ],
+      "latent_image": [
+        "456",
+        0
+      ],
+      "seed": 24010,
+      "steps": 25,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1
+    }
+  },
+  "461": {
+    "class_type": "SaveImageAdvanced",
+    "inputs": {
+      "images": [
+        "457",
+        0
+      ],
+      "filename_prefix": "civil_war_14_r2_airlift__nat_calendar",
+      "format": "png",
+      "format.bit_depth": "8-bit",
+      "format.input_color_space": "sRGB"
+    }
+  }
+}
