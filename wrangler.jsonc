@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "civil_war",
+  "compatibility_date": "2026-10-01",
+  "main": "src/index.js",
+  "observability": {
+    "enabled": true
+  },
+  // Attached to the shared hostname by path-scoped Routes, NOT a Custom Domain;
+  // the `games` hub Worker holds that. Cloudflare matches the most-specific
+  // route first, so these peel /civil_war off the hub.
+  // Two patterns: `/*` does not match the bare prefix, and the bare prefix is
+  // what src/index.js redirects to the trailing-slash form.
+  "routes": [
+    { "pattern": "games.csiesheep.com/civil_war", "zone_name": "csiesheep.com" },
+    { "pattern": "games.csiesheep.com/civil_war/*", "zone_name": "csiesheep.com" }
+  ],
+  // Only public/ is uploaded as static assets; src/ is bundled into the Worker.
+  // No Durable Object yet: rooms are M4.
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  }
+}
