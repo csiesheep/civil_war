@@ -235,6 +235,21 @@ check("剩 2 個行動回合、手上 2 張記分卡:現在就要打記分卡(�
     ok(true, "兩邊各 10 個種子都先打記分卡"));
 });
 
+check("打記分卡會當場輸、留著也會輸:還是打記分卡(留著記分卡的輸排在所有結果之後;orchestrator 裁決 #12)", () => {
+  if (TODO) return TODO;
+  // 民心 −19 and the Communists' last round, holding 後方's scoring card: playing it scores 後方 for
+  // the Nationalists and ends the game at once by 民心; keeping it loses at the settle. Both lose.
+  // Keeping the card is the loss the rules make certain, so it ranks last: with the two losses
+  // valued alike the noise picks between them, and this check sees it.
+  const c = atRound(1, 6, CCP, [[HEAD[CCP], "score_rear", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials"]]);
+  c.mandate = -19;
+  let played = null; try { played = E.apply(c, { type: "play", side: CCP, card: "score_rear", use: "event" }); } catch (e) { return `共軍打後方記分卡被拒絕:${e.message}`; }
+  const pre = all(eq(played.winner, KMT, "打出後方記分卡之後的勝者(對照:當場輸)"), eq(played.reason, "mandate", "那一局結束的理由")); if (pre !== true) return pre;
+  const pc = cardsPlayed(c, CCP, "normal", 10);
+  return all(eq(pc.filter((x) => x === "score_rear").length, 10, `10 個種子裡打記分卡的次數(實際打的:${[...new Set(pc)].join("、")})`),
+    ok(true, "打出去是民心 −20 當場輸,留著是結算時輸:10 個種子都打記分卡"));
+});
+
 check("對照:行動回合還夠的時候,不必現在打記分卡(國軍第 1 回合的第 6 個:它有 7 個)", () => {
   if (TODO) return TODO;
   // The same shape as the Communists' last round above, for the side that has one more round: the
