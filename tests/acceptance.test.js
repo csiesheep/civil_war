@@ -1415,7 +1415,7 @@ check("美援全部放在城時可以放進孤城;有一點放在鄉就不行;�
   );
 });
 
-check("空運只到孤城(有藍的城):沒有藍的城,不論是沒有補給還是共軍控制,美援也放不進去(orchestrator 裁決 #4,待 owner)", () => {
+check("空運只到孤城(有藍的城):沒有藍的城,不論是沒有補給還是共軍控制,美援也放不進去(owner 裁決 #4)", () => {
   const t = aidTodo(); if (t) return t;
   const mk = (edits) => toAction(enter(6, { options: AID_ON, edits, support: [0, 4], hands: [[], KH3] }));
   const empty = mk({ taiyuan: { b: 0 }, jinzhong: { r: 4 } }), held = mk({ zhengzhou: { r: 4, b: 2 } }), bare = mk({ zhengzhou: { r: 2, b: 0 } });
