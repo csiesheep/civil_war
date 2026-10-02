@@ -1,0 +1,482 @@
+[
+  {
+    "key": "sino_soviet_treaty",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21111,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The Kremlin in Moscow on the night of 14 August 1945, the moment after the signing: Chinese Foreign Minister Wang Shijie in a dark Western suit and Soviet Foreign Minister Molotov stand shaking hands across a polished table, a closed dark-red leather portfolio lying shut in front of them with two fountain pens beside it, the whole tabletop otherwise bare, Joseph Stalin, grey-haired with a heavy grey-black moustache in a plain pale tunic and holding his pipe, stands smiling behind them, T. V. Soong, a lean man in round glasses and a dark long gown, beside him, gilded walls, crystal chandeliers and red velvet curtains, press photographers with flashbulbs, low-angle close-up on the clasped hands and the closed portfolio. Moscow, August 1945, formal suits and uniforms, not a single sheet of paper or page of writing visible anywhere in the picture. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "sino_soviet_treaty",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21112,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The Kremlin in Moscow on the night of 14 August 1945, the moment after the signing: Chinese Foreign Minister Wang Shijie in a dark Western suit and Soviet Foreign Minister Molotov stand shaking hands across a polished table, a closed dark-red leather portfolio lying shut in front of them with two fountain pens beside it, the whole tabletop otherwise bare, Joseph Stalin, grey-haired with a heavy grey-black moustache in a plain pale tunic and holding his pipe, stands smiling behind them, T. V. Soong, a lean man in round glasses and a dark long gown, beside him, gilded walls, crystal chandeliers and red velvet curtains, press photographers with flashbulbs, low-angle close-up on the clasped hands and the closed portfolio. Moscow, August 1945, formal suits and uniforms, not a single sheet of paper or page of writing visible anywhere in the picture. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "sino_soviet_treaty",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21113,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The Kremlin in Moscow on the night of 14 August 1945, the moment after the signing: Chinese Foreign Minister Wang Shijie in a dark Western suit and Soviet Foreign Minister Molotov stand shaking hands across a polished table, a closed dark-red leather portfolio lying shut in front of them with two fountain pens beside it, the whole tabletop otherwise bare, Joseph Stalin, grey-haired with a heavy grey-black moustache in a plain pale tunic and holding his pipe, stands smiling behind them, T. V. Soong, a lean man in round glasses and a dark long gown, beside him, gilded walls, crystal chandeliers and red velvet curtains, press photographers with flashbulbs, low-angle close-up on the clasped hands and the closed portfolio. Moscow, August 1945, formal suits and uniforms, not a single sheet of paper or page of writing visible anywhere in the picture. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "sino_soviet_treaty",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21114,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The Kremlin in Moscow on the night of 14 August 1945, the moment after the signing: Chinese Foreign Minister Wang Shijie in a dark Western suit and Soviet Foreign Minister Molotov stand shaking hands across a polished table, a closed dark-red leather portfolio lying shut in front of them with two fountain pens beside it, the whole tabletop otherwise bare, Joseph Stalin, grey-haired with a heavy grey-black moustache in a plain pale tunic and holding his pipe, stands smiling behind them, T. V. Soong, a lean man in round glasses and a dark long gown, beside him, gilded walls, crystal chandeliers and red velvet curtains, press photographers with flashbulbs, low-angle close-up on the clasped hands and the closed portfolio. Moscow, August 1945, formal suits and uniforms, not a single sheet of paper or page of writing visible anywhere in the picture. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "return_to_nanjing",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21121,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki military uniform with no decorations and his peaked cap in his hand, and Madame Chiang, slender and elegant, her hair in a smooth chignon in a blue qipao climbing the steps side by side, an honour guard in khaki, a throng of cheering civilians waving small flags of the Republic of China (a red field with a blue canton bearing a white twelve-pointed sun, no yellow star), plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "return_to_nanjing",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21122,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki military uniform with no decorations and his peaked cap in his hand, and Madame Chiang, slender and elegant, her hair in a smooth chignon in a blue qipao climbing the steps side by side, an honour guard in khaki, a throng of cheering civilians waving small flags of the Republic of China (a red field with a blue canton bearing a white twelve-pointed sun, no yellow star), plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "return_to_nanjing",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21123,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki military uniform with no decorations and his peaked cap in his hand, and Madame Chiang, slender and elegant, her hair in a smooth chignon in a blue qipao climbing the steps side by side, an honour guard in khaki, a throng of cheering civilians waving small flags of the Republic of China (a red field with a blue canton bearing a white twelve-pointed sun, no yellow star), plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "return_to_nanjing",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21124,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki military uniform with no decorations and his peaked cap in his hand, and Madame Chiang, slender and elegant, her hair in a smooth chignon in a blue qipao climbing the steps side by side, an honour guard in khaki, a throng of cheering civilians waving small flags of the Republic of China (a red field with a blue canton bearing a white twelve-pointed sun, no yellow star), plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "reorganisation_conference",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21131,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain office room in the hill city of Chongqing on 25 February 1946, winter mist and steep terraced slopes of grey-tiled roofs seen through the tall windows, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold grey winter light, low angle. Chongqing, February 1946, no readable documents. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "reorganisation_conference",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21132,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain office room in the hill city of Chongqing on 25 February 1946, winter mist and steep terraced slopes of grey-tiled roofs seen through the tall windows, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold grey winter light, low angle. Chongqing, February 1946, no readable documents. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "reorganisation_conference",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21133,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain office room in the hill city of Chongqing on 25 February 1946, winter mist and steep terraced slopes of grey-tiled roofs seen through the tall windows, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold grey winter light, low angle. Chongqing, February 1946, no readable documents. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "reorganisation_conference",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21134,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain office room in the hill city of Chongqing on 25 February 1946, winter mist and steep terraced slopes of grey-tiled roofs seen through the tall windows, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold grey winter light, low angle. Chongqing, February 1946, no readable documents. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "into_manchuria",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21161,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Shanhaiguan Pass, where the Great Wall meets the sea: a long column of Communist soldiers in grey and khaki cotton uniforms, soft cloth caps and cloth puttees on their legs and cadres in padded jackets with rifles and bedrolls marching through the great arched gate of the grey brick fortress heading north-east, the plain grey brick of the gate tower with no plaque on it, mule carts with ammunition, a plain red flag with no star, no emblem and no lettering carried at the front, the rust-brown Great Wall climbing the hills behind and a strip of blue sea, autumn dust. Northeast China gateway, October 1945, no modern vehicles, no lettering anywhere on the gate. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "into_manchuria",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21162,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Shanhaiguan Pass, where the Great Wall meets the sea: a long column of Communist soldiers in grey and khaki cotton uniforms, soft cloth caps and cloth puttees on their legs and cadres in padded jackets with rifles and bedrolls marching through the great arched gate of the grey brick fortress heading north-east, the plain grey brick of the gate tower with no plaque on it, mule carts with ammunition, a plain red flag with no star, no emblem and no lettering carried at the front, the rust-brown Great Wall climbing the hills behind and a strip of blue sea, autumn dust. Northeast China gateway, October 1945, no modern vehicles, no lettering anywhere on the gate. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "into_manchuria",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21163,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Shanhaiguan Pass, where the Great Wall meets the sea: a long column of Communist soldiers in grey and khaki cotton uniforms, soft cloth caps and cloth puttees on their legs and cadres in padded jackets with rifles and bedrolls marching through the great arched gate of the grey brick fortress heading north-east, the plain grey brick of the gate tower with no plaque on it, mule carts with ammunition, a plain red flag with no star, no emblem and no lettering carried at the front, the rust-brown Great Wall climbing the hills behind and a strip of blue sea, autumn dust. Northeast China gateway, October 1945, no modern vehicles, no lettering anywhere on the gate. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "into_manchuria",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21164,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Shanhaiguan Pass, where the Great Wall meets the sea: a long column of Communist soldiers in grey and khaki cotton uniforms, soft cloth caps and cloth puttees on their legs and cadres in padded jackets with rifles and bedrolls marching through the great arched gate of the grey brick fortress heading north-east, the plain grey brick of the gate tower with no plaque on it, mule carts with ammunition, a plain red flag with no star, no emblem and no lettering carried at the front, the rust-brown Great Wall climbing the hills behind and a strip of blue sea, autumn dust. Northeast China gateway, October 1945, no modern vehicles, no lettering anywhere on the gate. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "shangdang_campaign",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21171,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Terraced loess hills in the Taihang Mountains in autumn: Communist riflemen in grey cotton uniforms, soft cloth caps, puttees and straw sandals charge down a hillside past trees heavy with red persimmons toward a walled town in the valley, bayonets fixed, a mountain gun crew firing from a ledge, General Liu Bocheng, a weathered square-jawed man with short cropped hair, with binoculars on a ridge giving orders, battle smoke drifting across the sky. Southeast Shanxi, September 1945, a plain red flag with no star, no emblem and no lettering, no tanks. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "shangdang_campaign",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21172,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Terraced loess hills in the Taihang Mountains in autumn: Communist riflemen in grey cotton uniforms, soft cloth caps, puttees and straw sandals charge down a hillside past trees heavy with red persimmons toward a walled town in the valley, bayonets fixed, a mountain gun crew firing from a ledge, General Liu Bocheng, a weathered square-jawed man with short cropped hair, with binoculars on a ridge giving orders, battle smoke drifting across the sky. Southeast Shanxi, September 1945, a plain red flag with no star, no emblem and no lettering, no tanks. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "shangdang_campaign",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21173,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Terraced loess hills in the Taihang Mountains in autumn: Communist riflemen in grey cotton uniforms, soft cloth caps, puttees and straw sandals charge down a hillside past trees heavy with red persimmons toward a walled town in the valley, bayonets fixed, a mountain gun crew firing from a ledge, General Liu Bocheng, a weathered square-jawed man with short cropped hair, with binoculars on a ridge giving orders, battle smoke drifting across the sky. Southeast Shanxi, September 1945, a plain red flag with no star, no emblem and no lettering, no tanks. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "shangdang_campaign",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21174,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Terraced loess hills in the Taihang Mountains in autumn: Communist riflemen in grey cotton uniforms, soft cloth caps, puttees and straw sandals charge down a hillside past trees heavy with red persimmons toward a walled town in the valley, bayonets fixed, a mountain gun crew firing from a ledge, General Liu Bocheng, a weathered square-jawed man with short cropped hair, with binoculars on a ridge giving orders, battle smoke drifting across the sky. Southeast Shanxi, September 1945, a plain red flag with no star, no emblem and no lettering, no tanks. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "marshall_mission",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21241,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A sunny garden terrace with a plum tree in a villa in Nanjing, a wide shot of exactly three men standing side by side in a row, full figures, each clearly different: in the centre General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, his arms stretched out wide to both sides with one open hand toward each of the others; on his left Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki tunic with no decorations; on his right Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair, in a grey Zhongshan suit; a garden table behind them with a rolled map, warm afternoon light, the three of them filling the foreground and nobody else in front of them. Nanjing, 1946, no readable documents, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "marshall_mission",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21242,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A sunny garden terrace with a plum tree in a villa in Nanjing, a wide shot of exactly three men standing side by side in a row, full figures, each clearly different: in the centre General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, his arms stretched out wide to both sides with one open hand toward each of the others; on his left Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki tunic with no decorations; on his right Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair, in a grey Zhongshan suit; a garden table behind them with a rolled map, warm afternoon light, the three of them filling the foreground and nobody else in front of them. Nanjing, 1946, no readable documents, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "marshall_mission",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21243,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A sunny garden terrace with a plum tree in a villa in Nanjing, a wide shot of exactly three men standing side by side in a row, full figures, each clearly different: in the centre General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, his arms stretched out wide to both sides with one open hand toward each of the others; on his left Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki tunic with no decorations; on his right Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair, in a grey Zhongshan suit; a garden table behind them with a rolled map, warm afternoon light, the three of them filling the foreground and nobody else in front of them. Nanjing, 1946, no readable documents, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "marshall_mission",
+    "c": 4,
+    "model": "zimage",
+    "seed": 21244,
+    "steps": 20,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A sunny garden terrace with a plum tree in a villa in Nanjing, a wide shot of exactly three men standing side by side in a row, full figures, each clearly different: in the centre General George Marshall, tall and straight with silver-grey hair and a lined, stern face, in a US Army general's uniform, his arms stretched out wide to both sides with one open hand toward each of the others; on his left Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face, in a plain khaki tunic with no decorations; on his right Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair, in a grey Zhongshan suit; a garden table behind them with a rolled map, warm afternoon light, the three of them filling the foreground and nobody else in front of them. Nanjing, 1946, no readable documents, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "league_banned",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21331,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain black lacquered double door set in a bare grey brick wall of a lane house in a Shanghai alley at dusk, the wall and door completely blank and unmarked: Nationalist policemen and plain-clothes agents in dark long gowns and fedoras carry out boxes of papers and a mimeograph machine while an elderly man with a white goatee, round spectacles and a long grey gown, the Democratic League's chairman Zhang Lan, stands upright in the doorway with a hand on his cane, a black sedan with its headlamps on, a policeman pulling the black double doors shut with a heavy lock, the only light a single street lamp and the sedan's headlamps, low angle. Shanghai, October 1947, 1940s police uniforms, no readable papers, no door plates, no plaques, no signboards, no lanterns, no posters, nothing hanging on the wall or door. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "league_banned",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21332,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain black lacquered double door set in a bare grey brick wall of a lane house in a Shanghai alley at dusk, the wall and door completely blank and unmarked: Nationalist policemen and plain-clothes agents in dark long gowns and fedoras carry out boxes of papers and a mimeograph machine while an elderly man with a white goatee, round spectacles and a long grey gown, the Democratic League's chairman Zhang Lan, stands upright in the doorway with a hand on his cane, a black sedan with its headlamps on, a policeman pulling the black double doors shut with a heavy lock, the only light a single street lamp and the sedan's headlamps, low angle. Shanghai, October 1947, 1940s police uniforms, no readable papers, no door plates, no plaques, no signboards, no lanterns, no posters, nothing hanging on the wall or door. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "league_banned",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21333,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain black lacquered double door set in a bare grey brick wall of a lane house in a Shanghai alley at dusk, the wall and door completely blank and unmarked: Nationalist policemen and plain-clothes agents in dark long gowns and fedoras carry out boxes of papers and a mimeograph machine while an elderly man with a white goatee, round spectacles and a long grey gown, the Democratic League's chairman Zhang Lan, stands upright in the doorway with a hand on his cane, a black sedan with its headlamps on, a policeman pulling the black double doors shut with a heavy lock, the only light a single street lamp and the sedan's headlamps, low angle. Shanghai, October 1947, 1940s police uniforms, no readable papers, no door plates, no plaques, no signboards, no lanterns, no posters, nothing hanging on the wall or door. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "league_banned",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21334,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: A plain black lacquered double door set in a bare grey brick wall of a lane house in a Shanghai alley at dusk, the wall and door completely blank and unmarked: Nationalist policemen and plain-clothes agents in dark long gowns and fedoras carry out boxes of papers and a mimeograph machine while an elderly man with a white goatee, round spectacles and a long grey gown, the Democratic League's chairman Zhang Lan, stands upright in the doorway with a hand on his cane, a black sedan with its headlamps on, a policeman pulling the black double doors shut with a heavy lock, the only light a single street lamp and the sedan's headlamps, low angle. Shanghai, October 1947, 1940s police uniforms, no readable papers, no door plates, no plaques, no signboards, no lanterns, no posters, nothing hanging on the wall or door. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "national_assembly",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21361,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The domed National Assembly hall in Nanjing: a line of delegates in long gowns, dark suits and khaki military uniforms dropping ballot papers one by one into a large wooden ballot box, low-angle close-up on a hand placing a folded blank ballot into the slot, rows of seated delegates behind and a huge portrait of Sun Yat-sen between large flags of the Republic of China (red field, blue canton with a white twelve-pointed sun), bright electric light. Nanjing, April 1948, no readable writing on any paper. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "national_assembly",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21362,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The domed National Assembly hall in Nanjing: a line of delegates in long gowns, dark suits and khaki military uniforms dropping ballot papers one by one into a large wooden ballot box, low-angle close-up on a hand placing a folded blank ballot into the slot, rows of seated delegates behind and a huge portrait of Sun Yat-sen between large flags of the Republic of China (red field, blue canton with a white twelve-pointed sun), bright electric light. Nanjing, April 1948, no readable writing on any paper. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "national_assembly",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21363,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The domed National Assembly hall in Nanjing: a line of delegates in long gowns, dark suits and khaki military uniforms dropping ballot papers one by one into a large wooden ballot box, low-angle close-up on a hand placing a folded blank ballot into the slot, rows of seated delegates behind and a huge portrait of Sun Yat-sen between large flags of the Republic of China (red field, blue canton with a white twelve-pointed sun), bright electric light. Nanjing, April 1948, no readable writing on any paper. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "national_assembly",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21364,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The domed National Assembly hall in Nanjing: a line of delegates in long gowns, dark suits and khaki military uniforms dropping ballot papers one by one into a large wooden ballot box, low-angle close-up on a hand placing a folded blank ballot into the slot, rows of seated delegates behind and a huge portrait of Sun Yat-sen between large flags of the Republic of China (red field, blue canton with a white twelve-pointed sun), bright electric light. Nanjing, April 1948, no readable writing on any paper. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "american_divisions",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21371,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The dusty drill ground of an American-trained division near Kunming in the golden light of a late afternoon: a Nationalist gunner in an American M1 steel helmet and an olive-drab uniform looks along the barrel of a 105 mm howitzer, an olive-drab Sherman tank and rows of GMC trucks and jeeps behind him, a line of infantry with M1 Garand rifles at attention, an American adviser in khaki with a clipboard, mountains in the distance, raised dust glowing in the sun. Yunnan, 1946, American equipment in olive drab, no unit markings, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "american_divisions",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21372,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The dusty drill ground of an American-trained division near Kunming in the golden light of a late afternoon: a Nationalist gunner in an American M1 steel helmet and an olive-drab uniform looks along the barrel of a 105 mm howitzer, an olive-drab Sherman tank and rows of GMC trucks and jeeps behind him, a line of infantry with M1 Garand rifles at attention, an American adviser in khaki with a clipboard, mountains in the distance, raised dust glowing in the sun. Yunnan, 1946, American equipment in olive drab, no unit markings, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "american_divisions",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21373,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The dusty drill ground of an American-trained division near Kunming in the golden light of a late afternoon: a Nationalist gunner in an American M1 steel helmet and an olive-drab uniform looks along the barrel of a 105 mm howitzer, an olive-drab Sherman tank and rows of GMC trucks and jeeps behind him, a line of infantry with M1 Garand rifles at attention, an American adviser in khaki with a clipboard, mountains in the distance, raised dust glowing in the sun. Yunnan, 1946, American equipment in olive drab, no unit markings, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "american_divisions",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21374,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: The dusty drill ground of an American-trained division near Kunming in the golden light of a late afternoon: a Nationalist gunner in an American M1 steel helmet and an olive-drab uniform looks along the barrel of a 105 mm howitzer, an olive-drab Sherman tank and rows of GMC trucks and jeeps behind him, a line of infantry with M1 Garand rifles at attention, an American adviser in khaki with a clipboard, mountains in the distance, raised dust glowing in the sun. Yunnan, 1946, American equipment in olive drab, no unit markings, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "menglianggu",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21391,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: The bare grey limestone peak of Menglianggu in Shandong: Communist soldiers in grey cotton uniforms, cloth caps and puttees swarm up the steep rocky slope with grenades and bayonets through heavy smoke, red tracer arcs, a plain red flag with no star, no emblem and no lettering at the front, far below in the valley a jam of Nationalist trucks and tanks burning with black smoke, no trees, dust and heat. Shandong, May 1947. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "menglianggu",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21392,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: The bare grey limestone peak of Menglianggu in Shandong: Communist soldiers in grey cotton uniforms, cloth caps and puttees swarm up the steep rocky slope with grenades and bayonets through heavy smoke, red tracer arcs, a plain red flag with no star, no emblem and no lettering at the front, far below in the valley a jam of Nationalist trucks and tanks burning with black smoke, no trees, dust and heat. Shandong, May 1947. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "menglianggu",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21393,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: The bare grey limestone peak of Menglianggu in Shandong: Communist soldiers in grey cotton uniforms, cloth caps and puttees swarm up the steep rocky slope with grenades and bayonets through heavy smoke, red tracer arcs, a plain red flag with no star, no emblem and no lettering at the front, far below in the valley a jam of Nationalist trucks and tanks burning with black smoke, no trees, dust and heat. Shandong, May 1947. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "menglianggu",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21394,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: The bare grey limestone peak of Menglianggu in Shandong: Communist soldiers in grey cotton uniforms, cloth caps and puttees swarm up the steep rocky slope with grenades and bayonets through heavy smoke, red tracer arcs, a plain red flag with no star, no emblem and no lettering at the front, far below in the valley a jam of Nationalist trucks and tanks burning with black smoke, no trees, dust and heat. Shandong, May 1947. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "fu_holds_the_north",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21531,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: General Fu Zuoyi, a stocky broad-faced man with close-cropped hair, in a khaki wool greatcoat with a fur collar and a peaked cap, stands on the ancient grey brick city wall of Beiping at winter dawn with binoculars, sandbagged machine-gun positions and Nationalist soldiers in padded khaki winter uniforms and steel helmets along the crenellated parapet, the great gate tower behind him, a snow-covered plain with distant smoke below, the Republic of China flag (a red field with a blue canton in the upper corner bearing a white twelve-pointed sun, not a yellow star) on the wall. Beiping, December 1948, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "fu_holds_the_north",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21532,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: General Fu Zuoyi, a stocky broad-faced man with close-cropped hair, in a khaki wool greatcoat with a fur collar and a peaked cap, stands on the ancient grey brick city wall of Beiping at winter dawn with binoculars, sandbagged machine-gun positions and Nationalist soldiers in padded khaki winter uniforms and steel helmets along the crenellated parapet, the great gate tower behind him, a snow-covered plain with distant smoke below, the Republic of China flag (a red field with a blue canton in the upper corner bearing a white twelve-pointed sun, not a yellow star) on the wall. Beiping, December 1948, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "fu_holds_the_north",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21533,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: General Fu Zuoyi, a stocky broad-faced man with close-cropped hair, in a khaki wool greatcoat with a fur collar and a peaked cap, stands on the ancient grey brick city wall of Beiping at winter dawn with binoculars, sandbagged machine-gun positions and Nationalist soldiers in padded khaki winter uniforms and steel helmets along the crenellated parapet, the great gate tower behind him, a snow-covered plain with distant smoke below, the Republic of China flag (a red field with a blue canton in the upper corner bearing a white twelve-pointed sun, not a yellow star) on the wall. Beiping, December 1948, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "fu_holds_the_north",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21534,
+    "steps": 25,
+    "prompt": "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished. Scene: General Fu Zuoyi, a stocky broad-faced man with close-cropped hair, in a khaki wool greatcoat with a fur collar and a peaked cap, stands on the ancient grey brick city wall of Beiping at winter dawn with binoculars, sandbagged machine-gun positions and Nationalist soldiers in padded khaki winter uniforms and steel helmets along the crenellated parapet, the great gate tower behind him, a snow-covered plain with distant smoke below, the Republic of China flag (a red field with a blue canton in the upper corner bearing a white twelve-pointed sun, not a yellow star) on the wall. Beiping, December 1948, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "new_consultative_conference",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21641,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, warm red light over everything. Scene: A grand hall in Beiping lit in warm red for the opening of the Political Consultative Conference: Mao Zedong, a stocky man with a broad round face, a high forehead and thick black hair combed straight back, in a grey tunic, stands at a podium with his hand raised, hundreds of delegates in rows before him, among them a Tibetan lama in maroon robes, a Mongol in a long robe, a Hui man in a white cap, women in cadre uniforms, scholars in suits and long gowns, the whole stage and wall hung with plain deep-red velvet curtains and rows of round red paper lanterns, low-angle view. Beiping, September 1949, no flags of any kind, no banners, no emblems, no stars, no signboards, no soldiers. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "new_consultative_conference",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21642,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, warm red light over everything. Scene: A grand hall in Beiping lit in warm red for the opening of the Political Consultative Conference: Mao Zedong, a stocky man with a broad round face, a high forehead and thick black hair combed straight back, in a grey tunic, stands at a podium with his hand raised, hundreds of delegates in rows before him, among them a Tibetan lama in maroon robes, a Mongol in a long robe, a Hui man in a white cap, women in cadre uniforms, scholars in suits and long gowns, the whole stage and wall hung with plain deep-red velvet curtains and rows of round red paper lanterns, low-angle view. Beiping, September 1949, no flags of any kind, no banners, no emblems, no stars, no signboards, no soldiers. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "new_consultative_conference",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21643,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, warm red light over everything. Scene: A grand hall in Beiping lit in warm red for the opening of the Political Consultative Conference: Mao Zedong, a stocky man with a broad round face, a high forehead and thick black hair combed straight back, in a grey tunic, stands at a podium with his hand raised, hundreds of delegates in rows before him, among them a Tibetan lama in maroon robes, a Mongol in a long robe, a Hui man in a white cap, women in cadre uniforms, scholars in suits and long gowns, the whole stage and wall hung with plain deep-red velvet curtains and rows of round red paper lanterns, low-angle view. Beiping, September 1949, no flags of any kind, no banners, no emblems, no stars, no signboards, no soldiers. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "new_consultative_conference",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21644,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, warm red light over everything. Scene: A grand hall in Beiping lit in warm red for the opening of the Political Consultative Conference: Mao Zedong, a stocky man with a broad round face, a high forehead and thick black hair combed straight back, in a grey tunic, stands at a podium with his hand raised, hundreds of delegates in rows before him, among them a Tibetan lama in maroon robes, a Mongol in a long robe, a Hui man in a white cap, women in cadre uniforms, scholars in suits and long gowns, the whole stage and wall hung with plain deep-red velvet curtains and rows of round red paper lanterns, low-angle view. Beiping, September 1949, no flags of any kind, no banners, no emblems, no stars, no signboards, no soldiers. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "peaceful_changeover",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21651,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Nationalist soldiers in khaki-green wool uniforms stacking their rifles in neat pyramids outside the great arrow-tower gate of Beiping in bright winter sun, a Communist officer in a grey cotton uniform and cloth cap counting them, columns of surrendered troops with mules and carts filing out under the gate, Communist soldiers lining the wall under a plain red flag with no star, no emblem and no lettering, frozen moat, dry blue sky with a red dawn glow. Beiping, 31 January 1949. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "peaceful_changeover",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21652,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Nationalist soldiers in khaki-green wool uniforms stacking their rifles in neat pyramids outside the great arrow-tower gate of Beiping in bright winter sun, a Communist officer in a grey cotton uniform and cloth cap counting them, columns of surrendered troops with mules and carts filing out under the gate, Communist soldiers lining the wall under a plain red flag with no star, no emblem and no lettering, frozen moat, dry blue sky with a red dawn glow. Beiping, 31 January 1949. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "peaceful_changeover",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21653,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Nationalist soldiers in khaki-green wool uniforms stacking their rifles in neat pyramids outside the great arrow-tower gate of Beiping in bright winter sun, a Communist officer in a grey cotton uniform and cloth cap counting them, columns of surrendered troops with mules and carts filing out under the gate, Communist soldiers lining the wall under a plain red flag with no star, no emblem and no lettering, frozen moat, dry blue sky with a red dawn glow. Beiping, 31 January 1949. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "peaceful_changeover",
+    "c": 4,
+    "model": "qwen",
+    "seed": 21654,
+    "steps": 25,
+    "prompt": "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything. Scene: Nationalist soldiers in khaki-green wool uniforms stacking their rifles in neat pyramids outside the great arrow-tower gate of Beiping in bright winter sun, a Communist officer in a grey cotton uniform and cloth cap counting them, columns of surrendered troops with mules and carts filing out under the gate, Communist soldiers lining the wall under a plain red flag with no star, no emblem and no lettering, frozen moat, dry blue sky with a red dawn glow. Beiping, 31 January 1949. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "stalins_advice",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21671,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A plain village house at Xibaipo in snow: four Chinese leaders in plain padded grey-blue cotton jackets, Mao Zedong, a stocky round-faced man with thick black hair combed back, Liu Shaoqi, Zhou Enlai and Zhu De, sit on one side of a rough wooden table with a map and tea cups, facing the Soviet visitor Anastas Mikoyan on the other side, plainly a European: a stout, pale-skinned man with a heavy black moustache, a large nose, thick dark eyebrows and receding dark hair, in a dark Western suit and tie with a heavy long dark overcoat with a fur collar, a fur hat on the table beside him, a coal stove glowing in the corner, small paned windows with snow outside, heavy cigarette smoke in a lamp's glow. Xibaipo, Hebei, early 1949, no readable writing on the map. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "stalins_advice",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21672,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A plain village house at Xibaipo in snow: four Chinese leaders in plain padded grey-blue cotton jackets, Mao Zedong, a stocky round-faced man with thick black hair combed back, Liu Shaoqi, Zhou Enlai and Zhu De, sit on one side of a rough wooden table with a map and tea cups, facing the Soviet visitor Anastas Mikoyan on the other side, plainly a European: a stout, pale-skinned man with a heavy black moustache, a large nose, thick dark eyebrows and receding dark hair, in a dark Western suit and tie with a heavy long dark overcoat with a fur collar, a fur hat on the table beside him, a coal stove glowing in the corner, small paned windows with snow outside, heavy cigarette smoke in a lamp's glow. Xibaipo, Hebei, early 1949, no readable writing on the map. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "stalins_advice",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21673,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A plain village house at Xibaipo in snow: four Chinese leaders in plain padded grey-blue cotton jackets, Mao Zedong, a stocky round-faced man with thick black hair combed back, Liu Shaoqi, Zhou Enlai and Zhu De, sit on one side of a rough wooden table with a map and tea cups, facing the Soviet visitor Anastas Mikoyan on the other side, plainly a European: a stout, pale-skinned man with a heavy black moustache, a large nose, thick dark eyebrows and receding dark hair, in a dark Western suit and tie with a heavy long dark overcoat with a fur collar, a fur hat on the table beside him, a coal stove glowing in the corner, small paned windows with snow outside, heavy cigarette smoke in a lamp's glow. Xibaipo, Hebei, early 1949, no readable writing on the map. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "stalins_advice",
+    "c": 4,
+    "model": "zimage",
+    "seed": 21674,
+    "steps": 20,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A plain village house at Xibaipo in snow: four Chinese leaders in plain padded grey-blue cotton jackets, Mao Zedong, a stocky round-faced man with thick black hair combed back, Liu Shaoqi, Zhou Enlai and Zhu De, sit on one side of a rough wooden table with a map and tea cups, facing the Soviet visitor Anastas Mikoyan on the other side, plainly a European: a stout, pale-skinned man with a heavy black moustache, a large nose, thick dark eyebrows and receding dark hair, in a dark Western suit and tie with a heavy long dark overcoat with a fur collar, a fur hat on the table beside him, a coal stove glowing in the corner, small paned windows with snow outside, heavy cigarette smoke in a lamp's glow. Xibaipo, Hebei, early 1949, no readable writing on the map. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "ta_kung_pao",
+    "c": 1,
+    "model": "qwen",
+    "seed": 21721,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A Tianjin street newsstand at dawn: a crowd of men in long gowns and suits and women in qipao reading freshly printed newspapers held up in both hands with their backs to the viewer so that only the blank backs of the sheets can be seen, a newsboy running with a stack, a rotary press glowing in an open doorway, warm lamp light on wet cobbles. Tianjin, 1948, newspapers seen only from behind, no readable text, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "ta_kung_pao",
+    "c": 2,
+    "model": "qwen",
+    "seed": 21722,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A Tianjin street newsstand at dawn: a crowd of men in long gowns and suits and women in qipao reading freshly printed newspapers held up in both hands with their backs to the viewer so that only the blank backs of the sheets can be seen, a newsboy running with a stack, a rotary press glowing in an open doorway, warm lamp light on wet cobbles. Tianjin, 1948, newspapers seen only from behind, no readable text, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "ta_kung_pao",
+    "c": 3,
+    "model": "qwen",
+    "seed": 21723,
+    "steps": 25,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A Tianjin street newsstand at dawn: a crowd of men in long gowns and suits and women in qipao reading freshly printed newspapers held up in both hands with their backs to the viewer so that only the blank backs of the sheets can be seen, a newsboy running with a stack, a rotary press glowing in an open doorway, warm lamp light on wet cobbles. Tianjin, 1948, newspapers seen only from behind, no readable text, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  },
+  {
+    "key": "ta_kung_pao",
+    "c": 4,
+    "model": "zimage",
+    "seed": 21724,
+    "steps": 20,
+    "prompt": "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish. Scene: A Tianjin street newsstand at dawn: a crowd of men in long gowns and suits and women in qipao reading freshly printed newspapers held up in both hands with their backs to the viewer so that only the blank backs of the sheets can be seen, a newsboy running with a stack, a rotary press glowing in an open doorway, warm lamp light on wet cobbles. Tianjin, 1948, newspapers seen only from behind, no readable text, no signboards. No text, no characters, no seals, no writing. Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere."
+  }
+]

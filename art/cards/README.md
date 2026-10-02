@@ -126,3 +126,15 @@ owner:「圖片用 z image 和 qwen image 各產生一張，讓我選」。Qwen 
 - `CHECK-zimage.md`:74 列的硬傷清單(框 / 字 / 旗與機徽 / 畸形 / 認不認得出),最前面有統計。
 - `pick/pair-01.jpg` 到 `pair-07.jpg`:並排對照表(`node art/cards/pairs.mjs`),**左 A = Qwen Image 2.1,右 B = Z-Image Turbo**,編號是 `cards.js` 的數字,紅字是兩邊各自的硬傷。
 - `pick.html`:本機挑圖頁(`node art/cards/pick.mjs` 產生;雙擊開,不需伺服器、不載入外部資源)。點圖或按 A / B / X(X = 兩張都不要、重出)選;上方固定列有「已選 n / 74」、還沒選的編號、結果文字(`1A 2B 3X … 美援A 蘇援B`)與「複製」;選擇存在瀏覽器的 localStorage;「全部清除」要按兩次。
+
+## owner 挑完之後:定案 59 張與重出 15 張的候選(#21)
+
+owner 的答案(2026-10-02):A 57 張、B 2 張(46 杜魯門主義、48 黃河歸故)、X 15 張(11、12、13、16、17、24、33、36、37、39、53、64、65、67、72)。
+
+- `final/<card id>.jpg`:定案的 59 張,從挑中的 `img/` 或 `img-zimage/` **原檔複製**(逐位元組相同);`final.json` 記 `{ key, model, seed, steps, from }`。`node art/cards/finalize.mjs` 產生。X 的 15 張要等重出的候選被挑中才進來。
+- `redo/<card id>__c<1-4>.jpg`:X 的 15 張各 4 張候選(768 × 1024,JPEG 品質 88,不後製);`redo.json` 記 60 筆 `{ key, c, model, seed, steps, prompt }`(`node art/cards/redo-prompts.mjs`)。種子 = 21000 + 牌的編號 × 10 + 候選編號。候選 1 到 4 是 Qwen Image 2.1(25 步);`real_tech` 的 X 牌(24、67、72)的候選 4 是 Z-Image Turbo(20 步)。
+- 其中 10 張的 prompt 和 `prompts.json` 一字不差,只換種子;11、24、33、64、67 改寫了 Scene(原文與改文在 `CHECK-redo.md` 最後一節)。
+- `node art/cards/render-redo.mjs` 出圖,可續跑(已有的檔案跳過,一張失敗不停整批);`REPRO=1 node art/cards/render-redo.mjs <key> <N>` 重出候選 N 並和交付的檔案逐像素比。
+- `CHECK-redo.md`:60 列硬傷清單(由 `check-redo-notes.json` 與 `check-redo-build.mjs` 產生)。
+- `redo/sheet-01.jpg` 到 `sheet-03.jpg`:對照表,一列一張牌、候選 1 到 4 由左到右(`node art/cards/redo-sheets.mjs`)。
+- `redo.html`:本機挑圖頁(`node art/cards/redo.mjs` 產生;雙擊開,不需伺服器)。點圖或按 1 / 2 / 3 / 4 / X 選;結果文字 `11-2 12-X 13-4 …`;選擇存在 localStorage(key `civil_war_21_redo_pick`)。
