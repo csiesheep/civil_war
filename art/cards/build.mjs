@@ -14,9 +14,12 @@ const TAIL = "Full-bleed image that runs to all four edges of the canvas: no bor
 const NOTEXT = "No text, no characters, no seals, no writing.";
 const AID = { american_aid: ["K", "nat_closeup", "美援", 0], soviet_aid: ["C", "com_oil", "蘇援", 0] };
 // Seeds that were changed by a re-render (#19: seed + 1000 * n after a hard defect in the picture); every other card keeps 16001 + its index.
+// Updated for #22 final set: 15 cards now use seeds from redo candidates
 const RESEED = {
-  surrender_order: 19006, league_banned: 17033, chen_cheng: 19034, new_consultative_conference: 19064, beiping_talks: 17066,
-  japanese_garrisons: 17010, sino_soviet_treaty: 17011, mobilisation_order: 17032, ta_kung_pao: 17072, soviet_aid: 17074,
+  surrender_order: 19006, japanese_garrisons: 17010, sino_soviet_treaty: 21112, mobilisation_order: 17032, league_banned: 21331, chen_cheng: 19034, beiping_talks: 17066,
+  return_to_nanjing: 21123, reorganisation_conference: 21133, into_manchuria: 21161, shangdang_campaign: 21174, marshall_mission: 21241,
+  national_assembly: 21362, american_divisions: 21374, menglianggu: 21392, fu_holds_the_north: 21533, new_consultative_conference: 21644,
+  peaceful_changeover: 21653, stalins_advice: 21674, ta_kung_pao: 21724, soviet_aid: 17074,
 };
 const meta = new Map();
 for (const c of E.CARDS) meta.set(c.id, { zh: c.zh, num: c.num, year: c.year, side: c.side === 1 ? "K" : c.side === 0 ? "C" : "N" });
@@ -34,6 +37,19 @@ order.forEach((id, i) => {
 });
 if (out.length !== 74 || SCENES.length !== 74) throw new Error("count " + out.length + "/" + SCENES.length);
 fs.writeFileSync(dir + "prompts.json", JSON.stringify(out, null, 2) + "\n");
+
+// Count final.json models for the "定案" section (#22)
+let finalQwen = 0, finalZimage = 0;
+try {
+  const final = JSON.parse(fs.readFileSync(dir + "final.json", "utf8"));
+  for (const e of final) {
+    if (e.model === "qwen") finalQwen++;
+    else if (e.model === "zimage") finalZimage++;
+  }
+} catch (e) {
+  // final.json doesn't exist yet, that's ok
+}
+
 const civilN = SCENES.filter((s) => s[3]).length;
 const SIDE_ZH = { K: "國軍", C: "共軍", N: "中立" };
 const row = (e) => { const m = meta.get(e.key); const civil = e.prompt.startsWith(CIVIL + " Scene:"); const side = e.key.startsWith("score_") ? "記分卡" : e.key.endsWith("_aid") ? SIDE_ZH[e.side] + "外援" : SIDE_ZH[e.side]; return `| ${m.num} | ${e.zh} | ${side} | ${m.year ?? "—"} | ${e.style}${civil ? "(無士兵版)" : ""} | ${e.scene_zh.replace(/\|/g, "/")} |`; };
@@ -60,6 +76,20 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 用 \`art/explore/14/r3/workflow_api.json\`(Qwen Image 2.1,25 步、cfg 1、euler / simple)當樣板,只換這四個欄位再送給 ComfyUI(\`http://127.0.0.1:8188/prompt\`):\`452.inputs.prompt\` = 該筆的 \`prompt\`,\`458.inputs.seed\` = \`seed\`,\`456.inputs.width / height\` = 768 / 1024,\`461.inputs.filename_prefix\` = 自訂。\`art/explore/14/r3/repro.mjs\` 是現成的寫法(把裡面讀 prompts.json 的路徑改成這個檔)。
 
 用 Z-Image Turbo 出的話,樣板是 \`art/explore/17/workflow_api_zimage.json\`(8 或 20 步),\`art/explore/17/gen.mjs\` 是現成的寫法;#17 看到 Z-Image 會多出紙邊與小字(結尾那一段擋不住),Qwen 沒有。
+
+## 定案(#22)
+
+**\`final/<key>.jpg\`**:定案的 74 張,每張都是最終選定的圖像,不再改動。
+- 59 張來自 #19 (#19 直接採用或經 #21 挑選)
+- 15 張來自 #21 的 redo 候選:owner 對 15 張重出候選的選擇是「11-2 12-3 13-3 16-1 17-4 24-1 33-1 36-2 37-4 39-2 53-3 64-4 65-3 67-4 72-4」
+
+**\`final.json\`**:74 筆記錄,每筆包括 \`key\`(牌 ID)、\`model\`(模型:qwen/zimage)、\`seed\`(種子)、\`steps\`(步數)、\`from\`(來源)。
+
+**模型統計**:
+- Qwen Image 2.1(25 步):${finalQwen} 張
+- Z-Image Turbo(20 步):${finalZimage} 張
+
+**定案對照表**(\`final-sheets/sheet-*.jpg\`):三張聯絡單,格式同 #19,每格下面標編號與牌名,圖來源是 \`final/\`。
 
 ## 畫面表
 
