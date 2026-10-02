@@ -1301,6 +1301,7 @@ check("美援:行動點 = 美國支持;不算手牌;佔一個行動回合;一回
   let a = null;
   const e = thrown(() => { a = act(S, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin"] }); });
   if (e != null) return `國軍用美援扶植 3 點被拒絕:${e}`;
+  const NE3 = toAction(enter(6, { options: AID_ON, edits: { jinzhou: { b: 1 } }, support: [0, 3], hands: [[], KH3] }));
   return all(
     eq(thrown(() => act(S, KMT, "american_aid", "place", { points: ["xuzhou", "xuzhou", "tianjin", "tianjin"] })) != null, true, "美援放 4 點(支持度 3)沒有被拒絕"),
     eq(`${blueOf(a, "xuzhou")},${blueOf(a, "tianjin")}`, "5,4", "徐州、天津的藍"),
@@ -1309,7 +1310,11 @@ check("美援:行動點 = 美國支持;不算手牌;佔一個行動回合;一回
     eq(J(a.aidUsed), "[false,true]", "st.aidUsed"), eq(a.round, 2, "之後是第幾個行動回合"), eq(a.actor, KMT, "之後輪到誰"),
     eq(aidOf(a, KMT), null, "同一回合用過之後 legal 還給美援"),
     eq(thrown(() => act(a, KMT, "american_aid", "place", { points: ["tianjin"] })) != null, true, "同一回合第二次用美援沒有被拒絕"),
-    ok(true, "美援 3 點:徐州 +2、天津 +1;手牌還是 2 張;佔了第 1 個行動回合;這一回合不能再用"),
+    // 東北的 +1 只給蘇援: with blue 1 in 錦州 and red 1 in 北滿, 美援 (3) puts 3 points in the Northeast, not 4, and hits with 3.
+    eq(thrown(() => act(NE3, KMT, "american_aid", "place", { points: ["jinzhou", "jinzhou", "jinzhou", "jinzhou"] })) != null, true, "美援在東北放 4 點(支持度 3)沒有被拒絕:+1 只給蘇援"),
+    eq(thrown(() => act(NE3, KMT, "american_aid", "place", { points: ["jinzhou", "jinzhou", "jinzhou"] })), null, "美援在東北放 3 點被拒絕"),
+    eq(rb(act(NE3, KMT, "american_aid", "campaign", { target: "beiman" }), "beiman"), "0/2", "美援 3 點奇襲北滿(東北;移除 1、放 2)之後 紅/藍"),
+    ok(true, "美援 3 點:徐州 +2、天津 +1;手牌還是 2 張;佔了第 1 個行動回合;這一回合不能再用;在東北也是 3 點"),
   );
 });
 
@@ -1490,6 +1495,7 @@ check("外援牌沒有任何合法用法時不算可用:空手的一方被跳過
   // cannot 遊說 (none of their own anywhere), and 美軍駐華 (美國支持 3) bars the only two spaces they could attack.
   const edits = Object.fromEntries(Object.keys(SPEC_SPACES).map((id) => [id, { r: 0, b: id === "tianjin" || id === "shanghai" ? 3 : 0 }]));
   const st = enter(6, { options: AID_ON, edits, support: [2, 3] }), free = enter(6, { options: AID_ON, edits, support: [2, 2] });
+  const held = toAction(enter(6, { options: AID_ON, edits, support: [2, 3], hands: [["score_north", "gao_shuxun"], []] }));
   const o = E.opsOptions(st, CCP);
   const pre = all(
     eq(st.turn, 6, "回合"), eq(J(st.support), "[2,3]", "支持度"), eq(total(st, CCP), 0, "紅的合計"),
@@ -1501,7 +1507,10 @@ check("外援牌沒有任何合法用法時不算可用:空手的一方被跳過
     eq(st.winner, null, "勝者"), eq(st.phase, "action", "phase"), eq(st.actor, KMT, "輪到誰(共軍沒有手牌,蘇援沒有任何用法)"),
     eq(J(E.mustAct(st)), J([KMT]), "mustAct"), eq(E.legal(st, CCP).kind, "wait", "共軍的 legal"), eq(J(st.aidUsed), "[false,false]", "st.aidUsed(蘇援沒有被用掉)"),
     eq(aidOf(st, KMT) && aidOf(st, KMT).id, "american_aid", "legal 給國軍的外援牌"),
-    ok(true, "蘇聯支持 2 但蘇援沒有地方可用:共軍被跳過,輪到國軍(美援可用);美國支持降到 2、天津上海打得到時,共軍就要行動"),
+    eq(held.actor, CCP, "共軍手上有牌時輪到誰"), eq(E.legal(held, CCP).kind, "action", "共軍手上有牌時的 legal"), eq((E.legal(held, CCP).cards || []).length, 1, "共軍可以打的手牌數"),
+    eq(aidOf(held, CCP), null, "手上有牌、蘇援沒有任何用法時 legal 還給蘇援"),
+    eq(thrown(() => act(held, CCP, "soviet_aid", "campaign", { target: "tianjin" })) != null, true, "沒有任何用法的蘇援打得出去"),
+    ok(true, "蘇聯支持 2 但蘇援沒有地方可用:空手的共軍被跳過,輪到國軍(美援可用);手上有牌時蘇援不出現、手牌照常;美國支持降到 2、天津上海打得到時,共軍就要行動"),
   );
 });
 
