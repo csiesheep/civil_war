@@ -1,0 +1,1506 @@
+// Pure rules. Runs unchanged in the browser (solo) and in the room Durable
+// Object. Deterministic: the seeded RNG lives in the state, so a game replays
+// from seed + actions, which is what makes the tests and the harness cheap.
+//
+// Shape of the machine. The state carries a `plan`: a queue of steps (an
+// event to resolve, ops to spend, the end of an action round, the end of a
+// turn). `run` executes steps until one needs a decision, which it parks in
+// `pending` (who decides, what kind of choice, the options). The four
+// external actions are `setup`/`headline`/`play`/`choose`; each validates,
+// mutates, then calls `run`. Every rule in the rulebook
+// (Projects/zongheng/zongheng - rulebook.md) has a named function here.
+//
+// One `apply` is therefore not one "move": `run` stops only at a decision,
+// never at a boundary in the turn structure. When nobody can play, a single
+// `apply` walks out the rest of the action rounds, the end-of-turn scoring and
+// the next deal, and hands back a state waiting on the next headline. That is
+// the rulebook (四、細則:「兩人皆無合法行動時(理論上不會),該行動回合跳過」,
+// and nothing in 三、回合結構 4「結算」 is a player's choice except the 明法令
+// discard, which does park). tests/engine-validation.test.js pins it.
+export * from "./board.js";
+import {
+  SPACES, SPACE, REGIONS, SCORED_REGIONS, STATES, SETUP, spacesOf, spacesOfState,
+} from "./board.js";
+import { CARDS, CARD, ERA_DECKS } from "./cards.js";
+export { CARDS, CARD, ERA_DECKS };
+
+export const QIN = 0, CHU = 1;
+export const SIDES = ["qin", "chu"];
+export const other = (s) => 1 - s;
+export const MIN_PLAYERS = 2, MAX_PLAYERS = 2;
+export const JIUDING = "jiuding";
+export const MANDATE_TO_WIN = 20;
+export const WEARINESS_NAMES = { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" };
+// Era: the deck shuffled in before that turn's refill; hand size and action
+// rounds follow the era (rulebook 三, 回合結構).
+export const ERAS = [
+  { id: "reform",   zh: "變法期", en: "Reform era",   from: 1, hand: 8, rounds: 6 },
+  { id: "alliance", zh: "縱橫期", en: "Alliance era", from: 4, hand: 9, rounds: 7 },
+  { id: "conquest", zh: "兼併期", en: "Conquest era", from: 7, hand: 9, rounds: 7 },
+];
+export const REFORM = [
+  { box: 1, zh: "徙木立信", ops: 2, first: 1, second: 0, perk: null },
+  { box: 2, zh: "廢井田",   ops: 2, first: 0, second: 0, perk: "twice" },
+  { box: 3, zh: "軍功爵",   ops: 2, first: 1, second: 0, perk: "campaign" },
+  { box: 4, zh: "行縣制",   ops: 3, first: 0, second: 0, perk: "peek" },
+  { box: 5, zh: "明法令",   ops: 3, first: 2, second: 0, perk: "discard" },
+  { box: 6, zh: "稱帝",     ops: 4, first: 3, second: 1, perk: "emperor" },
+];
+// The rulebook's open numbers, each a harness cell. `scoringSplit`: "homes"
+// scores 三晉 + both homes in the reform era and 東方 + 北疆 from the alliance
+// era; "v2" is the rulebook's first draft (東方 early, 西土 late), which scored
+// Chu's home two and a half times as often as Qin's.
+// `sealAt`: "control" gives Chu a 相印 on controlling the capital; "cap" only
+// once Chu's influence there sits at the cap (stability + 2).
+// `tie`: who wins a level Mandate after the final scoring.
+// `hangu`: Qin's starting influence in 函谷關 (stability 3): 2 leaves Qin with one
+// controlled home space at the start against Chu's two, 3 makes it two each.
+// `wuguo`: "any" lets 五國伐秦 strike any West space; "nonbg" keeps it out of 關中.
+// `yue`: "lasting" gives 楚滅越 a +1 on every South scoring, "none" leaves it at the two points.
+// `westBonus`: 司馬錯伐蜀 also gives Qin +1 on every West scoring (the granary of 蜀).
+// `reach`: "ts" (the rule since #107; owner, 2026-09-22: 「B 改成預設」) places
+// where you have influence or next to ANY space where you have influence, with
+// the eligible set fixed at the start of the place action -- a space reachable
+// only through a point placed earlier in the same action is not eligible.
+// "control" is the first-draft rule (#104's other cell): where you have
+// influence or next to a space you CONTROL, re-read point by point, so a point
+// that wins control opens its neighbours in the same action. Cost and cap are
+// the same either way. A state with no `reach` key at all plays as "control":
+// it can only be a game that started before the flip, and a game in progress
+// must not change its rules under the players (no migration, #107).
+// `emperor`: "win-lead" since #125 (owner, 2026-09-26: 「Wins only if ahead on
+// 天命」): the first to 稱帝 wins at once if it leads the Mandate then, else +3
+// as before. The same rule as `reach` for a game already under way: a state
+// with no `emperor` key plays as "vp" (see EMPEROR below), no migration.
+// Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
+// Balance log); the first drafts stay reachable as cells: sealAt "control",
+// comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
+// (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
+// #133 part 1 (owner, 2026-09-26): 遊說 by dice (realign-own, with 收手)
+// becomes the default (homeFall stays "none" until part 2's own flip -- kept
+// separate so each part's defaults are consistent on their own, per #133's
+// "Process" section). A saved game or a running room whose own `options`
+// object lacks this key is untouched -- `{ ...DEFAULT_OPTIONS, ...options }`
+// only runs once, in createGame(), at the moment a NEW game is made; a state
+// already on disk carries its own complete `options` object forward as-is on
+// every load, so this flip only reaches games created from here on.
+// #133 part 2 (owner, 2026-09-26): 守不住才敗 (homeFall "lose-turn") becomes
+// the default, same "old saves keep today's rule" reasoning as part 1's
+// `lobby` flip -- a saved game/room's own `options` object, missing this
+// key, is untouched (see part 1's comment on `lobby` above; the merge only
+// runs once, in createGame(), when a NEW game is made).
+// #135 (owner, balance lever): `seals` -- how many of the four states'
+// 相印 Chu needs for 合縱 -- goes from 4 to 5. Unlike `lobby`/`homeFall`
+// above, `seals` was ALREADY a key here (never "absent means off"), so an
+// old save/room's own `options` object already carries its own concrete
+// `seals: 4` baked in from whenever it was created -- this flip cannot
+// reach it at all, by construction, not just by the merge-once-at-creation
+// rule those two rely on. Confirmed with a throwaway script, not committed.
+// #142 (owner, 2026-09-27, 「好 採用D1」): `qinFarStart: 1` (遠交, Qin starts
+// with 1 in 臨淄 and 1 in 薊; see startGame) becomes the default. An absent key
+// is 0, so a save or an export whose own options predate this has no foothold
+// and keeps it that way (createGame merges once; `replay` does not merge).
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 };
+export const USES = ["event", "place", "campaign", "lobby", "reform"];
+// #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
+// as today, byte for byte (tests/defaults-130.test.js).
+// `lobby`: absent = today's 遊說 (局勢 > 0 removes min(ops, 局勢), no dice).
+//   "realign"       Twilight Struggle's realignment (owner, 2026-09-26:
+//                   「遊說改成雙方都會輸（冷戰熱鬥的「重整」）」): any space with
+//                   enemy influence, one roll per op, both sides can lose;
+//                   `realign` below.
+//   "realign-mild"  the same with 1d3 and a loss of at most 2 per attempt.
+//   "realign-own"   realign, only on a space where the actor ALSO has influence
+//                   of its own (owner's pick, #130: no riskless 遊說); once its
+//                   own influence there is gone the rest of the attempts are lost.
+//                   And 收手: after every attempt that leaves attempts unspent the
+//                   actor chooses to continue or to stop (a pending decision per
+//                   roll, the `realign` plan step; each roll is made as it is
+//                   resolved, so a room shows them one by one and a reload
+//                   resumes at the decision).
+// `homeFall`: absent or "none" = today; see `homeFallCheck` below.
+export const LOBBY = { realign: { die: 6, cap: Infinity }, "realign-mild": { die: 3, cap: 2 }, "realign-own": { die: 6, cap: Infinity, own: true, stop: true } };
+// Whether `side` may 遊說 `id` at all (enemy influence there; under realign-own
+// its own too). Protection is read separately (`isProtected`).
+function lobbyEligible(st, side, id) {
+  const a = infOf(st, id);
+  if (a[other(side)] <= 0) return false;
+  const R = LOBBY[st.options.lobby];
+  return !(R && R.own && a[side] <= 0);
+}
+export const HOME_FALL = ["none", "lose", "lose-turn", "lose-majority", "move"];
+export const HOME_REGION = ["west", "south"];
+export const HOME_CAPITAL = ["guanzhong", "ying"];
+// Under "move", where a fallen capital goes (遷都: Chu moved to 陳 in 278 BC).
+export const MOVED_CAPITAL = ["hanzhong", "chencai"];
+export function homeCapital(st, side) { return (st.capital && st.capital[side]) || HOME_CAPITAL[side]; }
+// Each side's home capital now and who holds it against its owner (control; under
+// lose-majority also `aheadBy`, the enemy when it has more influence there).
+// `view` carries it as `homeCapitals` whenever a homeFall value is set.
+export function homeCapitalStatus(st) {
+  return [QIN, CHU].map((side) => {
+    const capital = homeCapital(st, side), opp = other(side);
+    const out = { side, capital, heldBy: controller(st, capital) === opp ? opp : null };
+    if (st.options.homeFall === "lose-majority") out.aheadBy = infOf(st, capital)[opp] > infOf(st, capital)[side] ? opp : null;
+    return out;
+  });
+}
+export const MOVE_VP = 3;
+// `homeFall` (#130; owner: 「設計一下 如果國都被控制就輸了呢？」, and 「pls simulate them all」):
+//   "lose"           the enemy controlling your home capital loses you the game at
+//                    once (read with the markers, `checkMarkers`)
+//   "lose-turn"      ... if it still does at the end of a turn (`endTurnChecks`)
+//   "lose-majority"  the enemy having MORE influence than you there at the end of a turn
+//   "move"           遷都: the first time the enemy controls it at the end of a turn
+//                    it gains MOVE_VP and your capital moves (關中 → 漢中, 郢 → 陳蔡;
+//                    `st.capital`); the enemy controlling the new one at the end of a
+//                    LATER turn loses you the game. The old capital is an ordinary
+//                    space; the home region and homeLock do not change.
+// End reason "homeFall". Both capitals lost at once (a turn end under the turn-end
+// values; the rules give no answer, BE's reading, flagged on #130): the side ahead
+// on the Mandate wins, level goes by `tie` as the final scoring does.
+function homeFallWin(st, losers) {
+  if (losers.length === 1) return win(st, other(losers[0]), "homeFall");
+  const w = st.mandate > 0 ? QIN : st.mandate < 0 ? CHU : st.options.tie === "qin" ? QIN : CHU;
+  win(st, w, "homeFall");
+}
+function homeFallAtTurnEnd(st) {
+  const hf = st.options.homeFall;
+  if (hf !== "lose-turn" && hf !== "lose-majority" && hf !== "move") return;
+  const moved = [], losers = [];
+  for (const side of [QIN, CHU]) {
+    const cap = homeCapital(st, side), opp = other(side);
+    // One entry per capital per turn end, safe or not (the UI reads them).
+    const held = hf === "lose-majority" ? infOf(st, cap)[opp] > infOf(st, cap)[side] : controller(st, cap) === opp;
+    const result = !held ? "safe" : hf === "move" && cap === HOME_CAPITAL[side] ? "moved" : "fallen";
+    log(st, { type: "capitalCheck", whose: side, capital: cap, heldBy: held ? opp : null, result });
+    if (result === "fallen") losers.push(side);
+    else if (result === "moved") moved.push(side);
+  }
+  if (losers.length) return homeFallWin(st, losers);
+  for (const side of moved) {
+    const opp = other(side);
+    if (!st.capital) st.capital = HOME_CAPITAL.slice();
+    st.capital[side] = MOVED_CAPITAL[side];
+    log(st, { type: "capitalMoves", whose: side, from: HOME_CAPITAL[side], to: MOVED_CAPITAL[side], by: opp, vp: MOVE_VP });
+    vp(st, opp, MOVE_VP);
+    if (st.winner != null) return;
+  }
+}
+
+// ---------- RNG (mulberry32) ----------
+export function makeRng(seed) {
+  let a = seed >>> 0;
+  const rng = {
+    next() {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    },
+    int(n) { return Math.floor(rng.next() * n); },
+    getState() { return a; },
+    setState(s) { a = s >>> 0; },
+  };
+  return rng;
+}
+export function randomSeed() { return Math.floor(Math.random() * 2 ** 31); }
+export function shuffle(rng, arr) {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = rng.int(i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+// JSON clone on purpose: structuredClone crashes V8 on the development machine.
+export const clone = (x) => JSON.parse(JSON.stringify(x));
+function withRng(st, fn) {
+  const rng = makeRng(0);
+  rng.setState(st.rngState);
+  const out = fn(rng);
+  st.rngState = rng.getState();
+  return out;
+}
+// Entries carry a running number `i`, so a reader can tell whether anything
+// is missing between two entries.
+//
+// The log keeps the whole game (#128). It used to keep only the last 400
+// entries, and a full game writes more: over 200 normal + 200 hard bot games
+// on 0e558a8, 65 wrote more than 400 (the longest 437), and a game that
+// reaches turn 8 writes about 400 (median 398). Past the cap the start of the
+// game was gone and a move whose opening entry was evicted fell apart in the
+// log panel. A full game's log is under 38 KB of JSON (about 87 bytes an
+// entry), so the cap is now a runaway guard far above any real game, not a
+// window: LOG_CAP entries is about 4.6 times the longest game measured and
+// about 175 KB.
+//
+// If a log ever does outgrow it, `trimLog` drops whole moves, the oldest
+// first, and keeps the game's opening (its setup and turn 1) and the move in
+// progress. A move is what the log panel groups (`groupLog`, public/oppmove.js):
+// an opening entry and every entry up to the next one.
+export const LOG_CAP = 2000;
+const LOG_OPENS = new Set(["setup", "turn", "headline", "play", "endTurn"]);
+export function trimLog(log, cap = LOG_CAP) {
+  if (log.length <= cap) return log;
+  const opens = [];
+  for (let k = 0; k < log.length; k++) if (LOG_OPENS.has(log[k].type)) opens.push(k);
+  // The opening ends where the first move of turn 2 or later starts.
+  let o = opens.findIndex((k) => log[k].t >= 2);
+  if (o < 0) return log;
+  let drop = 0;
+  const from = opens[o];
+  // Never the last move: it may be the one in progress (an ops step still
+  // writes its real use into its `play` entry).
+  while (o + 1 < opens.length && log.length - drop > cap) { drop = opens[o + 1] - from; o++; }
+  if (drop) log.splice(from, drop);
+  return log;
+}
+export function log(st, entry) {
+  st.logSeq = (st.logSeq || 0) + 1;
+  st.log.push({ i: st.logSeq, t: st.turn, r: st.round, ...entry });
+  trimLog(st.log);
+}
+const fail = (msg) => { throw new Error(msg); };
+
+// ---------- the board ----------
+export function infOf(st, id) { return st.inf[id] || [0, 0]; }
+function ensure(st, id) { if (!st.inf[id]) st.inf[id] = [0, 0]; return st.inf[id]; }
+export function controller(st, id) {
+  const [q, c] = infOf(st, id), S = SPACE[id].stability;
+  if (q >= c + S) return QIN;
+  if (c >= q + S) return CHU;
+  return null;
+}
+export function capOf(st, id) { return SPACE[id].stability + st.options.cap; }
+// Place up to n points, never above the cap; returns how many landed.
+export function place(st, side, id, n = 1) {
+  const a = ensure(st, id);
+  const k = Math.max(0, Math.min(n, capOf(st, id) - a[side]));
+  a[side] += k;
+  return k;
+}
+export function remove(st, side, id, n) {
+  const a = ensure(st, id);
+  const k = Math.min(n, a[side]);
+  a[side] -= k;
+  return k;
+}
+export function controlled(st, side) { return SPACES.filter((s) => controller(st, s.id) === side).map((s) => s.id); }
+// `reach` is what `reachFrom` returned at the start of the place action: under
+// "ts" the eligible set is fixed then; under "control" it is null and reach is
+// re-read on `st` as it stands. A state without the option plays as "control".
+export function canPlaceAt(st, side, id, reach = null) {
+  if (reach) return reach.has(id);
+  if (infOf(st, id)[side] > 0) return true;
+  if (st.options.reach === "ts") return SPACE[id].adj.some((a) => infOf(st, a)[side] > 0);
+  return SPACE[id].adj.some((a) => controller(st, a) === side);
+}
+export function reachFrom(st, side) {
+  if (st.options.reach !== "ts") return null;
+  return new Set(SPACES.filter((s) => canPlaceAt(st, side, s.id)).map((s) => s.id));
+}
+// Where the NEXT point of a place action may go, with what it costs -- the one
+// answer both the map's lighting (public/app.js) and `placePoints` are read
+// from, so a lit space can never be one the engine refuses (#107; before this,
+// app.js re-read `canPlaceAt` per point on the trial board, which under "ts"
+// lit up to 5 spaces the engine then refused only at Confirm).
+//
+// `st` is the state at the START of the place action and `points` the points
+// picked so far but not yet committed. That split is the rule: the eligible set
+// comes from `st` (under "ts" it is fixed there), while the cost and the cap are
+// re-read on the board with `points` already on it -- exactly the order
+// `placePoints` checks them in, point by point.
+export function placeTargets(st, side, ops, points = []) {
+  const reach = reachFrom(st, side);
+  const trial = clone(st); trial.log = [];
+  let spent = 0;
+  for (const id of points) { spent += placeCost(trial, side, id); place(trial, side, id, 1); }
+  const left = ops - spent;
+  const lit = new Set(), costs = {};
+  for (const s of SPACES) {
+    const cost = placeCost(trial, side, s.id);
+    if (cost <= left && canPlaceAt(trial, side, s.id, reach) && infOf(trial, s.id)[side] < capOf(trial, s.id)) {
+      lit.add(s.id);
+      costs[s.id] = cost;
+    }
+  }
+  return { lit, costs, spent, left };
+}
+// Set by the balance harness (tests/sim.js) to watch placements (`place`) and
+// the two home capitals (`home`, #130: called with (st, "check") at the end of
+// every `checkMarkers` and (st, "turnEnd") where the turn-end checks start);
+// null in play. #138: `turnEnd` is called with (st) once a year is over and
+// before the next begins (after the turn-end checks and any 明法令 discard, before
+// the final scoring or the next deal); report-digest.js `turnEnds` reads the
+// board of each year there. It sees the state; it must not change it.
+export const probe = { place: null, home: null, turnEnd: null };
+export function placeCost(st, side, id) { return controller(st, id) === other(side) ? 2 : 1; }
+// 局勢 for 遊說: my controlled neighbours minus theirs.
+export function edge(st, side, id) {
+  let e = 0;
+  for (const a of SPACE[id].adj) {
+    const c = controller(st, a);
+    if (c === side) e++; else if (c === other(side)) e--;
+  }
+  return e;
+}
+export function isProtected(st, id) { return st.effects.some((e) => e.kind === "protect" && e.space === id); }
+
+// ---------- weariness ----------
+export function campaignLocked(st, id) {
+  const sp = SPACE[id], w = st.weariness;
+  if (w <= st.options.homeLock && REGIONS[sp.region].home) return true;
+  if (w <= 3 && (sp.region === "jin" || sp.region === "zhou")) return true;
+  if (w <= 2 && sp.battleground) return true;
+  return false;
+}
+export function tire(st, n, pusher) {
+  if (n <= 0 || st.winner) return;
+  st.weariness = Math.max(1, st.weariness - n);
+  log(st, { type: "tire", to: st.weariness, by: pusher });
+  if (st.weariness <= 1) win(st, other(pusher), "collapse");
+}
+export function recover(st, n) { st.weariness = Math.min(5, st.weariness + n); }
+
+// ---------- #123: collapse risk, decided by simulation, not by card text ----------
+// The UI's own state is always a per-seat VIEW (`E.view()`, app.js: `v = E.view
+// (game.st, game.me)` for solo, `v = game.st` = the server's own view for a
+// room) -- the opponent's hand is `null` there, not an array, on purpose. The
+// real `apply()`/`run()` machinery does not expect that: `eventMark` (used by
+// EVERY event, to log what it changed) reads `st.hands[side].length` for
+// BOTH sides unconditionally and throws on a hidden hand. Found the hard way
+// (#123 round 1): the easy bot's own candidate builder already hands a bare
+// view to `randomAction`, and a caught throw there silently reads as "safe",
+// so the very warning this issue exists to add would have gone dark for
+// every hidden-hand position -- solo and rooms alike, i.e. almost always.
+// `view()` hides three things this way: the opponent's hand (`null`, count in
+// `handCounts`), the draw pile (deleted, count in `drawCount`) and the not-
+// yet-shuffled-in eras (`later`, deleted, counts in `laterCounts`) -- all
+// patched here with placeholder ids of the RIGHT length, never real card
+// ids: enough for every generic length-only check (`eventMark`'s own diff,
+// `handSize` in bots.js's `evaluate`), and no sided card's own `effect()`
+// reads what those hidden piles actually hold to decide whether it tires
+// the realm.
+function withHiddenPilesFilled(st) {
+  const need = !Array.isArray(st.hands[QIN]) || !Array.isArray(st.hands[CHU]) || !Array.isArray(st.draw) || !st.later
+    || Object.values(st.later).some((a) => !Array.isArray(a));
+  if (!need) return st;
+  const s = clone(st);
+  for (const side of [QIN, CHU]) {
+    if (!Array.isArray(s.hands[side])) s.hands[side] = new Array((s.handCounts && s.handCounts[side]) || 0).fill("__hidden__");
+  }
+  if (!Array.isArray(s.draw)) s.draw = new Array(s.drawCount || 0).fill("__hidden__");
+  if (s.later && s.laterCounts) {
+    for (const k of Object.keys(s.laterCounts)) if (!Array.isArray(s.later[k])) s.later[k] = new Array(s.laterCounts[k] || 0).fill("__hidden__");
+  }
+  return s;
+}
+function firstLegalChoice(p) {
+  switch (p.kind) {
+    case "points": return (p.options || []).slice(0, Math.max(0, p.min || 0));
+    case "card": return (p.min ?? 1) === 0 ? [] : (p.options || []).slice(0, 1);
+    case "option": return (p.options || [])[0]?.id ?? null;
+    default: return null; // "ops" never arises mid-event; treated as unanswerable
+  }
+}
+// Would COMMITTING `action`, right now, end the game by pushing weariness to
+// 土崩 against `side`? (rulebook 五 / TS 8.1.3: the acting player is
+// responsible for weariness even through the opponent's event.) A pure,
+// side-effect-free look at a clone, for the UI (and the advisor/bots below)
+// to call BEFORE the player or bot actually commits. `action` is exactly the
+// shape `apply()` takes -- the same object a click or a bot's own candidate
+// would send. Any choice the play stops on along the way (an event's own
+// pick of a target, say) is answered with its first legal option: the tire
+// every sided card applies here is never conditioned on which option is
+// picked (the #115 event-audit harness established that shape for all of
+// them), so a future card that starts tiring the realm needs no second,
+// hand-written rule added to this function. Never throws: an action that
+// cannot even be tried from this state (a bad shape, a game already over)
+// reads as "safe" -- a genuinely illegal action fails again, loudly, when it
+// is actually played.
+export function actionWouldCollapse(st, side, action) {
+  if (st.winner != null) return false;
+  const probe = withHiddenPilesFilled(st);
+  let s;
+  try { s = apply(probe, action); } catch { return false; }
+  try {
+    for (let guard = 0; s.pending && s.winner == null && guard < 30; guard++) {
+      s = apply(s, { type: "choose", side: s.pending.who, choice: firstLegalChoice(s.pending) });
+    }
+  } catch { return false; }
+  return s.winner != null && s.winner !== side && s.reason === "collapse";
+}
+// The same question for just a card's event (own or the opponent's), without
+// yet knowing which ops use (if any) will ride along with it -- the event's
+// own tire never depends on that (`play()`'s own "event" step is identical
+// whichever ops use it is bundled with, or none at all). The card page opens
+// before place/campaign/lobby/order is chosen, so this is what it calls to
+// decide whether to warn at all, and the advisor/bots call it the same way
+// before ranking "event" as a candidate.
+export function eventWouldCollapse(st, side, cardId) {
+  if (!CARD[cardId]) return false;
+  return actionWouldCollapse(st, side, { type: "play", side, card: cardId, use: "event" });
+}
+
+// ---------- mandate, markers, scoring, reform ----------
+export function win(st, side, reason) {
+  if (st.winner != null) return;
+  st.winner = side; st.reason = reason; st.phase = "over"; st.pending = null; st.plan = [];
+  log(st, { type: "over", winner: side, reason });
+}
+export function vp(st, side, n) {
+  if (!n || st.winner != null) return;
+  st.mandate += side === QIN ? n : -n;
+  log(st, { type: "vp", side, n, mandate: st.mandate });
+  if (st.mandate >= MANDATE_TO_WIN) win(st, QIN, "mandate");
+  else if (st.mandate <= -MANDATE_TO_WIN) win(st, CHU, "mandate");
+}
+export function checkMarkers(st) {
+  if (st.winner != null) return;
+  for (const [id, s] of Object.entries(STATES)) {
+    const capCtl = controller(st, s.capital);
+    if (st.mie[id] && capCtl === CHU) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
+    if (st.seals[id] && capCtl === QIN) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
+    // After 田單復國 lifts 滅 (owner 裁決 #119), `mieHold[id]` lists the spaces
+    // of the state Qin still controlled at that moment; a space leaves the list
+    // once Qin loses it. The state falls again only to a new conquest: all of
+    // it held, and at least one space not on the list. No list, as always.
+    const sp = spacesOfState(id);
+    let held = st.mieHold && st.mieHold[id];
+    if (held) {
+      held = held.filter((x) => controller(st, x) === QIN);
+      if (held.length) st.mieHold[id] = held; else { delete st.mieHold[id]; held = null; }
+    }
+    const all = sp.every((x) => controller(st, x) === QIN) && !(held && held.length === sp.length);
+    if (all && !st.mie[id]) {
+      st.mie[id] = true; log(st, { type: "mie", state: id });
+      if (st.mieHold) delete st.mieHold[id];
+      if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, QIN, s.vp); }
+    }
+    const sealed = capCtl === CHU && (st.options.sealAt !== "cap" || infOf(st, s.capital)[CHU] >= capOf(st, s.capital));
+    if (sealed && !st.seals[id]) {
+      st.seals[id] = true; log(st, { type: "seal", state: id });
+      if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, CHU, 1); }
+    }
+  }
+  if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, QIN, "unification");
+  if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, CHU, "alliance");
+  if (st.winner == null && st.options.homeFall === "lose") {
+    const losers = [QIN, CHU].filter((side) => controller(st, HOME_CAPITAL[side]) === other(side));
+    if (losers.length) homeFallWin(st, losers);
+  }
+  if (probe.home) probe.home(st, "check");
+}
+export function regionTally(st, region) {
+  const ids = spacesOf(region), R = REGIONS[region];
+  const res = [QIN, CHU].map((side) => {
+    const ctl = ids.filter((id) => controller(st, id) === side);
+    return { spaces: ctl.length, bg: ctl.filter((id) => SPACE[id].battleground).length, ids: ctl };
+  });
+  return [QIN, CHU].map((i) => {
+    const me = res[i], op = res[1 - i];
+    let level = "none";
+    if (me.spaces === ids.length) level = "control";
+    else if (me.spaces > 0 && me.spaces > op.spaces && me.bg > op.bg) level = "domination";
+    else if (me.spaces > 0) level = "presence";
+    const base = level === "none" ? 0 : R[level];
+    let bonus = me.bg;
+    for (const e of st.effects) if (e.kind === "score" && e.region === region && e.who === i) bonus += e.delta;
+    return { ...me, level, base, bonus, total: base + bonus };
+  });
+}
+export function scoreRegion(st, region) {
+  const [q, c] = regionTally(st, region);
+  log(st, { type: "score", region, qin: q, chu: c });
+  vp(st, QIN, q.total - c.total);
+}
+export function reformThreshold(st, side) { return st.reform[side] >= 6 ? Infinity : REFORM[st.reform[side]].ops; }
+export function reformUsesLeft(st, side) { return (st.reform[side] >= 2 ? 2 : 1) - st.reformUsed[side]; }
+export function hasPerk(st, side, perk) { return REFORM.some((r) => r.perk === perk && st.reform[side] >= r.box); }
+// #121 `emperor`: what reaching box 6 (稱帝) FIRST is worth. The default is
+// "win-lead" since #125 (DEFAULT_OPTIONS); an absent key -- a game saved before
+// #125 -- plays as "vp", as it did when it started.
+//   "vp"       the rulebook: first +3, second +1
+//   "vp5"      first +5, second +1
+//   "win"      the first to reach it wins at once (end reason "emperor")
+//   "win-late" as "win" from turn 5 on; before that +3 as "vp", and the first
+//              place is then taken, so no one can win by it afterwards
+//   "win-lead" as "win", but only for a side that leads the Mandate at that
+//              moment (Qin above 0, Chu below 0); level or behind it is +3 as
+//              "vp" and the first place is taken
+// The second to arrive always gets +1; nobody wins by arriving second.
+export const EMPEROR = ["vp", "vp5", "win", "win-late", "win-lead"];
+export const EMPEROR_LATE_FROM = 5;
+// Whether `side` still has a win by 稱帝 to race for (box 6 open, and under
+// win-lead only while it leads), whatever the turn; the bots read this.
+export function emperorLive(st, side) {
+  const e = st.options.emperor;
+  if (st.reformFirst[6] != null) return false;
+  if (e === "win" || e === "win-late") return true;
+  return e === "win-lead" && (side === QIN ? st.mandate > 0 : st.mandate < 0);
+}
+// Whether `side` reaching box 6 first right now wins the game.
+export function emperorWins(st, side) {
+  return emperorLive(st, side) && (st.options.emperor !== "win-late" || st.turn >= EMPEROR_LATE_FROM);
+}
+export function reformAdvance(st, side, n = 1) {
+  for (let i = 0; i < n; i++) {
+    if (st.reform[side] >= 6) return;
+    const box = ++st.reform[side], R = REFORM[box - 1];
+    log(st, { type: "reform", side, box });
+    if (st.reformFirst[box] == null) {
+      const wins = R.perk === "emperor" && emperorWins(st, side);
+      st.reformFirst[box] = side;
+      if (wins) { win(st, side, "emperor"); return; }
+      vp(st, side, R.perk === "emperor" && st.options.emperor === "vp5" ? 5 : R.first);
+    } else vp(st, side, R.second);
+    if (R.perk === "emperor") recover(st, 1);
+  }
+}
+
+// ---------- ops ----------
+export function opsOf(st, side, cardId) {
+  const base = cardId === JIUDING ? 4 : CARD[cardId].ops;
+  if (base === 0) return 0;
+  let o = base;
+  for (const e of st.effects) if (e.kind === "opsAll" && e.target === side) o += e.delta;
+  return Math.max(1, o);
+}
+function inZhou(id) { const r = SPACE[id].region; return r === "jin" || r === "zhou"; }
+export function campaignMod(st, side, target) {
+  const region = SPACE[target].region;
+  let d = 0;
+  for (const e of st.effects) {
+    if (e.kind !== "campaign") continue;
+    if (e.who !== side && e.who !== "both") continue;
+    if (e.regions && !e.regions.includes(region)) continue;
+    d += e.delta;
+  }
+  return d;
+}
+export function addEffect(st, e) { st.effects.push(e); }
+export function removeEffect(st, pred) { st.effects = st.effects.filter((e) => !pred(e)); }
+
+// A campaign with `ops` points against `target` by `side`. Locks and
+// protection are checked by the caller (free campaigns from events may skip
+// them); the weariness cost is paid here unless `noTire`.
+export function campaign(st, side, target, ops, { noTire = false, pusher = side } = {}) {
+  const opp = other(side);
+  let o = ops + campaignMod(st, side, target);
+  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) { st.perkUsed[side] = true; o += 1; }
+  o = Math.max(0, o);
+  const removed = remove(st, opp, target, o);
+  const placed = place(st, side, target, o - removed);
+  log(st, { type: "campaign", side, target, ops: o, removed, placed });
+  if (!noTire && SPACE[target].battleground) tire(st, 1, pusher);
+  checkMarkers(st);
+  return { ops: o, removed, placed };
+}
+// One side's modifier for a realignment roll on `id` (#130): +1 per neighbour
+// it controls, +1 if it has more influence there than the other side, +1 if
+// the space is in its home region or next to a space of it.
+export function realignMod(st, side, id) {
+  const w = realignWhy(st, side, id);
+  return w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0);
+}
+// The three parts of it, for the log (the UI names them).
+export function realignWhy(st, side, id) {
+  const sp = SPACE[id], home = HOME_REGION[side];
+  return {
+    adj: sp.adj.filter((a) => controller(st, a) === side),
+    more: infOf(st, id)[side] > infOf(st, id)[other(side)],
+    home: sp.region === home || sp.adj.some((a) => SPACE[a].region === home),
+  };
+}
+// 遊說 under `lobby: "realign"` / "realign-mild": `ops` attempts on `target`,
+// one at a time; each side rolls a die plus its modifier, the loser removes
+// the difference from its own influence there (never below 0, capped under
+// "mild"), a tie does nothing. Stops once the enemy has nothing left there
+// (the rest are lost) or the game ends; markers are read after every attempt.
+// The odds of ONE attempt by `side` on `id` as the board stands (the pick screen,
+// the preview and the bots read this, so nobody keeps a copy of the rule): both
+// modifiers and their parts, win / tie / lose by the dice, and the expected net
+// (enemy points removed − own points lost, each capped by the option and by what
+// the loser has there). null when no realign value is in play.
+export function realignOdds(st, side, id) {
+  const R = LOBBY[st.options.lobby];
+  if (!R) return null;
+  const opp = other(side), why = [realignWhy(st, QIN, id), realignWhy(st, CHU, id)];
+  const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
+  const own = infOf(st, id)[side], enemy = infOf(st, id)[opp], n = R.die * R.die;
+  let win = 0, tie = 0, net = 0;
+  for (let a = 1; a <= R.die; a++) for (let b = 1; b <= R.die; b++) {
+    const d = a + mod[side] - (b + mod[opp]);
+    if (d > 0) { win++; net += Math.min(d, R.cap, enemy); } else if (d < 0) net -= Math.min(-d, R.cap, own); else tie++;
+  }
+  return { mod, why, win: win / n, tie: tie / n, lose: (n - win - tie) / n, net: net / n };
+}
+// One attempt: both rolls from the game's RNG now, the loss, the entry, the markers.
+function realignAttempt(st, side, target, k) {
+  const R = LOBBY[st.options.lobby];
+  const why = [realignWhy(st, QIN, target), realignWhy(st, CHU, target)];
+  const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
+  const roll = withRng(st, (rng) => [1 + rng.int(R.die), 1 + rng.int(R.die)]);
+  const d = roll[QIN] + mod[QIN] - (roll[CHU] + mod[CHU]);
+  const lose = d > 0 ? CHU : d < 0 ? QIN : null;
+  const n = lose == null ? 0 : remove(st, lose, target, Math.min(Math.abs(d), R.cap));
+  log(st, { type: "realign", side, target, k, roll, mod, adj: why.map((w) => w.adj), more: why.map((w) => w.more), home: why.map((w) => w.home), lose, n });
+  checkMarkers(st);
+  return { removed: lose === other(side) ? n : 0, lost: lose === side ? n : 0 };
+}
+function realign(st, side, target, ops) {
+  const R = LOBBY[st.options.lobby];
+  log(st, { type: "lobby", side, target, ops, mode: st.options.lobby, own: infOf(st, target)[side] });
+  const head = st.log[st.log.length - 1];
+  if (R.stop) {
+    // 收手: the attempts are the `realign` step placed right after this ops step.
+    Object.assign(head, { attempts: 0, removed: 0, lost: 0 });
+    st.plan.splice(1, 0, { do: "realign", side, target, ops, k: 0, head: st.logSeq, choices: [] });
+    return 0;
+  }
+  let removed = 0, lost = 0, k = 0;
+  while (k < ops && lobbyEligible(st, side, target) && st.winner == null) {
+    k++;
+    const r = realignAttempt(st, side, target, k);
+    removed += r.removed; lost += r.lost;
+  }
+  // The first entry of the 遊說 carries its totals.
+  if (head && head.type === "lobby") Object.assign(head, { attempts: k, removed, lost });
+  checkMarkers(st);
+  return removed;
+}
+// The `realign` plan step (realign-own): roll, then ask continue / stop while
+// attempts are left and both sides still have influence there.
+function realignStep(st, step) {
+  const more = () => step.k < step.ops && lobbyEligible(st, step.side, step.target) && st.winner == null;
+  const head = st.log.find((l) => l.i === step.head && l.type === "lobby");
+  if (step.k > 0) {
+    if (!more()) return true;
+    if (!step.choices.length) {
+      return ask(st, step, { kind: "option", options: [{ id: "continue" }, { id: "stop" }], tag: "realign", target: step.target, k: step.k, ops: step.ops });
+    }
+    if (step.choices.shift() === "stop") {
+      log(st, { type: "lobbyStop", side: step.side, target: step.target, k: step.k, left: step.ops - step.k });
+      return true;
+    }
+  }
+  if (!more()) return true;
+  step.k++;
+  const r = realignAttempt(st, step.side, step.target, step.k);
+  if (head) { head.attempts = step.k; head.removed += r.removed; head.lost += r.lost; }
+  if (st.winner != null) return true;
+  return realignStep(st, step);
+}
+export function lobby(st, side, target, ops) {
+  if (st.options.lobby && LOBBY[st.options.lobby]) return realign(st, side, target, ops);
+  const e = edge(st, side, target);
+  const removed = e > 0 ? remove(st, other(side), target, Math.min(ops, e)) : 0;
+  log(st, { type: "lobby", side, target, ops, edge: e, removed });
+  checkMarkers(st);
+  return removed;
+}
+// Points one at a time, so the cost re-evaluates as control changes.
+// Under reach "ts" the eligible set is taken once, before the first point.
+export function placePoints(st, side, points, ops) {
+  if (probe.place) probe.place(st, side, points);
+  const reach = reachFrom(st, side);
+  let spent = 0;
+  for (const id of points) {
+    const cost = placeCost(st, side, id);
+    if (spent + cost > ops) fail(`place: not enough ops for ${id}`);
+    if (!canPlaceAt(st, side, id, reach)) fail(`place: ${id} is not reachable`);
+    if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
+    place(st, side, id, 1);
+    spent += cost;
+  }
+  log(st, { type: "place", side, points, spent });
+  checkMarkers(st);
+  return spent;
+}
+
+// ---------- decks and hands ----------
+function drawOne(st) {
+  if (!st.draw.length) {
+    if (!st.discard.length) return null;
+    st.draw = withRng(st, (rng) => shuffle(rng, st.discard));
+    st.discard = [];
+    log(st, { type: "reshuffle", n: st.draw.length });
+  }
+  return st.draw.pop();
+}
+// Refill draws; event draws (`nonScoring`) reveal and reshuffle scoring cards.
+export function draw(st, side, n, { nonScoring = false } = {}) {
+  let got = 0;
+  for (let guard = 0; got < n && guard < 200; guard++) {
+    const c = drawOne(st);
+    if (c == null) break;
+    if (nonScoring && CARD[c].scoring) {
+      st.draw.push(c);
+      st.draw = withRng(st, (rng) => shuffle(rng, st.draw));
+      if (st.draw.every((x) => CARD[x].scoring)) break;
+      continue;
+    }
+    st.hands[side].push(c);
+    got++;
+  }
+  return got;
+}
+export function discardCard(st, side, cardId, { noEvent = true } = {}) {
+  const h = st.hands[side], i = h.indexOf(cardId);
+  if (i < 0) fail(`discard: ${cardId} not in hand`);
+  h.splice(i, 1);
+  st.discard.push(cardId);
+  log(st, { type: "discard", side, card: cardId, noEvent });
+}
+export function eraOf(turn) { return ERAS.filter((e) => turn >= e.from).pop(); }
+export function hasCards(st, side) { return st.hands[side].length > 0 || jiudingUsable(st, side); }
+// 細作 (xizuo, 67) names a card the other side must play on its next action
+// round (`st.forced[side]`, cards.js). The obligation LAPSES when that card is
+// no longer in that side's hand -- orchestrator's ruling (#55), flagged to the
+// owner; the rulebook says nothing about the case. Any other reading freezes
+// the game: seed 70 on fallbacks stopped at turn 7 with Chu forced to play
+// 說客 after 春申君's event made Chu draw two and discard that very card, and
+// `legal()` then offered Chu nothing at all.
+//
+// This is the ONE place that decides it. Every reader of `st.forced` goes
+// through here (`legal`, both checks in `play`, the Nine Cauldrons guard), so
+// a stale value can never reach a rule. It does not mutate: `legal` and the
+// per-seat `view` are read-only for the room and the bots. The stale value is
+// wiped once, in `beginAction`, so the state on the wire is honest too.
+export function forcedCard(st, side) {
+  const c = st.forced[side];
+  return c != null && st.hands[side].includes(c) ? c : null;
+}
+export function jiudingUsable(st, side) { return st.jiuding.holder === side && !st.jiuding.faceDown; }
+
+// ---------- creating a game ----------
+// #137: which rules a game was created under, kept in the state
+// (`st.rulesVersion`, public) and written into an export's `game.rulesVersion`,
+// so a later engine can tell whether a recorded action list still replays
+// under its rules. It is the date of the last change to what a given seed +
+// options + actions play out to: bump it (to that day's date, "-2" for a
+// second change the same day) with any change to the rules in engine.js /
+// cards.js / board.js, or to what the engine does with a given options object.
+// A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
+// and a replay uses the recorded options exactly (`replay`).
+export const RULES_VERSION = "2026-09-27";
+// A new game: the options given, over today's defaults.
+export function createGame(seed, options = {}) {
+  return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
+}
+// `options` is the game's complete options object, used as it is.
+function startGame(seed, options) {
+  const rng = makeRng(seed);
+  const st = {
+    seed, rngState: 0, options, rulesVersion: RULES_VERSION,
+    turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: QIN, phasing: QIN,
+    inf: {}, mandate: 0, weariness: 5,
+    reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
+    mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: true,
+    jiuding: { holder: CHU, faceDown: false },
+    draw: [], discard: [], removed: [], later: {},
+    hands: [[], []], headline: [null, null],
+    effects: [], forced: [null, null], revealed: [false, false],
+    pending: null, plan: [], winner: null, reason: null, log: [],
+    // #137: every action `apply` accepts, as given, in order: with the seed
+    // and the options it replays the game exactly (`replay` below). It holds
+    // hidden choices (a headline before the reveal, a card out of a hand), so
+    // `view` drops it until the game is over. A state without it (a save from
+    // before #137, the tutorial's hand-built position) records nothing.
+    actions: [],
+  };
+  for (const side of [QIN, CHU]) {
+    for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
+  }
+  ensure(st, "hangu")[QIN] = st.options.hangu;
+  // #135 (D1, 遠交): `qinFarStart: n` -- Qin's fixed setup also puts n in 臨淄 and
+  // n in 薊, before the free placement. 1 by default since #142; absent (a game
+  // created before #142) or 0 is the setup without it, and stays so.
+  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[QIN] = st.options.qinFarStart;
+  if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
+  const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
+  if (st.options.scoringSplit === "v2") {
+    decks.reform = decks.reform.filter((c) => c !== "score_west").concat("score_east");
+    decks.alliance = decks.alliance.filter((c) => c !== "score_east").concat("score_west");
+  }
+  st.draw = shuffle(rng, decks.reform);
+  st.later = { alliance: decks.alliance, conquest: decks.conquest };
+  st.rngState = rng.getState();
+  st.plan = [
+    { do: "setup", side: QIN, n: SETUP.qin.free, regions: SETUP.qin.freeIn, choices: [] },
+    { do: "setup", side: CHU, n: SETUP.chu.free, regions: SETUP.chu.freeIn, choices: [] },
+    { do: "setup", side: CHU, n: st.options.comp, regions: null, choices: [] },
+    { do: "startTurn" },
+  ];
+  return run(st);
+}
+
+// ---------- the plan runner ----------
+export function run(st) {
+  for (let guard = 0; !st.pending && st.winner == null; guard++) {
+    if (guard > 10000) fail("run: plan did not settle");
+    if (!st.plan.length) {
+      // Nothing planned and nobody owes a headline: with an empty hand on both
+      // sides (#57) there is no action left that could end the phase, so the
+      // headlines resolve themselves rather than the table waiting for ever.
+      if (st.phase !== "headline" || mustAct(st).length) break;
+      st.plan.push({ do: "headline" });
+    }
+    const step = st.plan[0];
+    if (exec(st, step)) st.plan.shift();
+  }
+  return st;
+}
+function ask(st, step, spec) {
+  st.pending = { who: step.side, ...spec, step: step.do };
+  return false;
+}
+function exec(st, step) {
+  switch (step.do) {
+    case "setup": {
+      if (step.n <= 0) return true;
+      if (!step.choices.length) {
+        const options = step.regions
+          ? SPACES.filter((s) => step.regions.includes(s.region)).map((s) => s.id)
+          : SPACES.filter((s) => infOf(st, s.id)[step.side] > 0).map((s) => s.id);
+        return ask(st, step, { kind: "points", n: step.n, min: step.n, options, side: step.side, tag: "setup" });
+      }
+      for (const id of step.choices[0]) place(st, step.side, id, 1);
+      log(st, { type: "setup", side: step.side, points: step.choices[0] });
+      checkMarkers(st);
+      return true;
+    }
+    case "startTurn": return startTurn(st), true;
+    case "headline": return resolveHeadlines(st), true;
+    case "event": {
+      st.phasing = step.by ?? step.side;
+      // #115: an event used to leave no trace of its own in the log -- an
+      // enemy card spent for ops showed its ops and nothing else, so an event
+      // the opponent resolved (or one with nothing to do) looked like one
+      // that never happened. `event` marks the start (before the effect's own
+      // entries: vp, tire, campaign, discard ...), `eventEnd` says whether it
+      // changed anything and, if not, why.
+      let pre = step.pre;
+      if (pre == null) {
+        pre = eventMark(st);
+        log(st, { type: "event", card: step.card, side: step.side, by: st.phasing });
+      }
+      for (let guard = 0; guard < 20; guard++) {
+        const need = CARD[step.card].effect(st, step.side, step.choices, step);
+        if (!need) break;
+        // A choice with nothing to choose from resolves itself as "nothing".
+        if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.empty = true; step.choices.push([]); continue; }
+        // Who answers the event's choices -- the card's owner, not always the
+        // player who played it -- goes into `eventEnd` as `chose`.
+        const who = need.who ?? step.side;
+        if (!(step.asked || []).includes(who)) step.asked = [...(step.asked || []), who];
+        step.pre = pre; // the mark waits in the plan only while a choice is pending
+        return ask(st, step, { ...need, tag: "event", card: step.card });
+      }
+      step.done = true;
+      // What the event did, then what follows from it (滅, 相印): the log reads
+      // cause before consequence. Markers only follow influence, which
+      // `eventEnd` already counts, so logging it first loses nothing.
+      logEventEnd(st, step, pre);
+      checkMarkers(st);
+      return true;
+    }
+    case "score": return scoreRegion(st, step.region), true;
+    case "ops": {
+      // Ops chosen up front (in the play action) or asked for now (an
+      // opponent's card played event-first, 商旅通賈).
+      let choice = step.payload;
+      if (!choice) {
+        if (!step.choices.length) {
+          if (step.afterEvent) step.ops = opsOf(st, step.side, step.card);
+          const o = opsOptions(st, step.side);
+          const allowed = [];
+          if (o.placeOptions.length) allowed.push("place");
+          if (o.campaignTargets.length) allowed.push("campaign");
+          if (o.lobbyTargets.length) allowed.push("lobby");
+          if (!allowed.length) { log(st, { type: "opsLost", side: step.side, ops: step.ops }); return true; }
+          return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops" });
+        }
+        choice = step.choices[0];
+        if (step.playSeq) { const e = st.log.find((l) => l.i === step.playSeq && l.type === "play"); if (e) e.use = choice.use; }
+      }
+      doOps(st, step.side, step.card, step.ops, choice);
+      return true;
+    }
+    case "reform": {
+      st.reformUsed[step.side]++;
+      reformAdvance(st, step.side, 1);
+      return true;
+    }
+    case "finishCard": return finishCard(st, step), true;
+    case "realign": return realignStep(st, step);
+    case "jiudingPass": {
+      st.jiuding = { holder: other(step.side), faceDown: true };
+      log(st, { type: "jiuding", to: other(step.side) });
+      return true;
+    }
+    case "endAction": return endAction(st), true;
+    case "beginAction": return beginAction(st), true;
+    case "endTurn": {
+      if (!step.stage) {
+        endTurnChecks(st);
+        if (st.winner != null) return true;
+        step.stage = "discard";
+        step.sides = [QIN, CHU].filter((s) => hasPerk(st, s, "discard") && st.hands[s].some((c) => !CARD[c].scoring));
+        step.choices = [];
+      }
+      while (step.sides.length) {
+        const side = step.sides[0];
+        if (!step.choices.length) {
+          return ask(st, { ...step, side }, { kind: "card", n: 1, min: 0, options: st.hands[side].filter((c) => !CARD[c].scoring), tag: "endDiscard" });
+        }
+        const [pick] = step.choices.shift();
+        if (pick) discardCard(st, side, pick);
+        step.sides.shift();
+      }
+      if (probe.turnEnd) probe.turnEnd(st);
+      if (st.turn >= st.options.turns) finalScoring(st);
+      else st.plan.push({ do: "startTurn" });
+      return true;
+    }
+    default: fail(`exec: unknown step ${step.do}`);
+  }
+}
+
+// What an event can change, read before it runs and compared after (#115).
+// When the event asks for a choice the mark waits in the plan step, and
+// `view` keeps the plan, so it holds only what both seats may see: a hand is
+// its size, never its cards. The bots play events out by the thousand while
+// they think, so the mark is plain copies (no JSON round trip for the board)
+// and the comparison does the set work only when something changed.
+function eventMark(st) {
+  const inf = {};
+  for (const k in st.inf) inf[k] = [st.inf[k][0], st.inf[k][1]];
+  return {
+    inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
+    hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
+    effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
+    jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
+  };
+}
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner"];
+const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
+// `effect`: did the event change anything at all. When it did not, `why`:
+// "noTarget" -- a choice it needed had nothing to choose from (no space with
+// enemy influence, nothing in the region to hit, an empty discard pile ...);
+// "noChange" -- it ran, but the board came out as it went in (every space at
+// the cap, nothing left to remove, a track already full, a lasting effect
+// already in play). What it changed that no other entry reports rides along:
+// influence per space (`inf`: [space, Qin delta, Chu delta]), lasting effects
+// added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]), a
+// recovery of the weariness track (`recover`), and the seat(s) that answered
+// its choices (`chose`). Mandate, weariness lost, reform, seals, 滅 and
+// discards already log themselves.
+function logEventEnd(st, step, a) {
+  const b = eventMark(st);
+  const inf = [];
+  for (const k in b.inf) {
+    const x = a.inf[k] || [0, 0], y = b.inf[k];
+    if (x[0] !== y[0] || x[1] !== y[1]) inf.push([k, y[0] - x[0], y[1] - x[1]]);
+  }
+  for (const k in a.inf) if (!b.inf[k] && (a.inf[k][0] || a.inf[k][1])) inf.push([k, -a.inf[k][0], -a.inf[k][1]]);
+  inf.sort((p, q) => SPACE_ORDER[p[0]] - SPACE_ORDER[q[0]]);
+  // Lasting effects as a multiset (函谷關天險 re-played is removed and pushed
+  // back: the same set, no change).
+  const fx = { add: [], rm: [] };
+  // Same objects in the same order (no choice was asked, so no clone came
+  // between the marks): nothing to compare. Otherwise compare by content.
+  const same = a.effects.length === b.effects.length && a.effects.every((e, i) => e === b.effects[i]);
+  if (!same) {
+    const ea = a.effects.map((e) => JSON.stringify(e)), eb = b.effects.map((e) => JSON.stringify(e));
+    const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
+    const ca = count(ea), cb = count(eb);
+    for (const k of new Set([...ea, ...eb])) {
+      const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
+      for (let i = 0; i < d; i++) fx.add.push(card);
+      for (let i = 0; i < -d; i++) fx.rm.push(card);
+    }
+  }
+  const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
+  const effect = inf.length > 0 || fx.add.length > 0 || fx.rm.length > 0 || dh[0] !== 0 || dh[1] !== 0 || MARK_SCALARS.some((k) => a[k] !== b[k]);
+  const entry = { type: "eventEnd", card: step.card, side: step.side, by: step.by ?? step.side, effect };
+  if (!effect) entry.why = step.empty ? "noTarget" : "noChange";
+  if (step.asked && step.asked.length) entry.chose = step.asked.slice();
+  if (inf.length) entry.inf = inf;
+  if (fx.add.length || fx.rm.length) entry.fx = fx;
+  if (dh[0] || dh[1]) entry.hands = dh;
+  if (b.weariness > a.weariness) entry.recover = b.weariness;
+  log(st, entry);
+}
+
+function startTurn(st) {
+  st.turn++;
+  const era = eraOf(st.turn);
+  if (era.id !== st.era) {
+    st.era = era.id;
+    if (st.later[era.id]) {
+      st.draw = withRng(st, (rng) => shuffle(rng, st.draw.concat(st.later[era.id])));
+      delete st.later[era.id];
+      log(st, { type: "era", era: era.id });
+    }
+  }
+  st.rounds = era.rounds;
+  st.round = 0;
+  st.reformUsed = [0, 0]; st.perkUsed = [false, false]; st.forced = [null, null]; st.revealed = [false, false];
+  st.headline = [null, null];
+  if (st.jiuding.faceDown) st.jiuding.faceDown = false;
+  // Alternate draws so a mid-deal reshuffle is fair.
+  for (let guard = 0; guard < 40; guard++) {
+    let dealt = 0;
+    for (const side of [QIN, CHU]) if (st.hands[side].length < era.hand) dealt += draw(st, side, 1);
+    if (!dealt) break;
+  }
+  st.phase = "headline";
+  log(st, { type: "turn", turn: st.turn, era: st.era });
+}
+// Who still owes a headline. The deal in `startTurn` stops when `drawOne` runs
+// out of cards (draw and discard both empty), so a side can reach the headline
+// phase holding nothing: it commits no headline -- orchestrator's ruling
+// (#57), flagged to the owner. Before this the phase simply never ended, for
+// anyone: `legal()` answered `{ kind: "headline", cards: [] }` for ever and
+// `mustAct` kept naming a side that could do nothing.
+// #112: this also runs on a per-seat view, where the hand you may not see is
+// `null` and its size lives in `handCounts` (`view` below; bots.js reads the
+// same channel to rebuild a hidden hand). Every room client calls `mustAct` on
+// a view once a second, so reading `hands[side].length` here threw a TypeError
+// every second of every headline phase, for both seats and for a spectator.
+// The count answers the same question without showing a card: hiding a hand
+// must neither invent a headline nor lose one.
+function handSize(st, side) { const h = st.hands[side]; return h ? h.length : st.handCounts[side]; }
+function needsHeadline(st, side) { return st.headline[side] == null && handSize(st, side) > 0; }
+
+function resolveHeadlines(st) {
+  const played = [QIN, CHU].filter((s) => st.headline[s] != null);
+  // Ties go to Qin. With only one headline it goes alone; with none (both
+  // hands empty) the phase is over before it began. A side that committed
+  // nothing is logged the way `beginAction` logs an action-round skip.
+  const order = played.length === 2
+    ? (CARD[st.headline[CHU]].ops > CARD[st.headline[QIN]].ops ? [CHU, QIN] : [QIN, CHU])
+    : played;
+  for (const side of [QIN, CHU]) if (st.headline[side] == null) log(st, { type: "skip", side });
+  log(st, { type: "headline", cards: st.headline, first: order[0] ?? null });
+  const steps = [];
+  for (const side of order) {
+    const card = st.headline[side];
+    if (CARD[card].scoring) steps.push({ do: "score", region: CARD[card].scoring, side });
+    else steps.push({ do: "event", card, side: CARD[card].side ?? side, by: side, choices: [] });
+    steps.push({ do: "finishCard", card, side, triggered: true });
+  }
+  steps.push({ do: "beginAction" });
+  st.plan.splice(1, 0, ...steps);
+  st.phase = "action"; st.round = 1; st.actor = QIN;
+}
+
+// A side with nothing to play skips its half of the action round (rulebook
+// 四、細則). There is no decision in a skip, so `run` does not stop: with both
+// hands empty the remaining rounds, the end of the turn and the next deal all
+// come out of whichever `apply` emptied the last hand.
+function beginAction(st) {
+  if (st.winner != null) return;
+  st.phasing = st.actor;
+  // The obligation lapsed while someone else was acting (#55): drop the stale
+  // name so the state this side is about to see says what the rules say.
+  if (st.forced[st.actor] && !forcedCard(st, st.actor)) st.forced[st.actor] = null;
+  if (!hasCards(st, st.actor)) {
+    log(st, { type: "skip", side: st.actor });
+    st.plan.push({ do: "endAction" });
+  }
+}
+function endAction(st) {
+  if (st.winner != null) return;
+  if (st.actor === QIN) { st.actor = CHU; }
+  else { st.actor = QIN; st.round++; }
+  if (st.round > st.rounds) { st.round = st.rounds; st.plan.push({ do: "endTurn" }); return; }
+  st.plan.push({ do: "beginAction" });
+}
+function endTurnChecks(st) {
+  if (probe.home) probe.home(st, "turnEnd");
+  const holding = [QIN, CHU].filter((s) => st.hands[s].some((c) => CARD[c].scoring));
+  if (holding.length === 2) return win(st, CHU, "scoringBoth");
+  if (holding.length === 1) return win(st, other(holding[0]), "scoring");
+  homeFallAtTurnEnd(st);
+  if (st.winner != null) return;
+  recover(st, 1);
+  if (st.luoyiYields) {
+    const ctl = controller(st, "luoyi");
+    if (ctl != null) vp(st, ctl, st.options.luoyi);
+  }
+  st.effects = st.effects.filter((e) => e.until !== "turn");
+  log(st, { type: "endTurn", turn: st.turn, weariness: st.weariness });
+}
+function finalScoring(st) {
+  for (const r of SCORED_REGIONS) { scoreRegion(st, r); if (st.winner != null) return; }
+  if (st.mandate > 0) win(st, QIN, "final");
+  else if (st.mandate < 0) win(st, CHU, "final");
+  else win(st, st.options.tie === "qin" ? QIN : CHU, "tie");
+}
+function finishCard(st, step) {
+  const c = step.card;
+  if (c === JIUDING) return;
+  if (st.hands[QIN].includes(c) || st.hands[CHU].includes(c) || st.removed.includes(c) || st.discard.includes(c)) return;
+  if (step.triggered && CARD[c].remove) st.removed.push(c);
+  else st.discard.push(c);
+}
+// The one door for spending ops, whichever action brought them: `play` dry
+// runs it through `validateOps` before it commits, and so does `choose` for
+// the ops steps that ask (the event-first branch, 商旅通賈). Every refusal is
+// a rules `Error`, so a payload with no points or a space that is not on the
+// board is a refusal too, not a TypeError from three calls down (#16).
+function doOps(st, side, card, ops, choice) {
+  if (!choice || typeof choice !== "object") fail("ops: no choice");
+  if (choice.use === "place") {
+    if (!Array.isArray(choice.points)) fail("place: points must be a list");
+    for (const id of choice.points) if (!SPACE[id]) fail(`place: unknown space ${id}`);
+    if (card === JIUDING && choice.points.every(inZhou)) ops += 1;
+    placePoints(st, side, choice.points, ops);
+  } else if (choice.use === "campaign") {
+    if (!SPACE[choice.target]) fail(`campaign: unknown space ${choice.target}`);
+    if (card === JIUDING && inZhou(choice.target)) ops += 1;
+    const t = choice.target;
+    if (infOf(st, t)[other(side)] <= 0) fail("campaign: no enemy influence there");
+    if (campaignLocked(st, t)) fail("campaign: locked by weariness");
+    if (isProtected(st, t)) fail("campaign: the space is protected this turn");
+    campaign(st, side, t, ops);
+  } else if (choice.use === "lobby") {
+    if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
+    if (card === JIUDING && inZhou(choice.target)) ops += 1;
+    const t = choice.target;
+    if (infOf(st, t)[other(side)] <= 0) fail("lobby: no enemy influence there");
+    if (!lobbyEligible(st, side, t)) fail("lobby: no influence of your own there");
+    if (!LOBBY[st.options.lobby] && edge(st, side, t) <= 0) fail("lobby: no edge there");
+    if (isProtected(st, t)) fail("lobby: the space is protected this turn");
+    lobby(st, side, t, ops);
+  } else fail(`ops: bad use ${choice.use}`);
+}
+
+// ---------- actions ----------
+export function mustAct(st) {
+  if (st.winner != null) return [];
+  if (st.pending) return [st.pending.who];
+  if (st.phase === "headline") return [QIN, CHU].filter((s) => needsHeadline(st, s));
+  if (st.phase === "action") return [st.actor];
+  return [];
+}
+
+export function apply(state, action) {
+  const st = clone(state);
+  if (st.winner != null) fail("game over");
+  // Copied before the handlers run, so what is kept is the action as given.
+  const given = Array.isArray(st.actions) ? clone(action) : null;
+  let out;
+  switch (action.type) {
+    case "choose": out = choose(st, action); break;
+    case "headline": out = headline(st, action); break;
+    case "play": out = play(st, action); break;
+    default: fail(`unknown action ${action.type}`);
+  }
+  // Only an accepted action gets here: a refusal throws and the clone is dropped.
+  if (given) out.actions.push(given);
+  return out;
+}
+
+// #137: the game again from its seed, its options and its recorded actions.
+// `options` is the game's own `st.options` (an export's `game.options`), used
+// EXACTLY as recorded: it is not merged over today's DEFAULT_OPTIONS, so a key
+// the recorded object lacks (a key added or a default flipped since, or one a
+// JSON copy dropped because it was undefined) stays absent, which the engine
+// reads as the old rule, as it did when the game was played. No actions (a game from before #137, or the tutorial) means
+// no replay: this throws rather than hand back a game that never happened.
+export function replay(seed, options, actions) {
+  if (!Array.isArray(actions)) fail("replay: this game has no recorded actions");
+  let st = startGame(seed, clone(options || {}));
+  for (const a of actions) st = apply(st, a);
+  return st;
+}
+
+function choose(st, action) {
+  const p = st.pending;
+  if (!p) fail("nothing to choose");
+  if (action.side !== p.who) fail("not your choice");
+  const step = st.plan[0];
+  const choice = validateChoice(st, p, action.choice);
+  st.pending = null;
+  step.choices.push(choice);
+  return run(st);
+}
+function validateChoice(st, p, choice) {
+  switch (p.kind) {
+    case "points": {
+      if (!Array.isArray(choice) || choice.length < p.min || choice.length > p.n) fail("points: wrong count");
+      const opts = new Set(p.options);
+      const counts = {};
+      for (const id of choice) {
+        if (!opts.has(id)) fail(`points: ${id} not allowed`);
+        counts[id] = (counts[id] || 0) + 1;
+        if (p.distinct && counts[id] > 1) fail("points: repeats not allowed");
+        if (p.maxPer && counts[id] > p.maxPer) fail(`points: more than ${p.maxPer} in ${id}`);
+        if (p.maxOf && counts[id] > (p.maxOf[id] ?? 0)) fail(`points: not that many in ${id}`);
+        if (p.side != null && infOf(st, id)[p.side] + counts[id] > capOf(st, id)) fail(`points: ${id} over the cap`);
+      }
+      return choice;
+    }
+    case "card": {
+      const arr = Array.isArray(choice) ? choice : choice == null ? [] : [choice];
+      if (arr.length < (p.min ?? 1) || arr.length > (p.n ?? 1)) fail("card: wrong count");
+      for (const c of arr) if (!p.options.includes(c)) fail(`card: ${c} not allowed`);
+      return arr;
+    }
+    case "option": {
+      if (!p.options.some((o) => o.id === choice)) fail(`option: ${choice} not allowed`);
+      return choice;
+    }
+    case "ops": {
+      if (!choice || !p.allowed.includes(choice.use)) fail("ops: bad use");
+      // The same dry run `play` does, so ops that arrive through this door are
+      // refused by the same rules with the same error (#16). Without it an
+      // illegal `points` / `target` only blew up once `run` reached the step.
+      validateOps(st, p.who, p.card, p.ops, choice);
+      return choice;
+    }
+    default: fail(`choose: unknown kind ${p.kind}`);
+  }
+}
+
+function headline(st, action) {
+  if (st.phase !== "headline") fail("not the headline phase");
+  const side = action.side;
+  if (st.headline[side] != null) fail("already headlined");
+  const c = action.card;
+  if (c === JIUDING) fail("the Nine Cauldrons may not be headlined");
+  const h = st.hands[side], i = h.indexOf(c);
+  if (i < 0) fail("card not in hand");
+  h.splice(i, 1);
+  st.headline[side] = c;
+  // Everyone who owed a headline has one now (a side with no card owes none, #57).
+  if (![QIN, CHU].some((s) => needsHeadline(st, s))) st.plan.unshift({ do: "headline" });
+  return run(st);
+}
+
+function play(st, action) {
+  if (st.phase !== "action" || st.pending) fail("not an action round");
+  const side = action.side;
+  if (side !== st.actor) fail("not your action");
+  const c = action.card, use = action.use;
+  const steps = [];
+  // 頓兵堅城 is read before anything is played, the Nine Cauldrons included:
+  // while a discard is owed AND possible the round IS the discard (#57), so
+  // every other play is refused with the bog's own message. The bog check used
+  // to sit after the JIUDING branch returned, so `play()` took the Cauldrons in
+  // a bog round although `legal()` offered none -- the round was spent and the
+  // bog still owed afterwards (#59, pre-existing; the table's UI and the bots
+  // never did it because they read `legal()`).
+  const h = st.hands[side];
+  const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
+  const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
+  if (c === JIUDING) {
+    if (!jiudingUsable(st, side)) fail("the Nine Cauldrons are not yours to use");
+    if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
+    if (forcedCard(st, side)) fail("you must play the named card");
+    if (!["place", "campaign", "lobby"].includes(use)) fail("the Nine Cauldrons: place, campaign or lobby only");
+    validateOps(st, side, JIUDING, 4, { use, points: action.points, target: action.target }, true);
+    steps.push({ do: "ops", side, card: JIUDING, ops: 4, payload: { use, points: action.points, target: action.target } });
+    steps.push({ do: "jiudingPass", side }, { do: "endAction" });
+    // Logged like any card's play, before its ops (#81): the news, the
+    // opponent's-move reveal (#79) and the log panel read a move's start here.
+    log(st, { type: "play", side, card: JIUDING, use });
+    st.plan.unshift(...steps);
+    return run(st);
+  }
+  if (!h.includes(c)) fail("card not in hand");
+  const card = CARD[c];
+  // 頓兵堅城 (dunbing, 69) and 細作 (xizuo, 67) both claim this action round.
+  // orchestrator's ruling (#57), flagged to the owner: the bog comes first and
+  // 細作 carries. While a discard is owed AND possible, the round IS the
+  // discard -- any card of 2+ ops, named or not, the player's choice -- so the
+  // named-card check does not apply to it. With no card the bog can take, the
+  // card's own text says the round is a normal one and the bog waits: then the
+  // named card must be played, as before. Until this the two refusals crossed
+  // and a named card under 2 ops left the side with nothing at all to do
+  // (seed 1332 on fallbacks, turn 7, Chu forced to play 記分 score_east).
+  const bogRound = bogCards.length > 0 && use === "bog";
+  const forced = forcedCard(st, side);
+  if (forced && forced !== c && !bogRound) fail("you must play the named card");
+  if (bogCards.length && use !== "bog") fail("頓兵堅城: discard a card of 2+ ops first");
+  h.splice(h.indexOf(c), 1);
+  // The obligation is not used up by a bog discard of another card (#57): it
+  // waits for the side's next action round. Discarding the named card itself
+  // ends it, like playing it -- and `forcedCard` would say so anyway, since
+  // the card has left the hand.
+  if (!bogRound || c === forced) st.forced[side] = null;
+  const ops = opsOf(st, side, c);
+  if (use === "bog") {
+    if (!bogCards.includes(c)) fail("bog: that card cannot be discarded");
+    removeEffect(st, (e) => e === bog);
+    log(st, { type: "bog", side, card: c });
+    steps.push({ do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
+  } else if (card.scoring) {
+    if (use !== "event") fail("a scoring card must be played as its event");
+    steps.push({ do: "score", region: card.scoring, side }, { do: "finishCard", card: c, side, triggered: true }, { do: "endAction" });
+  } else if (use === "event") {
+    steps.push({ do: "event", card: c, side: card.side ?? side, by: side, choices: [] }, { do: "finishCard", card: c, side, triggered: true }, { do: "endAction" });
+  } else if (use === "reform") {
+    if (reformUsesLeft(st, side) <= 0) fail("reform: no advances left this turn");
+    if (card.ops < reformThreshold(st, side)) fail("reform: card below the threshold");
+    steps.push({ do: "reform", side }, { do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
+  } else if (["place", "campaign", "lobby"].includes(use)) {
+    const payload = { use, points: action.points, target: action.target };
+    const enemy = card.side != null && card.side !== side;
+    const paired = c === "shuoke" && action.pair;
+    // The player chooses whether an enemy card's ops or its event comes first
+    // (owner's ruling, #71). A missing or unknown order used to fall silently
+    // into ops-first, so an old client, a bug or a hand-made room message could
+    // skip the choice (#73). 說客's pair has no event, so it needs no order.
+    if (enemy && !paired && action.order !== "opsFirst" && action.order !== "eventFirst") {
+      fail("an enemy card needs an order: opsFirst or eventFirst");
+    }
+    if (paired) {
+      // 說客: the paired enemy card's ops, no event, both discarded.
+      const pair = CARD[action.pair];
+      if (!h.includes(action.pair) || pair.side !== other(side)) fail("說客: pair an enemy card from your hand");
+      h.splice(h.indexOf(action.pair), 1);
+      const pops = opsOf(st, side, action.pair);
+      validateOps(st, side, action.pair, pops, payload);
+      steps.push({ do: "ops", side, card: action.pair, ops: pops, payload });
+      steps.push({ do: "finishCard", card: c, side, triggered: false }, { do: "finishCard", card: action.pair, side, triggered: false }, { do: "endAction" });
+    } else if (enemy && action.order === "eventFirst") {
+      steps.push({ do: "event", card: c, side: card.side, by: side, choices: [] });
+      // The event resolves before this card's ops are spent, so the ops are
+      // read after it (`afterEvent`): an event that changes the player's ops
+      // this turn counts for this card too (荊軻刺秦王 played by Qin, owner
+      // 裁決 #119: the card text literally; it used to keep the play-time ops).
+      steps.push({ do: "ops", side, card: c, ops, payload: null, choices: [], afterEvent: true });
+      steps.push({ do: "finishCard", card: c, side, triggered: true }, { do: "endAction" });
+    } else {
+      validateOps(st, side, c, ops, payload);
+      steps.push({ do: "ops", side, card: c, ops, payload });
+      if (enemy) steps.push({ do: "event", card: c, side: card.side, by: side, choices: [] });
+      steps.push({ do: "finishCard", card: c, side, triggered: enemy }, { do: "endAction" });
+    }
+  } else fail(`play: bad use ${use}`);
+  // 說客's pair is named (#115): its ops are the move's ops and it goes to the
+  // discard pile, so a log without it read as 說客 played alone.
+  log(st, { type: "play", side, card: c, use, ...(c === "shuoke" && action.pair ? { pair: action.pair } : {}) });
+  // Event first, the ops are chosen only after the event, and may go to any
+  // use then: the `use` above is only what the play said. The ops step writes
+  // the real one back into this entry (#115: the log read 「扶植 4」 for a raid).
+  for (const s of steps) if (s.do === "ops" && !s.payload) s.playSeq = st.logSeq;
+  st.plan.unshift(...steps);
+  return run(st);
+}
+// Validate ops without mutating: replay the placement on a throwaway copy.
+function validateOps(st, side, card, ops, payload, jiuding = false) {
+  const trial = clone(st);
+  trial.log = [];
+  doOps(trial, side, jiuding ? JIUDING : card, ops, payload);
+}
+
+// ---------- what a side may do now (for the UI and the bots) ----------
+// Where ops can go right now: placement targets with their cost per point,
+// campaign targets (enemy influence, not locked, not protected), lobby
+// targets with a positive edge.
+export function opsOptions(st, side) {
+  const placeOptions = SPACES.filter((s) => canPlaceAt(st, side, s.id) && infOf(st, s.id)[side] < capOf(st, s.id))
+    .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
+  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
+  const realigning = !!LOBBY[st.options.lobby];
+  const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
+    .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
+  return { placeOptions, campaignTargets, lobbyTargets };
+}
+export function legal(st, side) {
+  if (st.winner != null) return { kind: "over" };
+  if (st.pending) return st.pending.who === side ? { kind: "pending", pending: st.pending } : { kind: "wait" };
+  if (st.phase === "headline") {
+    return needsHeadline(st, side) ? { kind: "headline", cards: st.hands[side].slice() } : { kind: "wait" };
+  }
+  if (st.phase !== "action" || st.actor !== side) return { kind: "wait" };
+  const h = st.hands[side];
+  const bog = st.effects.some((e) => e.kind === "bog" && e.who === side);
+  const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
+  if (bogCards.length) return { kind: "action", bog: bogCards, cards: [] };
+  const { placeOptions, campaignTargets, lobbyTargets } = opsOptions(st, side);
+  const forced = forcedCard(st, side);
+  const cards = h.filter((c) => !forced || c === forced).map((c) => {
+    const card = CARD[c];
+    if (card.scoring) return { id: c, ops: 0, uses: { event: true } };
+    const ops = opsOf(st, side, c);
+    const uses = {
+      event: true,
+      place: placeOptions.length ? { ops, options: placeOptions } : null,
+      campaign: campaignTargets.length ? { ops, targets: campaignTargets } : null,
+      lobby: lobbyTargets.length ? { ops, targets: lobbyTargets } : null,
+      reform: reformUsesLeft(st, side) > 0 && card.ops >= reformThreshold(st, side),
+      enemy: card.side != null && card.side !== side,
+    };
+    if (c === "shuoke") uses.pair = h.filter((x) => CARD[x].side === other(side));
+    return { id: c, ops, uses };
+  });
+  const jiuding = !forced && jiudingUsable(st, side)
+    ? { ops: 4, place: placeOptions.length ? { options: placeOptions } : null, campaign: campaignTargets.length ? { targets: campaignTargets } : null, lobby: lobbyTargets.length ? { targets: lobbyTargets } : null }
+    : null;
+  return { kind: "action", cards, jiuding, forced };
+}
+
+// ---------- the per-seat view ----------
+export function view(st, side) {
+  // The plan stays: it names only cards already face up and choices already
+  // made, and a bot answering a pending needs it to simulate.
+  // #137: the action list never goes into a view's top level, mid-game or
+  // after (it names hidden choices); it is left out of the copy rather than
+  // copied and deleted, since bots and the UI call this constantly.
+  const v = clone({ ...st, actions: undefined });
+  // The seed goes with the rng state (#131): the game replays from seed +
+  // moves and the decks are public, so a seed rebuilds both hands and the draw.
+  delete v.seed; delete v.rngState;
+  v.drawCount = st.draw.length; delete v.draw;
+  v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
+  v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
+  if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
+  if (side == null) {
+    // A spectator sees the table and neither hand.
+    v.hands = [null, null];
+    if (st.phase === "headline") v.headline = st.headline.map((h) => (h == null ? null : "hidden"));
+  } else {
+    const opp = other(side);
+    const showOpp = st.revealed[side] || (st.pending && st.pending.who === side && st.pending.showHand);
+    if (!showOpp) v.hands[opp] = null;
+    // Headlines stay hidden until both are in, unless 行縣制 lets this side peek.
+    if (st.phase === "headline" && st.headline[side] == null && !hasPerk(st, side, "peek")) v.headline[opp] = st.headline[opp] == null ? null : "hidden";
+    if (st.phase === "headline" && st.headline[opp] == null) v.headline[opp] = null;
+  }
+  // A card choice someone else is answering may list cards of a hand this
+  // viewer cannot see (明法令's discard, 春申君, 韓非入秦): those options are
+  // dropped (#131). The side that answers keeps them all.
+  if (v.pending && v.pending.who !== side && v.pending.kind === "card") {
+    const hidden = new Set([QIN, CHU].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
+    v.pending.options = v.pending.options.filter((c) => !hidden.has(c));
+  }
+  // #137: once the game is over everything is revealed, to every seat and to
+  // spectators alike: both hands, the draw pile and the later eras in order,
+  // the discard and removed piles, the seed (seed + options + the moves replay
+  // the whole game) and the board. The rest of the view keeps #131's shape;
+  // `final` is the one place the secrets appear, and only after the end.
+  if (st.winner != null) {
+    v.final = clone({
+      hands: st.hands, draw: st.draw, later: st.later, discard: st.discard, removed: st.removed,
+      seed: st.seed ?? 0, inf: st.inf, reform: st.reform, weariness: st.weariness, seals: st.seals, mie: st.mie,
+    });
+    // With seed + options (`v.options`) the recorded actions replay the game
+    // (`replay`). A game without them (older save, tutorial) has no `actions`
+    // key here at all: that absence is the "not replayable" mark.
+    if (Array.isArray(st.actions)) v.final.actions = clone(st.actions);
+  }
+  return v;
+}
+
+// #137: the download's JSON, built from a view (what the client holds) and
+// what the view does not know. Pure and DOM-free (browser and Node alike);
+// the one clock it reads is `new Date()` when `meta.exportedAt` is not given.
+export { exportGame } from "./export.js";
