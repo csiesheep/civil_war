@@ -118,14 +118,25 @@ export const SITUATIONS = [
   { turn: 8, id: "peace_talks",       zh: "和談",     en: "The Peace Talks",        year: "1949" },
 ];
 export function situationOf(turn) { return SITUATIONS.find((s) => s.turn === turn) || null; }
+// The reform track's numbers (threshold, 先到 / 後到, the perk), the same for
+// both sides. Its box names are each side's own (#9): `reformName`.
 export const REFORM = [
-  { box: 1, zh: "徙木立信", ops: 2, first: 1, second: 0, perk: null },
-  { box: 2, zh: "廢井田",   ops: 2, first: 0, second: 0, perk: "twice" },
-  { box: 3, zh: "軍功爵",   ops: 2, first: 1, second: 0, perk: "campaign" },
-  { box: 4, zh: "行縣制",   ops: 3, first: 0, second: 0, perk: "peek" },
-  { box: 5, zh: "明法令",   ops: 3, first: 2, second: 0, perk: "discard" },
-  { box: 6, zh: "稱帝",     ops: 4, first: 3, second: 1, perk: "emperor" },
+  { box: 1, ops: 2, first: 1, second: 0, perk: null },
+  { box: 2, ops: 2, first: 0, second: 0, perk: "twice" },
+  { box: 3, ops: 2, first: 1, second: 0, perk: "campaign" },
+  { box: 4, ops: 3, first: 0, second: 0, perk: "peek" },
+  { box: 5, ops: 3, first: 2, second: 0, perk: "discard" },
+  { box: 6, ops: 4, first: 3, second: 1, perk: "emperor" },
 ];
+// #9, the rulebook's table: the Communists' track is 建軍, the Nationalists' 行憲.
+const REFORM_NAMES = [
+  ["五四指示", "土地法大綱", "新式整軍", "隱蔽戰線", "約法八章", "開國"],
+  ["政協決議", "制憲國大", "美械整編師", "保密局", "戡亂動員", "就職"],
+];
+// The name of `side`'s box `box` (1 to 6); null for anything else.
+export function reformName(side, box) {
+  return (REFORM_NAMES[side] && REFORM_NAMES[side][box - 1]) ?? null;
+}
 // The rulebook's open numbers, each a harness cell. `scoringSplit`: "homes"
 // scores 三晉 + both homes in the reform era and 東方 + 北疆 from the alliance
 // era; "v2" is the rulebook's first draft (東方 early, 西土 late), which scored
