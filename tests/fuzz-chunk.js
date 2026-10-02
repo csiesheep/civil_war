@@ -1,17 +1,17 @@
 // One chunk of the fuzz, in a process of its own (on the owner's machine Node sometimes dies in a
 // long run: a chunk that dies is run once more by tests/fuzz.test.js before it is believed).
-//   node tests/fuzz-chunk.js <first seed> <count>
+//   node tests/fuzz-chunk.js <first seed> <count> [options as JSON]      (the options of a control cell)
 // Prints one line, `FUZZ {json}`: what each game ended by, every error with its seed, and for every
 // tenth game whether it replays from its seed and recorded actions to the very same state.
 import * as E from "../public/shared/engine.js";
 import { playRandomGame } from "./driver.js";
 
-const first = Number(process.argv[2] || 1), count = Number(process.argv[3] || 100);
+const first = Number(process.argv[2] || 1), count = Number(process.argv[3] || 100), options = JSON.parse(process.argv[4] || "{}");
 const out = { first, count, ended: 0, actions: 0, errors: [], reasons: {}, turns: {}, replayed: 0, replayMismatch: [], events: {} };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 for (let seed = first; seed < first + count; seed++) {
   try {
-    const { st, actions } = playRandomGame(seed);
+    const { st, actions } = playRandomGame(seed, options);
     out.ended++; out.actions += actions;
     out.reasons[st.reason] = (out.reasons[st.reason] || 0) + 1;
     out.turns[st.turn] = (out.turns[st.turn] || 0) + 1;
