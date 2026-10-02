@@ -1662,6 +1662,20 @@ check("共通:標題階段兩邊各出一張事件,行動點高的先結算,平�
   );
 });
 
+check("共通:事件沒有目標、或放不下時自己收尾,不會停在一個沒有答案的決定上", () => {
+  const t = cardTodo("siping_taken", "into_manchuria"); if (t) return t;
+  // 四平攻克 with no red anywhere in the Northeast; 闖關東 with the three villages of the Northeast full of red.
+  const S = holding(KMT, "siping_taken", { edits: { beiman: { r: 0 } } }), a = ev(S, KMT, "siping_taken");
+  const F = holding(CCP, "into_manchuria", { edits: { beiman: { r: 5 }, siping: { r: 4 }, liaoxi: { r: 4 } } }), b = ev(F, CCP, "into_manchuria");
+  const end = (st) => st.log.filter((l) => l.type === "eventEnd").pop() || {};
+  return all(
+    eq(a.pending, null, "四平攻克沒有目標時還有待決定"), eq(a.round, 2, "之後是第幾個行動回合(那張牌佔掉了一個)"), eq(where(a, "siping_taken"), "removed", "四平攻克在哪裡"),
+    eq(end(a).effect, false, "四平攻克的 eventEnd 說它有沒有效果"), eq(diff(blueMap(S), blueMap(a)), "無", "藍的變動"),
+    eq(b.pending, null, "闖關東放不下時還有待決定"), eq(total(b, CCP), total(F, CCP), "紅的合計"), eq(where(b, "into_manchuria"), "removed", "闖關東在哪裡"),
+    ok(true, "四平攻克(東北沒有紅)、闖關東(東北的鄉都滿了)都直接結束,牌照樣移出遊戲,行動回合照樣用掉"),
+  );
+});
+
 // ---------- 接收期・國軍 (10)
 check("受降令 *(3):國軍在最多 3 座沒有紅的城各放 1(東北除外)", () => {
   const t = cardTodo("surrender_order"); if (t) return t;
@@ -1930,7 +1944,9 @@ check("蘇軍延期撤兵(2):持續至回合結束:東北的城不可被奇襲(�
     eq(tg(a, CCP).includes("siping") && tg(a, KMT).includes("siping"), true, "東北的鄉(四平)也被擋了"),
     eq(ids(E.opsOptions(a, CCP).lobbyTargets).includes("shenyang"), true, "連遊說瀋陽也擋了"),
     eq(a.pending, null, "還有待決定"), eq(where(a, "soviets_delay"), "discard", "牌在哪裡"),
-    ok(true, "這一回合瀋陽兩邊都不能奇襲;四平照常;遊說照常;牌進棄牌堆"),
+    eq(thrown(() => act(a, KMT, "kunming_incident", "campaign", { target: "shenyang" })) != null, true, "打一張牌奇襲瀋陽沒有被拒絕(apply)"),
+    eq(thrown(() => act(a, KMT, "kunming_incident", "campaign", { target: "siping" })), null, "打一張牌奇襲四平被拒絕(apply)"),
+    ok(true, "這一回合瀋陽兩邊都不能奇襲(清單裡沒有,打出來也被拒絕);四平照常;遊說照常;牌進棄牌堆"),
   );
 });
 
@@ -1970,7 +1986,8 @@ check("六月東北停戰 *(2):本回合東北不可奇襲;民生回復 1", () =
     eq(ne(tg(S, CCP)).length > 0 && ne(tg(S, KMT)).length > 0, true, "打出之前兩邊在東北都有奇襲目標"),
     eq(ne(tg(a, CCP)).length + ne(tg(a, KMT)).length, 0, "打出之後東北的奇襲目標數"), eq(tg(a, KMT).includes("jiluyu"), true, "東北以外(冀魯豫)也被擋了"),
     eq(a.weariness, 4, "民生 3 回復 1"), eq(where(a, "june_truce"), "removed", "牌在哪裡"),
-    ok(true, "這一回合東北的城和鄉都不能奇襲;民生 3→4"),
+    eq(thrown(() => act(a, CCP, "shangdang_campaign", "campaign", { target: "siping" })) != null, true, "打一張牌奇襲四平沒有被拒絕(apply)"),
+    ok(true, "這一回合東北的城和鄉都不能奇襲(清單裡沒有,打出來也被拒絕);民生 3→4"),
   );
 });
 
