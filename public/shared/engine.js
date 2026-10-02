@@ -14,10 +14,17 @@
 //     a city out of supply (`placeBarred`, read by placeTargets, placePoints and
 //     opsOptions), and each 孤城 loses blue at the end of the turn, after the
 //     capital check (`supplyAttrition` in endTurnChecks, log `attrition`).
+//   - #2 the eight 時局 (`SITUATIONS`, read from the turn number where each
+//     rule is: `situationStep` at the start of the turn, before the refill;
+//     `sovietHeld`, `campaignMod`, `campaignLocked(st, id, side)`, `campaign`,
+//     `jumpOpen`, `reformAdvance`, `attritionLoss`); each side's own hand size
+//     and action rounds per era (`ERAS`, `st.rounds` = [Communists,
+//     Nationalists], `endAction`); the two support tracks (`st.support`,
+//     `moveSupport`) -- only the numbers, not the aid cards.
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (時局, the two aid cards, asymmetric rounds, scoring with base
-// areas, every card event) is not done: that is the rest of M1. The Phase 0
+// differently (the two aid cards, scoring with base areas, every card event)
+// is not done: that is the rest of M1. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
@@ -55,15 +62,29 @@ export const JIUDING = "jiuding";
 export const MANDATE_TO_WIN = 20;
 export const WEARINESS_NAMES = { 5: "復員", 4: "動盪", 3: "通膨", 2: "凋敝", 1: "崩潰" };
 // Era: the deck shuffled in before that turn's refill; hand size and action
-// rounds follow the era (rulebook 三, 回合結構).
-// NOT YET THE RULEBOOK: it gives each side its own hand size and rounds per era
-// (Nationalists 9/7, 9/7, 8/6; Communists 8/6, 9/7, 9/7). These are Zongheng's
-// symmetric numbers; the asymmetry is M1.
+// rounds follow the era (rulebook 三, 回合結構), each side its own (#2):
+// `hand` and `rounds` are [Communists, Nationalists], indexed by seat.
+// The Communists act first, the two alternate, and the side with more action
+// rounds takes its extra one(s) last (`endAction`).
 export const ERAS = [
-  { id: "takeover", zh: "接收期", en: "Takeover era", from: 1, hand: 8, rounds: 6 },
-  { id: "turning",  zh: "易勢期", en: "Turning era",  from: 4, hand: 9, rounds: 7 },
-  { id: "decisive", zh: "決戰期", en: "Decisive era", from: 7, hand: 9, rounds: 7 },
+  { id: "takeover", zh: "接收期", en: "Takeover era", from: 1, hand: [8, 9], rounds: [6, 7] },
+  { id: "turning",  zh: "易勢期", en: "Turning era",  from: 4, hand: [9, 9], rounds: [7, 7] },
+  { id: "decisive", zh: "決戰期", en: "Decisive era", from: 7, hand: [9, 8], rounds: [7, 6] },
 ];
+// 時局 (mechanism F, rulebook 三): eight, in a fixed order, one per turn, face up
+// from the start. What each does is read from the turn number (`situationOf`)
+// wherever the rule applies; nothing of it is kept in `st.effects`.
+export const SITUATIONS = [
+  { turn: 1, id: "surrender",         zh: "受降",     en: "The Surrender",          year: "1945 下" },
+  { turn: 2, id: "truce",             zh: "停戰",     en: "The Truce",              year: "1946 上" },
+  { turn: 3, id: "general_offensive", zh: "全面進攻", en: "The General Offensive",  year: "1946 下" },
+  { turn: 4, id: "focused_offensive", zh: "重點進攻", en: "The Focused Offensives", year: "1947 上" },
+  { turn: 5, id: "counteroffensive",  zh: "戰略反攻", en: "The Counteroffensive",   year: "1947 下" },
+  { turn: 6, id: "constitution",      zh: "行憲",     en: "The Constitution",       year: "1948 上" },
+  { turn: 7, id: "decisive_battle",   zh: "決戰",     en: "The Decisive Battles",   year: "1948 下" },
+  { turn: 8, id: "peace_talks",       zh: "和談",     en: "The Peace Talks",        year: "1949" },
+];
+export function situationOf(turn) { return SITUATIONS.find((s) => s.turn === turn) || null; }
 export const REFORM = [
   { box: 1, zh: "徙木立信", ops: 2, first: 1, second: 0, perk: null },
   { box: 2, zh: "廢井田",   ops: 2, first: 0, second: 0, perk: "twice" },
@@ -306,8 +327,15 @@ export function controller(st, id) {
   return null;
 }
 export function capOf(st, id) { return SPACE[id].stability + st.options.cap; }
+// 受降 (turn 1, #2): the Soviets hold the Northeast's three cities. Nobody may
+// put a point there by any means (四, 細則: 「包括事件與外援牌」), so `place()`
+// itself refuses -- unlike supply, which bars only the 扶植 action -- and nobody
+// may 奇襲 them. The Northeast's villages are open. Turn 0 is the setup, which
+// is turn 1's free placement.
+export function sovietHeld(st, id) { return st.turn <= 1 && SPACE[id].region === "northeast" && SPACE[id].kind === "city"; }
 // Place up to n points, never above the cap; returns how many landed.
 export function place(st, side, id, n = 1) {
+  if (sovietHeld(st, id)) return 0;
   const a = ensure(st, id);
   const k = Math.max(0, Math.min(n, capOf(st, id) - a[side]));
   a[side] += k;
@@ -344,18 +372,24 @@ export function reachFrom(st, side) {
 // comes from `st` (under "ts" it is fixed there), while the cost, the cap and
 // supply (`placeBarred`, #1) are re-read on the board with `points` already on
 // it -- exactly the order `placePoints` checks them in, point by point.
+// 戰略反攻 (#2): within the one jump, the first point picked outside reach is
+// the jumped village, and from then on only that one is open beyond reach.
 export function placeTargets(st, side, ops, points = []) {
-  const reach = reachFrom(st, side);
+  const reach = reachFrom(st, side), jump = jumpOpen(st, side);
   const trial = clone(st); trial.log = [];
-  let spent = 0;
-  for (const id of points) { spent += placeCost(trial, side, id); place(trial, side, id, 1); }
+  let spent = 0, jumped = null;
+  for (const id of points) {
+    if (jump && jumped == null && SPACE[id].kind === "village" && !canPlaceAt(trial, side, id, reach)) jumped = id;
+    spent += placeCost(trial, side, id); place(trial, side, id, 1);
+  }
   const left = ops - spent;
   const lit = new Set(), costs = {};
   // Supply, unlike reach, is re-read with `points` on the board (#1).
   const barred = placeBarred(trial, side);
+  const reachable = (id) => canPlaceAt(trial, side, id, reach) || (jump && SPACE[id].kind === "village" && (jumped == null || jumped === id));
   for (const s of SPACES) {
     const cost = placeCost(trial, side, s.id);
-    if (cost <= left && canPlaceAt(trial, side, s.id, reach) && infOf(trial, s.id)[side] < capOf(trial, s.id) && !barred(s.id)) {
+    if (cost <= left && reachable(s.id) && infOf(trial, s.id)[side] < capOf(trial, s.id) && !barred(s.id) && !sovietHeld(trial, s.id)) {
       lit.add(s.id);
       costs[s.id] = cost;
     }
@@ -383,7 +417,16 @@ export function edge(st, side, id) {
 export function isProtected(st, id) { return st.effects.some((e) => e.kind === "protect" && e.space === id); }
 
 // ---------- weariness ----------
-export function campaignLocked(st, id) {
+// `side` is who attacks (#2). 決戰 and 和談 (turns 7 and 8): a Communist 奇襲 on
+// a city is not locked by 民生 at all. Only that: the Communists on a village
+// and the Nationalists anywhere are locked as before. A protection (`isProtected`)
+// is another rule and still holds. Without `side`, no 時局 unlocks anything.
+function situationUnlocks(st, side, id) {
+  const sit = situationOf(st.turn);
+  return side === CCP && SPACE[id].kind === "city" && !!sit && (sit.id === "decisive_battle" || sit.id === "peace_talks");
+}
+export function campaignLocked(st, id, side) {
+  if (situationUnlocks(st, side, id)) return false;
   const sp = SPACE[id], w = st.weariness;
   if (w <= st.options.homeLock && REGIONS[sp.region].home) return true;
   if (w <= 3 && REGIONS[sp.region].front) return true;
@@ -433,8 +476,9 @@ function withHiddenPilesFilled(st) {
 }
 function firstLegalChoice(p) {
   switch (p.kind) {
-    case "points": return (p.options || []).slice(0, Math.max(0, p.min || 0));
-    case "card": return (p.min ?? 1) === 0 ? [] : (p.options || []).slice(0, 1);
+    // A choice may need more points than it has spaces (停戰: 4 among 3 cities, #2): round robin.
+    case "points": { const o = p.options || []; return o.length ? Array.from({ length: Math.max(0, p.min || 0) }, (_, i) => o[i % o.length]) : []; }
+    case "card": return (p.min ?? 1) === 0 ? [] : (p.options || []).slice(0, p.min ?? 1);
     case "option": return (p.options || [])[0]?.id ?? null;
     default: return null; // "ops" never arises mid-event; treated as unanswerable
   }
@@ -490,6 +534,19 @@ export function vp(st, side, n) {
   log(st, { type: "vp", side, n, mandate: st.mandate });
   if (st.mandate >= MANDATE_TO_WIN) win(st, CCP, "mandate");
   else if (st.mandate <= -MANDATE_TO_WIN) win(st, KMT, "mandate");
+}
+// ---------- the two support tracks (rulebook 三, 外國勢力) ----------
+// `st.support` is [蘇聯支持, 美國支持]: indexed by the seat each track backs
+// (CCP = 0, KMT = 1), each 0 to 4, starting at 1 and 4. `moveSupport` is the
+// one door: the 時局 use it now, the cards will.
+export const SUPPORT_START = [1, 4];
+export const SUPPORT_MAX = 4;
+export function moveSupport(st, side, delta) {
+  if (!delta || st.winner != null) return 0;
+  const from = st.support[side], to = Math.max(0, Math.min(SUPPORT_MAX, from + delta));
+  st.support[side] = to;
+  log(st, { type: "support", side, delta, from, to });
+  return to - from;
 }
 export function checkMarkers(st) {
   if (st.winner != null) return;
@@ -591,7 +648,28 @@ export function reformAdvance(st, side, n = 1) {
       vp(st, side, R.perk === "emperor" && st.options.emperor === "vp5" ? 5 : R.first);
     } else vp(st, side, R.second);
     if (R.perk === "emperor") recover(st, 1);
+    // 行憲 (turn 6, #2): every box the Nationalists advance, by the action or by
+    // an event, moves 民心 1 their way, and then the Communists put 1 point in a
+    // city with blue (not bound by adjacency). Their choice waits in the plan
+    // right after the step being executed (the reform, or the event).
+    if (side === KMT && situationOf(st.turn)?.id === "constitution" && st.winner == null) {
+      vp(st, KMT, 1);
+      if (st.winner != null) return;
+      st.plan.splice(1, 0, { do: "constitution", side: CCP, choices: [] });
+    }
   }
+}
+// The Communists' point of 行憲: a city with blue where red is not at the cap.
+// None such: nothing to place.
+function constitutionStep(st, step) {
+  const options = SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && infOf(st, s.id)[CCP] < capOf(st, s.id)).map((s) => s.id);
+  if (!options.length) return true;
+  if (!step.choices.length) return situationAsk(st, step, CCP, { kind: "points", n: 1, min: 1, options, side: CCP });
+  const [id] = step.choices.shift();
+  place(st, CCP, id, 1);
+  log(st, { type: "constitutionPlace", side: CCP, space: id });
+  checkMarkers(st);
+  return true;
 }
 
 // ---------- ops ----------
@@ -603,9 +681,25 @@ export function opsOf(st, side, cardId) {
   return Math.max(1, o);
 }
 function inZhou(id) { const r = SPACE[id].region; return r === "jin" || r === "zhou"; }
+// The 時局's modifiers (#2) come first, each for the side and the kind of
+// target the rulebook names and no other: 全面進攻 the Nationalists +1;
+// 重點進攻 the Nationalists +1 in 西北 and 華東中原, −1 elsewhere; 戰略反攻 the
+// Communists +1 on a village; 決戰 the Communists +1 on a city. (`campaign`
+// keeps the total at 0 or more.)
+function situationCampaignMod(st, side, target) {
+  const sit = situationOf(st.turn), sp = SPACE[target];
+  if (!sit) return 0;
+  switch (sit.id) {
+    case "general_offensive": return side === KMT ? 1 : 0;
+    case "focused_offensive": return side !== KMT ? 0 : sp.region === "northwest" || sp.region === "east" ? 1 : -1;
+    case "counteroffensive": return side === CCP && sp.kind === "village" ? 1 : 0;
+    case "decisive_battle": return side === CCP && sp.kind === "city" ? 1 : 0;
+    default: return 0;
+  }
+}
 export function campaignMod(st, side, target) {
   const region = SPACE[target].region;
-  let d = 0;
+  let d = situationCampaignMod(st, side, target);
   for (const e of st.effects) {
     if (e.kind !== "campaign") continue;
     if (e.who !== side && e.who !== "both") continue;
@@ -628,9 +722,23 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
   const removed = remove(st, opp, target, o);
   const placed = place(st, side, target, o - removed);
   log(st, { type: "campaign", side, target, ops: o, removed, placed });
-  if (!noTire && SPACE[target].battleground) tire(st, 1, pusher);
+  // 決戰, 和談 (#2): a Communist 奇襲 on a city does not push 民生.
+  if (!noTire && SPACE[target].battleground && !situationUnlocks(st, side, target)) tire(st, 1, pusher);
   checkMarkers(st);
+  truceBroken(st, side);
   return { ops: o, removed, placed };
+}
+// 停戰 (turn 2, #2): the first 奇襲 of the turn, whoever makes it and however
+// (an action, or an event's free 奇襲 calling `campaign` itself), moves 民心 2
+// toward the other side, and costs 美國支持 1 if it was the Nationalists. Once a
+// turn, for the first only (orchestrator 裁決 #2, flagged to the owner).
+function truceBroken(st, side) {
+  if (situationOf(st.turn)?.id !== "truce" || st.winner != null) return;
+  if (!st.situationUsed || st.situationUsed.truce) return;
+  st.situationUsed = { ...st.situationUsed, truce: true };
+  log(st, { type: "truceBroken", side });
+  vp(st, other(side), 2);
+  if (side === KMT) moveSupport(st, KMT, -1);
 }
 // One side's modifier for a realignment roll on `id` (#130): +1 per neighbour
 // it controls, +1 if it has more influence there than the other side, +1 if
@@ -739,22 +847,34 @@ export function lobby(st, side, target, ops) {
 // Under reach "ts" the eligible set is taken once, before the first point.
 // Supply is read before every point (#1): a point that lifts a siege opens the
 // city for the next point of the same action.
+// 戰略反攻 (#2): while the Communists' jump is open, the first point outside
+// reach may go into a village, and every point outside reach must then go into
+// that same village; a 扶植 that does so uses the jump up for the turn.
 export function placePoints(st, side, points, ops) {
   if (probe.place) probe.place(st, side, points);
-  const reach = reachFrom(st, side);
-  let spent = 0;
+  const reach = reachFrom(st, side), jump = jumpOpen(st, side);
+  let spent = 0, jumped = null;
   for (const id of points) {
     const cost = placeCost(st, side, id);
     if (spent + cost > ops) fail(`place: not enough ops for ${id}`);
-    if (!canPlaceAt(st, side, id, reach)) fail(`place: ${id} is not reachable`);
+    if (!canPlaceAt(st, side, id, reach)) {
+      if (jump && SPACE[id].kind === "village" && (jumped == null || jumped === id)) jumped = id;
+      else fail(`place: ${id} is not reachable`);
+    }
     if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
+    if (sovietHeld(st, id)) fail(`place: the Soviets hold ${id} this turn (受降)`);
     if (placeBarred(st, side)(id)) fail(`place: ${id} is cut off from supply`);
     place(st, side, id, 1);
     spent += cost;
   }
-  log(st, { type: "place", side, points, spent });
+  if (jumped) st.situationUsed = { ...st.situationUsed, jump: true };
+  log(st, { type: "place", side, points, spent, ...(jumped ? { jump: jumped } : {}) });
   checkMarkers(st);
   return spent;
+}
+// Whether the Communists still have 戰略反攻's jump this turn.
+function jumpOpen(st, side) {
+  return side === CCP && situationOf(st.turn)?.id === "counteroffensive" && !(st.situationUsed && st.situationUsed.jump);
 }
 
 // ---------- decks and hands ----------
@@ -822,7 +942,7 @@ export function jiudingUsable(st, side) { return st.jiuding.holder === side && !
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01"; // #1: supply's effects
+export const RULES_VERSION = "2026-10-01-2"; // #2: 時局, asymmetric rounds, support tracks (#1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -832,8 +952,10 @@ function startGame(seed, options) {
   const rng = makeRng(seed);
   const st = {
     seed, rngState: 0, options, rulesVersion: RULES_VERSION,
-    turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: CCP, phasing: CCP,
+    turn: 0, era: null, phase: "setup", round: 0, rounds: [0, 0], actor: CCP, phasing: CCP,
     inf: {}, mandate: 0, weariness: 5,
+    // #2: [蘇聯支持, 美國支持]; and the once-a-turn uses of a 時局, reset by startTurn.
+    support: SUPPORT_START.slice(), situationUsed: { truce: false, jump: false },
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
     mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: false, // CIVIL WAR: no 洛邑
     jiuding: { holder: KMT, faceDown: false },
@@ -907,6 +1029,9 @@ function exec(st, step) {
       return true;
     }
     case "startTurn": return startTurn(st), true;
+    case "situation": return situationStep(st, step);
+    case "deal": return dealHands(st), true;
+    case "constitution": return constitutionStep(st, step);
     case "headline": return resolveHeadlines(st), true;
     case "event": {
       st.phasing = step.by ?? step.side;
@@ -1017,9 +1142,10 @@ function eventMark(st) {
     hands: [st.hands[CCP].length, st.hands[KMT].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
     effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
     jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
+    support: (st.support || []).join(),
   };
 }
-const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner"];
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner", "support"];
 const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
 // `effect`: did the event change anything at all. When it did not, `why`:
 // "noTarget" -- a choice it needed had nothing to choose from (no space with
@@ -1080,19 +1206,113 @@ function startTurn(st) {
       log(st, { type: "era", era: era.id });
     }
   }
-  st.rounds = era.rounds;
+  st.rounds = era.rounds.slice();
   st.round = 0;
   st.reformUsed = [0, 0]; st.perkUsed = [false, false]; st.forced = [null, null]; st.revealed = [false, false];
   st.headline = [null, null];
+  st.situationUsed = { truce: false, jump: false };
   if (st.jiuding.faceDown) st.jiuding.faceDown = false;
-  // Alternate draws so a mid-deal reshuffle is fair.
+  // Rulebook 三, 回合結構: 1 the 時局 (its turn-start effect, which may ask),
+  // then 2 the refill. Both are plan steps, so a 時局's decision parks the turn
+  // before anyone draws (和談: the Nationalists offer from the hand they hold).
+  st.phase = "situation";
+  log(st, { type: "turn", turn: st.turn, era: st.era });
+  st.plan.splice(1, 0, { do: "situation", stage: "start", choices: [] }, { do: "deal" });
+}
+function dealHands(st) {
+  const era = eraOf(st.turn);
+  // Alternate draws so a mid-deal reshuffle is fair. Each side up to its own hand size.
   for (let guard = 0; guard < 40; guard++) {
     let dealt = 0;
-    for (const side of [CCP, KMT]) if (st.hands[side].length < era.hand) dealt += draw(st, side, 1);
+    for (const side of [CCP, KMT]) if (st.hands[side].length < era.hand[side]) dealt += draw(st, side, 1);
     if (!dealt) break;
   }
   st.phase = "headline";
-  log(st, { type: "turn", turn: st.turn, era: st.era });
+}
+
+// ---------- 時局 (rulebook 三, mechanism F) ----------
+// The turn-start effects, one plan step that walks its stages; a choice parks
+// it (tag "situation"). Everything else a 時局 does is read where the rule is
+// (`sovietHeld`, `campaignMod`, `campaignLocked`, `campaign`, `jumpOpen`,
+// `reformAdvance`, `attritionLoss`), from `st.turn` alone, so a turn entered by
+// hand plays exactly like one reached in play.
+const NE = (kind) => SPACES.filter((s) => s.region === "northeast" && (!kind || s.kind === kind)).map((s) => s.id);
+function situationAsk(st, step, side, spec) {
+  return ask(st, { ...step, side }, { ...spec, tag: "situation", situation: situationOf(st.turn).id });
+}
+function situationStep(st, step) {
+  const sit = situationOf(st.turn);
+  if (!sit) return true;
+  if (step.stage === "start") {
+    log(st, { type: "situation", id: sit.id });
+    // The track moves first: 和談's −2 is in before the offer.
+    if (sit.id === "general_offensive") moveSupport(st, KMT, -1);
+    if (sit.id === "counteroffensive") moveSupport(st, CCP, 1);
+    if (sit.id === "constitution" && st.reform[KMT] >= 2) moveSupport(st, KMT, 1);
+    if (sit.id === "decisive_battle") moveSupport(st, CCP, 1);
+    if (sit.id === "peace_talks") moveSupport(st, KMT, -2);
+    step.stage = sit.id === "truce" ? "withdrawCcp" : sit.id === "peace_talks" ? "offer" : "done";
+  }
+  // 停戰, 蘇軍撤離: with 蘇聯支持 ≥ 2 the Communists first put 2 points in ONE
+  // space of the Northeast (city or village, up to the cap; orchestrator 裁決 #2,
+  // flagged to the owner); then the Nationalists 4 among the Northeast's three
+  // cities. Neither is bound by adjacency (裁決 #2); both go through `place()`,
+  // so supply is not read.
+  if (step.stage === "withdrawCcp") {
+    const options = NE().filter((id) => infOf(st, id)[CCP] < capOf(st, id));
+    if (st.support[CCP] >= 2 && options.length) {
+      if (!step.choices.length) return situationAsk(st, step, CCP, { kind: "points", n: 1, min: 1, options, side: CCP });
+      const [id] = step.choices.shift();
+      const n = place(st, CCP, id, 2);
+      log(st, { type: "withdrawal", side: CCP, points: [id], placed: n });
+      checkMarkers(st);
+      if (st.winner != null) return true;
+    }
+    step.stage = "withdrawKmt";
+  }
+  if (step.stage === "withdrawKmt") {
+    const options = NE("city").filter((id) => infOf(st, id)[KMT] < capOf(st, id));
+    // Room for 4 is always there in play (nobody can place in these cities on
+    // turn 1); short of it, as many as fit.
+    const n = Math.min(4, options.reduce((t, id) => t + capOf(st, id) - infOf(st, id)[KMT], 0));
+    if (n > 0) {
+      if (!step.choices.length) return situationAsk(st, step, KMT, { kind: "points", n, min: n, options, side: KMT });
+      const points = step.choices.shift();
+      for (const id of points) place(st, KMT, id, 1);
+      log(st, { type: "withdrawal", side: KMT, points });
+      checkMarkers(st);
+    }
+    step.stage = "done";
+  }
+  // 和談: before the refill (四, 細則). The Nationalists may offer, discarding 2
+  // cards that are not scoring cards (no event); the Communists accept (4 action
+  // rounds each this turn) or refuse (民心 2 toward the Nationalists). Not asked
+  // at all with fewer than 2 such cards.
+  if (step.stage === "offer") {
+    const cards = st.hands[KMT].filter((c) => !CARD[c].scoring);
+    if (cards.length < 2) { step.stage = "done"; return true; }
+    if (!step.choices.length) return situationAsk(st, step, KMT, { kind: "option", options: [{ id: "offer" }, { id: "pass" }] });
+    if (step.choices.shift() === "pass") { log(st, { type: "peace", step: "pass" }); step.stage = "done"; return true; }
+    step.stage = "discard";
+  }
+  if (step.stage === "discard") {
+    if (!step.choices.length) {
+      return situationAsk(st, step, KMT, { kind: "card", n: 2, min: 2, options: st.hands[KMT].filter((c) => !CARD[c].scoring) });
+    }
+    const cards = step.choices.shift();
+    for (const c of cards) discardCard(st, KMT, c, { noEvent: true });
+    log(st, { type: "peace", step: "offer", cards });
+    step.stage = "answer";
+  }
+  if (step.stage === "answer") {
+    if (!step.choices.length) return situationAsk(st, step, CCP, { kind: "option", options: [{ id: "accept" }, { id: "refuse" }] });
+    const answer = step.choices.shift();
+    log(st, { type: "peace", step: answer });
+    if (answer === "accept") st.rounds = [4, 4];
+    else vp(st, KMT, 2);
+    step.stage = "done";
+  }
+  return true;
 }
 // Who still owes a headline. The deal in `startTurn` stops when `drawOne` runs
 // out of cards (draw and discard both empty), so a side can reach the headline
@@ -1147,11 +1367,18 @@ function beginAction(st) {
     st.plan.push({ do: "endAction" });
   }
 }
+// `st.round` is the action round the actor is in; `st.rounds` is [Communists,
+// Nationalists]. The Communists go first and the two alternate while both have
+// rounds left; the side with more then takes the rest in a row, last (#2):
+// 6/7 is 共國 ×6 then 國, 7/6 is 共國 ×6 then 共.
 function endAction(st) {
   if (st.winner != null) return;
-  if (st.actor === CCP) { st.actor = KMT; }
-  else { st.actor = CCP; st.round++; }
-  if (st.round > st.rounds) { st.round = st.rounds; st.plan.push({ do: "endTurn" }); return; }
+  const r = st.round, left = (side, n) => n <= st.rounds[side];
+  let next = null;
+  if (st.actor === CCP) next = left(KMT, r) ? [KMT, r] : left(CCP, r + 1) ? [CCP, r + 1] : null;
+  else next = left(CCP, r + 1) ? [CCP, r + 1] : left(KMT, r + 1) ? [KMT, r + 1] : null;
+  if (!next) { st.plan.push({ do: "endTurn" }); return; }
+  [st.actor, st.round] = next;
   st.plan.push({ do: "beginAction" });
 }
 function endTurnChecks(st) {
@@ -1202,7 +1429,8 @@ function doOps(st, side, card, ops, choice) {
     if (card === JIUDING && inZhou(choice.target)) ops += 1;
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("campaign: no enemy influence there");
-    if (campaignLocked(st, t)) fail("campaign: locked by weariness");
+    if (sovietHeld(st, t)) fail("campaign: the Soviets hold it this turn (受降)");
+    if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
     campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
@@ -1443,10 +1671,10 @@ function validateOps(st, side, card, ops, payload, jiuding = false) {
 // campaign targets (enemy influence, not locked, not protected), lobby
 // targets with a positive edge.
 export function opsOptions(st, side) {
-  const barred = placeBarred(st, side);
-  const placeOptions = SPACES.filter((s) => canPlaceAt(st, side, s.id) && infOf(st, s.id)[side] < capOf(st, s.id) && !barred(s.id))
+  const barred = placeBarred(st, side), jump = jumpOpen(st, side);
+  const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && !barred(s.id) && !sovietHeld(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
-  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
+  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id, side) && !sovietHeld(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
   const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
     .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
@@ -1580,9 +1808,9 @@ function placeBarred(st, side) {
   return (id) => SPACE[id].kind === "city" && !ok.has(id);
 }
 // 孤城的效果 2 (#1): how many points each 孤城 loses at the end of this turn.
-// The one place to change it: turn 7's 時局 makes it 2, and a card may stop it
-// for a turn (neither is done yet).
-function attritionLoss(st) { return st.options.supply ? 1 : 0; }
+// The one place to change it: turn 7's 時局 (決戰) makes it 2 (#2), and a card
+// may stop it for a turn (空運孤城, not done yet).
+function attritionLoss(st) { return !st.options.supply ? 0 : situationOf(st.turn)?.id === "decisive_battle" ? 2 : 1; }
 // At the end of the turn, after the capital check (so a capital that moved
 // supplies already): read the 孤城 once, each loses `attritionLoss` (not below
 // 0), one `attrition` entry if any did, then the markers once (rulebook 四,
