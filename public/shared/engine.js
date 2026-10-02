@@ -2092,7 +2092,8 @@ function placeBarred(st, side) {
 // The one place to change it: turn 7's 時局 (決戰) makes it 2 (#2), and 空運孤城
 // stops it for the turn it is played in, turn 7's 2 included (#8: its
 // `noAttrition` effect, gone with the turn's other effects right after).
-function attritionLoss(st) {
+// Exported read-only for the bots (#12): what the evaluation expects a 孤城 to lose.
+export function attritionLoss(st) {
   if (!st.options.supply || st.effects.some((e) => e.kind === "noAttrition")) return 0;
   return situationNow(st)?.id === "decisive_battle" ? 2 : 1;
 }

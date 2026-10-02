@@ -1,80 +1,40 @@
-// The bot. Works from `view(state, seat)` like a human: it fills the unknown
-// (the other hand, the draw pile) with a random consistent guess, lists what
-// `legal()` allows, plays each candidate on the guess, answering every choice
-// the play asks for by the same greedy rule, and keeps the best evaluation.
-// Every decision carries a `why` for table talk (M3).
+// The bot (M2, #12). Works from `view(state, seat)` like a human: it fills the
+// unknown (the other hand, the draw pile, the eras not yet shuffled in) with a
+// random guess consistent with what this seat sees (`determinize`), lists what
+// `legal()` allows (`placeTargets` point by point for a 扶植), plays each
+// candidate on the guess (`simulate`), answering every choice the play asks for
+// by the same rule, and keeps the best evaluation (`evaluate`). Every decision
+// carries a `why` for table talk (M3).
 //
-// Levels: easy = a random legal action (scoring cards played at once);
-// normal = one ply plus noise; hard = one ply, then the other side's best
-// reply on the top few, less noise.
+// Levels: easy = the random player (random.js; scoring cards played at once);
+// normal = one ply plus noise; hard = one ply, then the other side's best reply
+// on the top few, less noise.
+//
+// The skeleton is Zongheng's bot (csiesheep/zongheng at 686b439); the
+// evaluation, the candidates, the guess and the answers are this game's:
+//   - the five scoring regions, valued by how often each is still to score
+//     (its scoring card in a hand now, the eras' decks to come, the final
+//     scoring); base areas count as 要衝 through `E.regionTally`;
+//   - the roads to 易幟 (3 at once wins) and 整編 (5 at once wins), the reform
+//     track to box 6, 遷都 (陝北 -> 太行, 南京 -> 廣州);
+//   - supply: a 孤城 loses blue at the turn's end and takes no 扶植 (two terms,
+//     zero when `options.supply` is off);
+//   - the aid cards are candidates of an action round (`legal().aid`), and the
+//     support tracks that set their ops are worth something;
+//   - each side has its own number of action rounds (`st.rounds[side]`): a
+//     side holding as many scoring cards as it has rounds left must play one
+//     now (`actionsLeft`). The simulation does not show the loss when the other
+//     side still acts after this side's last round, so the evaluation counts.
+//
+// The bot never catches the engine's refusal of its own candidates: a candidate
+// the engine refuses while the bot thinks is a bug of the candidate lists, and
+// it surfaces as an exception, not as a quietly dropped option.
 import * as E from "./engine.js";
 import { randomAction, randomPoints, randomOps, randomChoice } from "./random.js";
 
-const { CCP, KMT, SPACES, SPACE, STATES, SCORED_REGIONS, CARD, ERA_DECKS, ERAS, JIUDING } = E;
+const { CCP, KMT, SPACES, SPACE, STATES, SCORED_REGIONS, CARD, ERA_DECKS, ERAS } = E;
 export const LEVELS = ["easy", "normal", "hard"];
-
-// Expected scorings of each region over a whole game, final scoring included.
-const RATE = { jin: 3.0, west: 2.8, south: 2.8, east: 1.5, north: 1.5 };
-// Enemy events that tire the realm when spent for ops: deadly at 民困.
-const TIRING = new Set(["changping", "wangjian", "huaiwang"]);
-const REFORM_PERK = [0, 0.5, 1.5, 3, 4, 6, 7];
-// #121, only under a win by 稱帝: the road by box (0…5), and a card of 4 face
-// ops in hand at box 5 (half of it at box 4). Box 5 is one step from the win,
-// as a third 滅 or a fourth 相印 is one marker away, and weighs the same 8.
-const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = E.MANDATE_TO_WIN;
 const NOISE = { easy: 0, normal: 0.6, hard: 0.2 };
-// #130, only under homeFall: a capital is a road to a loss, like the last 滅 or
-// 相印. FALL is what losing it is worth to a one-ply bot that must see it coming
-// (the game scores -1000 once it happens); the road is the share of it by the
-// points the enemy still lacks (0 = the enemy holds it now, which counts at the
-// turn end under lose-turn / lose-majority / move; 1 = one point away ...) and
-// by who acts next: the attacker (ROAD_TEMPO, it can finish), the defender
-// (ROAD_DEFENCE, it can answer), or neither yet (ROAD: headlines, a pending choice).
-// Under move the FIRST fall of the home capital costs MOVE_VP (and a capital
-// nearer the front, which the evaluation then sees as the new road), so that
-// road is MOVE_ROAD of MOVE_VP: steep, so that taking it is worth nearly the
-// whole +3 to the taker rather than being credited in advance.
-const FALL = 60, ROAD = [1, 0.6, 0.25, 0.1, 0.03], ROAD_TEMPO = [1, 0.9, 0.4, 0.15, 0.05], ROAD_DEFENCE = [0.5, 0.25, 0.1, 0.03, 0.01];
-const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
-// #136: a 稱帝 the side can finish THIS TURN with its own hand (one or two of its
-// actions left: a reform with a card of the next box's ops, one per advance left,
-// or an event whose text reads 「變法軌前進 N」, which uses no advance) is a win
-// the other side can rarely undo, unlike a capital it holds with the defender to
-// act (FALL x ROAD_DEFENCE[0] = 30). Before this it scored at most box 5 + card =
-// 16, so under lose-turn a capital take outranked it: at emperor.test.js's box-4
-// race, seed 18, the bot spent 長平 on 郢 (17 losses in 200 playouts) instead of
-// 韓非 then 長平 (200 wins). One action away it is now worth what a capital held
-// by an attacker with the tempo is (FALL x ROAD_TEMPO[0] = 60). Two actions away
-// (box 4 with 韓非 and 長平, or a 3-op card and 長平) keeps the old terms: the
-// one-ply search already sees the first step land on the one-action position,
-// so the bot climbs now; valuing the two-action position as high as well (54
-// was tried) let it put the climb off for a campaign (emperor.test.js :249,
-// hard seed 12, 呂不韋 campaign), with Chu to act in between.
-const TRACK_EVENT = Object.fromEntries(Object.entries(CARD).flatMap(([id, c]) => {
-  const m = /變法軌前進 (\d)/.exec(c.text || "");
-  return m ? [[id, Number(m[1])]] : [];
-}));
-const EMPEROR_NEAR = FALL * ROAD_TEMPO[0];
-// The fewest actions (1 or 2) in which `s` reaches box 6 this turn, or 0.
-function emperorSteps(st, s) {
-  if (st.phase !== "action" || st.pending || st.reform[s] < 4 || !E.emperorWins(st, s)) return 0;
-  const acts = Math.min(2, st.rounds - st.round + (st.actor === CCP || s === KMT ? 1 : 0));
-  const cards = st.hands[s].filter((c) => (TRACK_EVENT[c] && CARD[c].side === s) || (c !== JIUDING && !CARD[c].scoring && CARD[c].ops >= 3));
-  const go = (box, adv, k, rest) => {
-    if (box >= 6) return k;
-    if (k >= acts) return 0;
-    let best = 0;
-    for (let i = 0; i < rest.length; i++) {
-      const c = rest[i], others = rest.slice(0, i).concat(rest.slice(i + 1));
-      let r = 0;
-      if (TRACK_EVENT[c] && CARD[c].side === s) r = go(box + TRACK_EVENT[c], adv, k + 1, others);
-      if (!r && adv > 0 && c !== JIUDING && !CARD[c].scoring && CARD[c].ops >= E.REFORM[box].ops) r = go(box + 1, adv - 1, k + 1, others);
-      if (r && (!best || r < best)) best = r;
-    }
-    return best;
-  };
-  return go(st.reform[s], E.reformUsesLeft(st, s), 0, cards);
-}
 const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 function gauss(rng) {
   let u = 0, v = 0;
@@ -82,115 +42,235 @@ function gauss(rng) {
   while (v === 0) v = rng.next();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
+const hand = (st, s) => st.hands[s] || [];
+const inNortheast = (id) => SPACE[id].region === "northeast";
+const isCity = (id) => SPACE[id].kind === "city";
 
-// ---------- 滅國 after a restore ----------
-// The engine's own condition (E.checkMarkers, owner 裁決 #119): after 田單復國
-// lifts a 滅, `st.mieHold[id]` lists the spaces of that state Qin still
-// controlled then; a space leaves the list once Qin loses it, and the state
-// falls again only when Qin holds all of it with at least one space NOT on the
-// list. So while every space of the state is on the list and still Qin's, no
-// move of Qin's can destroy it: Qin must first lose one. True in exactly that
-// case, for the advisor (advisor.js) and the evaluation below.
-export function heldSinceRestore(st, id) {
-  const held = st.mieHold && st.mieHold[id];
-  if (!held || st.mie[id]) return false;
-  return E.spacesOfState(id).every((x) => held.includes(x) && E.controller(st, x) === CCP);
+// ---------- the action rounds a side has left ----------
+// `side`'s OWN action rounds still to come this turn, the one it is in now
+// included when it has not played yet. The Communists act first in each round,
+// the two alternate, and the side with more rounds takes the rest last
+// (engine `endAction`): with the Communists to act in round r, the
+// Nationalists still have their round r; with the Nationalists to act, the
+// Communists' next is round r + 1. A play in progress (a choice pending before
+// its `endAction`) has used its round. In the headline phase the headline is
+// one more play. 0 outside the headline and the action phase.
+export function actionsLeft(st, side) {
+  const R = st.rounds;
+  if (!Array.isArray(R) || st.winner != null) return 0;
+  if (st.phase === "headline") return R[side] + (st.headline[side] == null ? 1 : 0);
+  if (st.phase !== "action") return 0;
+  if (st.plan.some((p) => p.do === "endTurn")) return 0;
+  let n = R[side] - st.round + (st.actor === side || side === KMT ? 1 : 0);
+  if (st.actor === side && st.plan.some((p) => p.do === "endAction")) n--;
+  return Math.max(0, n);
 }
 
 // ---------- evaluation: how good is this position for `side` ----------
-// `terms`, when an object is passed, collects the same number split into named
-// buckets from `side`'s point of view: the advisor (advisor.js) subtracts the
-// buckets before a move from the buckets after it to say *why* the move
-// scored. The bookkeeping is a side channel: every `vq` line below is the same
-// expression in the same order as before it existed, so the returned value is
-// bit for bit what it always was, and the buckets add back up to it
-// (tests/advisor.test.js pins both). Keys starting with `$` are facts for the
-// advisor's `params`, not part of the sum. Called with no `terms` (every call
-// inside this file) the cost is one branch per bucket.
+// Everything is in 民心 points (MANDATE_TO_WIN = 20 wins), from the
+// Communists' point of view (`vq`), turned to `side`'s at the end. `terms`,
+// when an object is passed, collects the same number split into named buckets
+// from `side`'s point of view (for debugging and the handover's table).
+//
+// Region scorings still to come. GAMMA discounts a scoring one turn further
+// away (the board will have moved by then). DEAL is the chance that a given
+// scoring card turns up in one turn's deal, by the era of that turn and the
+// deck the card came in with: the three fronts of 1946 are in the first era's
+// deck of 24 and come round most turns; the Northwest's and the Rear's arrive
+// with the second era; every era added thins them out.
+const GAMMA = 0.8;
+const DEAL = { takeover: { takeover: 0.75 }, turning: { takeover: 0.45, turning: 0.5 }, decisive: { takeover: 0.35, turning: 0.35 } };
+const W = {
+  // 易幟 (the Communists) and 整編 (the Nationalists): per marker held, besides
+  // the road to the instant win (`markerRoad`); a marker can be lifted again.
+  mieHeld: 1, sealHeld: 1,
+  // the reform track: the value of standing in box 0..6 (its perks, the first
+  // to box 6); EMPEROR_ROAD / EMPEROR_CARD under a win by box 6 (win-lead).
+  reformPerk: [0, 0.5, 1.5, 3, 4, 6, 7],
+  // a card of the other side in hand (its event goes to the other side when
+  // played); any card in hand (choice).
+  enemyCard: 0.4, handCard: 0.25,
+  // influence in a space one does not control: a foothold.
+  spread: 0.15,
+  // holding scoring cards (more than the rounds left is a loss, `stuckLoser`):
+  // URGENT per card when exactly as many, HOLD per card otherwise.
+  urgent: 8, hold: 1,
+  // supply (zero when options.supply is off): per blue point a 孤城 is
+  // expected to lose (this turn's attrition, then STAY per further turn that
+  // it stays cut off), and per 孤城 for the 扶植 it may not take (the 要衝 and
+  // the five seats count CUT_KEY times; the airlift of 美援 takes AIRLIFT off).
+  attrition: 1.0, stay: 0.6, cut: 1.5, cutKey: 1.5, airlift: 0.4,
+  // a level of support: the aid card's ops next turns (per discounted turn
+  // left), and the smaller things a track does without the aid cards; 美軍駐華.
+  support: 0.4, supplyNoAid: 0.1, garrison: 1.0,
+  // an action round more than the other side this turn.
+  tempo: 0.5,
+};
+const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = 20;
+// #130 / Zongheng: a capital is a road to a loss (homeFall). FALL is what
+// losing it is worth to a one-ply bot that must see it coming; the road is the
+// share of it by the points the enemy still lacks and by who acts next. Under
+// 遷都 ("move") the FIRST fall of the home capital costs MOVE_VP.
+const FALL = 60, ROAD = [1, 0.6, 0.25, 0.1, 0.03], ROAD_TEMPO = [1, 0.9, 0.4, 0.15, 0.05], ROAD_DEFENCE = [0.5, 0.25, 0.1, 0.03, 0.01];
+const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
+
+// The road to an instant win by markers (3 易幟 for the Communists, 5 整編 for
+// the Nationalists; a marker is taken the moment its condition holds): `needs`
+// is the points still missing per power without a marker, `k` how many more
+// markers win. P = the points of the cheapest k. Worth MARK_WIN times a share
+// that falls with P, steeper when the side itself acts next (it can finish:
+// one card of 4 ops or an event like 軍事整編會議 covers several powers at
+// once), shallower when the other side acts next (it can answer), between the
+// two when neither acts yet. Past the table, MARK_STEP per point under
+// MARK_HORIZON keeps the long road worth walking.
+const MARK_WIN = 60, MARK_HORIZON = 12, MARK_STEP = 0.3;
+// A side brings P down by about 3 to 4 an action (cards of 2 to 4 ops, 美援 at
+// 4, 軍事整編會議's five points), so the table reaches two or three actions out.
+const MARK_TEMPO = [1, 0.95, 0.9, 0.8, 0.65, 0.5, 0.38, 0.28, 0.2, 0.14, 0.09, 0.06, 0.04];
+const MARK_DEFENCE = [1, 0.6, 0.5, 0.4, 0.32, 0.25, 0.19, 0.14, 0.1, 0.07, 0.05, 0.03, 0.02];
+const MARK_EITHER = [1, 0.8, 0.7, 0.6, 0.48, 0.37, 0.28, 0.21, 0.15, 0.1, 0.07, 0.05, 0.03];
+function markerRoad(st, side, needs, k) {
+  if (k <= 0) return MARK_WIN;
+  if (needs.length < k) return 0;
+  const P = needs.slice().sort((a, b) => a - b).slice(0, k).reduce((t, x) => t + x, 0);
+  const next = st.phase === "action" && !st.pending ? st.actor : null;
+  const share = next === side ? MARK_TEMPO : next === 1 - side ? MARK_DEFENCE : MARK_EITHER;
+  return MARK_WIN * (P < share.length ? share[P] : 0) + MARK_STEP * Math.max(0, MARK_HORIZON - P);
+}
+
+// The scoring card of a region, and the deck it came in with.
+const SCORING = Object.fromEntries(SCORED_REGIONS.map((r) => {
+  const id = Object.keys(CARD).find((c) => CARD[c].scoring === r);
+  return [r, { id, deck: CARD[id].era }];
+}));
+const futureMemo = new Map();
+// Scorings of a card of `deck` after turn `turn`: the turns to come, then the final scoring.
+function futureScorings(turn, turns, deck) {
+  const key = `${turn}/${turns}/${deck}`;
+  let v = futureMemo.get(key);
+  if (v == null) {
+    v = 0;
+    for (let t = turn + 1; t <= turns; t++) v += GAMMA ** (t - turn) * (DEAL[E.eraOf(t).id][deck] || 0);
+    v += GAMMA ** Math.max(0, turns - turn);
+    futureMemo.set(key, v);
+  }
+  return v;
+}
+function discountedTurns(turn, turns) { let v = 0; for (let t = turn + 1; t <= turns; t++) v += GAMMA ** (t - turn); return v; }
+// How many times region `r` is still to score, as the bot expects it: once more
+// this turn when its card is in a hand (or a headline not yet resolved), else
+// none this turn once the hands are dealt; then the turns to come.
+function regionWeight(st, r) {
+  const { id, deck } = SCORING[r], turn = Math.max(1, st.turn), turns = st.options.turns;
+  let now = 0;
+  if (st.phase === "headline" || st.phase === "action") {
+    if (hand(st, CCP).includes(id) || hand(st, KMT).includes(id) || st.headline.includes(id)) now = 1;
+  } else if (st.phase !== "over") now = DEAL[E.eraOf(turn).id][deck] || 0;
+  return now + futureScorings(turn, turns, deck);
+}
+
+// The fewest actions (1 or 2) in which `s` reaches box 6 this turn, or 0
+// (Zongheng #136). An event that moves a track (「…軌前進 N」: the side's own
+// card, or a neutral one, played by it) uses no advance; a reform needs a card
+// of the next box's ops.
+const TRACK_EVENT = Object.fromEntries(Object.entries(CARD).flatMap(([id, c]) => {
+  const m = /(?:變法|行憲|建軍)軌前進 (\d)/.exec(c.text || "");
+  return m ? [[id, Number(m[1])]] : [];
+}));
+const EMPEROR_NEAR = FALL * ROAD_TEMPO[0];
+function emperorSteps(st, s) {
+  if (st.phase !== "action" || st.pending || st.reform[s] < 4 || !E.emperorWins(st, s)) return 0;
+  const acts = Math.min(2, actionsLeft(st, s));
+  const ownEvent = (c) => TRACK_EVENT[c] && (CARD[c].side === s || CARD[c].side == null);
+  const cards = hand(st, s).filter((c) => ownEvent(c) || (!CARD[c].scoring && CARD[c].ops >= 3));
+  const go = (box, adv, k, rest) => {
+    if (box >= 6) return k;
+    if (k >= acts) return 0;
+    let best = 0;
+    for (let i = 0; i < rest.length; i++) {
+      const c = rest[i], others = rest.slice(0, i).concat(rest.slice(i + 1));
+      let r = 0;
+      if (ownEvent(c)) r = go(box + TRACK_EVENT[c], adv, k + 1, others);
+      if (!r && adv > 0 && !CARD[c].scoring && CARD[c].ops >= E.REFORM[box].ops) r = go(box + 1, adv - 1, k + 1, others);
+      if (r && (!best || r < best)) best = r;
+    }
+    return best;
+  };
+  return go(st.reform[s], E.reformUsesLeft(st, s), 0, cards);
+}
+
+// The side that has lost already by its scoring cards: more in hand than its
+// own action rounds left means one is still in hand at the turn's end (engine
+// `endTurnChecks`); both: the Nationalists win (scoringBoth). null otherwise.
+// This is the count the simulation does not show when the other side still
+// acts after this side's last round.
+function stuckLoser(st) {
+  if (st.phase !== "action" && st.phase !== "headline") return null;
+  const over = (s) => hand(st, s).filter((c) => CARD[c].scoring).length > actionsLeft(st, s);
+  return over(CCP) ? CCP : over(KMT) ? KMT : null;
+}
+
 export function evaluate(st, side, terms = null) {
   if (st.winner != null) return st.winner === side ? 1000 : -1000;
+  const lost = stuckLoser(st);
+  if (lost != null) { if (terms) terms.scoringStuck = lost === side ? -1000 : 1000; return lost === side ? -1000 : 1000; }
   const sign = side === CCP ? 1 : -1;
   const T = terms ? (k, x) => { terms[k] = (terms[k] || 0) + sign * x; } : null;
-  const turnsLeft = Math.max(0, st.options.turns - st.turn) + (st.phase === "headline" ? 1 : 0.5);
-  const frac = Math.min(1, turnsLeft / st.options.turns);
-  let vq = st.mandate; // everything below is from Qin's point of view
+  const turn = Math.max(1, st.turn), turns = st.options.turns;
+  let vq = st.mandate; // everything below is from the Communists' point of view
   if (T) T("mandate", st.mandate);
+
+  // The five regions: each point of difference, times the scorings still to come.
   for (const r of SCORED_REGIONS) {
     const [q, c] = E.regionTally(st, r);
-    const card = "score_" + r;
-    let exp = RATE[r] * frac;
-    const inHand = st.hands[CCP]?.includes(card) || st.hands[KMT]?.includes(card);
-    if (inHand) exp += 0.8;
-    const dumped = st.discard.includes(card);
-    if (dumped) exp *= 0.8;
-    vq += exp * (q.total - c.total);
-    if (T) {
-      // The one place the bookkeeping does arithmetic of its own: the region
-      // term split into the control level, the battlegrounds, and the premium
-      // for the scoring card being in a hand. The three add back to the term.
-      const expCard = inHand ? 0.8 * (dumped ? 0.8 : 1) : 0, expBase = exp - expCard;
-      T(`region:${r}:base`, expBase * (q.base - c.base));
-      T(`region:${r}:bg`, expBase * (q.bonus - c.bonus));
-      T(`region:${r}:card`, expCard * (q.total - c.total));
-      terms[`$net:${r}`] = sign * (q.total - c.total);
+    const v = regionWeight(st, r) * (q.total - c.total);
+    vq += v;
+    if (T) T(`region:${r}`, v);
+  }
+
+  // 易幟 and 整編: the markers held, and the road to the instant win (3 易幟 or
+  // 5 整編 held at once): the points still missing for the cheapest set of
+  // powers that completes it, read against who acts next (`markerRoad`).
+  const mie = Object.keys(st.mie).length, seals = Object.keys(st.seals).length;
+  const held = W.mieHeld * mie - W.sealHeld * seals;
+  vq += held;
+  if (T) T("markers", held);
+  const mieNeed = [], sealNeed = [];
+  for (const [id, s] of Object.entries(STATES)) {
+    if (!st.mie[id]) {
+      let need = 0;
+      for (const x of E.spacesOfState(id)) { const [q, c] = E.infOf(st, x); need += Math.max(0, c + SPACE[x].stability - q); }
+      mieNeed.push(need);
+    }
+    if (!st.seals[id]) {
+      const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability, cap = E.capOf(st, s.capital);
+      // Control, and under sealAt "cap" blue at the cap: red above cap − stability must go first.
+      sealNeed.push(st.options.sealAt === "cap" ? Math.max(0, cap - c) + Math.max(0, q + S - cap) : Math.max(0, q + S - c));
     }
   }
-  const mie = Object.keys(st.mie).length, seals = Object.keys(st.seals).length;
-  const mieHeld = 3 * mie + (mie === st.options.mie - 1 ? 8 : 0);
-  vq += mieHeld;
-  if (T) T("mie", mieHeld);
-  const sealsHeld = 2 * seals + (seals === st.options.seals - 1 ? 8 : 0);
-  vq -= sealsHeld;
-  if (T) T("seals", -sealsHeld);
-  // The roads to 滅 and 相印, as points still needed; a threat grows with
-  // the markers already held.
-  const mieScale = 1 + 0.7 * mie, sealScale = 1 + 0.7 * seals;
-  for (const [id, s] of Object.entries(STATES)) {
-    const sp = E.spacesOfState(id);
-    if (!st.mie[id]) {
-      // A state held whole since 田單復國 lifted its 滅 cannot fall until Qin
-      // first loses a space of it (heldSinceRestore above): as far as this road goes.
-      const blocked = heldSinceRestore(st, id);
-      let need = 0;
-      for (const x of sp) { const [q, c] = E.infOf(st, x), S = SPACE[x].stability; if (q < c + S) need += c + S - q; }
-      const road = mieScale * (blocked ? 0.1 : need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
-      vq += road;
-      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = blocked ? null : need; }
-    } else if (T) terms[`$mieNeed:${id}`] = 0;
-    if (!st.seals[id]) {
-      const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability;
-      const need = Math.max(0, q + S - c) + (st.options.sealAt === "cap" ? Math.max(0, E.capOf(st, s.capital) - Math.max(c, q + S)) : 0);
-      const road = sealScale * (need <= 1 ? 1.8 : need === 2 ? 1.0 : need === 3 ? 0.5 : 0.15);
-      vq -= road;
-      if (T) { T(`sealRoad:${id}`, -road); terms[`$sealNeed:${id}`] = need; }
-    } else if (T) terms[`$sealNeed:${id}`] = 0;
-  }
-  const risk = (s) => (st.weariness <= 2 ? 3 * st.hands[s].filter((c) => TIRING.has(c) && CARD[c].side !== s).length : 0);
-  const tiring = risk(CCP) - risk(KMT);
-  vq -= tiring;
-  if (T) { T("tiring", -tiring); terms.$tiring = st.hands[side].filter((c) => TIRING.has(c) && CARD[c].side !== side).length; }
-  const reformPerk = REFORM_PERK[st.reform[CCP]] - REFORM_PERK[st.reform[KMT]];
+  const roads = markerRoad(st, CCP, mieNeed, st.options.mie - mie) - markerRoad(st, KMT, sealNeed, st.options.seals - seals);
+  vq += roads;
+  if (T) T("markerRoads", roads);
+
+  // The reform tracks (建軍 / 行憲): the perks, and under a win by box 6 the race to it.
+  const reformPerk = W.reformPerk[st.reform[CCP]] - W.reformPerk[st.reform[KMT]];
   vq += reformPerk;
   if (T) T("reform", reformPerk);
-  // #121: under emperor "win" / "win-late" / "win-lead" the first to box 6
-  // wins the game, so the track is a road to a win like 滅 and 相印 are: worth
-  // more the closer it gets, and the 4-op card that takes the last step is
-  // worth keeping. Only for a side that can still win by it (E.emperorLive:
-  // box 6 open, and under win-lead only while that side leads the Mandate);
-  // never under the default rule.
   const emp = st.options.emperor;
   if (emp === "win" || emp === "win-late" || emp === "win-lead") {
     const race = (s) => {
       if (!E.emperorLive(st, s)) return 0;
-      if (emperorSteps(st, s) === 1) return EMPEROR_NEAR; // #136
+      if (emperorSteps(st, s) === 1) return EMPEROR_NEAR;
       const box = st.reform[s];
-      const card = box >= 4 && st.hands[s].some((c) => c !== JIUDING && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
+      const card = box >= 4 && hand(st, s).some((c) => !CARD[c].scoring && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
       return EMPEROR_ROAD[box] + card;
     };
     const road = race(CCP) - race(KMT);
     vq += road;
     if (T) T("reform", road);
   }
+
+  // The capitals (遷都 by default).
   const hf = st.options.homeFall;
   if (hf && hf !== "none") {
     let cap = 0;
@@ -206,149 +286,127 @@ export function evaluate(st, side, terms = null) {
     vq += cap;
     if (T) T("capital", cap);
   }
-  const enemyCards = (s) => st.hands[s].filter((c) => CARD[c].side === 1 - s).length;
-  const enemyHeld = 0.4 * (enemyCards(CCP) - enemyCards(KMT));
-  vq -= enemyHeld;
-  if (T) { T("enemyCards", -enemyHeld); terms.$enemyCards = enemyCards(side); }
-  const handSize = 0.25 * (st.hands[CCP].length - st.hands[KMT].length);
-  vq += handSize;
-  if (T) T("handSize", handSize);
-  // A scoring card must leave the hand before the turn ends: with no action
-  // left this turn it is a certain loss, with one left it is urgent.
-  if (st.phase === "action") {
+
+  // The hands.
+  const enemyCards = (s) => hand(st, s).filter((c) => CARD[c].side === 1 - s).length;
+  const hands = -W.enemyCard * (enemyCards(CCP) - enemyCards(KMT)) + W.handCard * (hand(st, CCP).length - hand(st, KMT).length);
+  vq += hands;
+  if (T) T("hands", hands);
+
+  // The scoring cards against each side's OWN action rounds left (a side with
+  // more is lost already: `stuckLoser`, read at the top).
+  if (st.phase === "action" || st.phase === "headline") {
+    const n = [CCP, KMT].map((s) => hand(st, s).filter((c) => CARD[c].scoring).length);
+    const left = [CCP, KMT].map((s) => actionsLeft(st, s));
+    let pain = 0;
     for (const s of [CCP, KMT]) {
-      const n = st.hands[s].filter((c) => CARD[c].scoring).length;
-      if (!n) continue;
-      const left = st.rounds - st.round + (st.actor === CCP || s === KMT ? 1 : 0);
-      const pain = left < n ? 500 : left === n ? 8 * n : n;
-      vq += (s === CCP ? -1 : 1) * pain;
-      if (T) T("scoringPain", (s === CCP ? -1 : 1) * pain);
+      if (!n[s]) continue;
+      pain += (s === CCP ? -1 : 1) * (n[s] === left[s] ? W.urgent * n[s] : W.hold * n[s]);
+    }
+    const tempo = W.tempo * (left[CCP] - left[KMT]);
+    vq += pain + tempo;
+    if (T) { T("scoringPain", pain); T("tempo", tempo); }
+  }
+
+  // Supply (rulebook 三, 補給): both terms are zero with the option off.
+  if (st.options.supply) {
+    const iso = E.isolatedCities(st);
+    if (iso.length) {
+      // (a) the blue a 孤城 loses at this turn's 結算, then at each later one it stays cut off.
+      let expect = E.attritionLoss(st), stay = 1;
+      for (let t = turn + 1; t <= turns; t++) { stay *= W.stay; expect += stay * E.attritionLoss({ options: st.options, effects: [], turn: t }); }
+      // (b) no 扶植 into it (美援 all in cities may airlift: worth less while it can).
+      const relief = st.options.aid && (st.support[KMT] || 0) > 0 ? W.airlift : 0;
+      const keys = new Set(Object.values(STATES).map((s) => s.capital));
+      let a = 0, b = 0;
+      for (const id of iso) {
+        a += W.attrition * Math.min(E.infOf(st, id)[KMT], expect);
+        b += W.cut * (1 - relief) * (SPACE[id].battleground || keys.has(id) ? W.cutKey : 1);
+      }
+      vq += a + b;
+      if (T) { T("isolatedAttrition", a); T("isolatedNoPlace", b); }
     }
   }
-  if (st.luoyiYields) {
-    const l = E.controller(st, "luoyi");
-    if (l != null) {
-      const yields = (l === CCP ? 1 : -1) * st.options.luoyi * turnsLeft * 0.8;
-      vq += yields;
-      if (T) T("luoyi", yields);
-    }
+
+  // The support tracks: the aid card's ops in the turns to come, and 美軍駐華.
+  if (Array.isArray(st.support)) {
+    const per = (st.options.aid ? W.support : W.supplyNoAid) * discountedTurns(turn, turns);
+    let sup = per * (st.support[CCP] - st.support[KMT]);
+    if (E.GARRISON.some((id) => E.garrisoned(st, id))) sup -= W.garrison; // the engine's own reading
+    vq += sup;
+    if (T) T("support", sup);
   }
+
+  let spread = 0;
   for (const s of SPACES) {
     const [q, c] = E.infOf(st, s.id), ctl = E.controller(st, s.id);
-    if (q > 0 && ctl !== CCP) { vq += 0.15; if (T) T("spread", 0.15); }
-    if (c > 0 && ctl !== KMT) { vq -= 0.15; if (T) T("spread", -0.15); }
+    if (q > 0 && ctl !== CCP) spread += W.spread;
+    if (c > 0 && ctl !== KMT) spread -= W.spread;
   }
-  const j = st.jiuding;
-  const cauldrons = (j.holder === CCP ? 1 : -1) * (j.faceDown ? 0.8 : 1.5);
-  vq += cauldrons;
-  if (T) T("jiuding", cauldrons);
+  vq += spread;
+  if (T) T("spread", spread);
   return side === CCP ? vq : -vq;
 }
 
 // ---------- the guess: a full state consistent with what this seat sees ----------
+// The decks are public (`E.ERA_DECKS`), so every card is either seen (this
+// hand, the discard and removed piles, a face-up headline, a card on its way
+// through the plan, the other hand when it is shown) or among the unseen: the
+// other hand, a hidden headline and the draw pile. The eras not shuffled in yet
+// (`later`, the keys of `laterCounts`) are their whole decks. The aid cards are
+// in no deck. The other hand is dealt from the unseen cards with the one thing
+// this seat knows about it: no more scoring cards than its own action rounds
+// left (a side that holds more loses at the turn's end, which no player plays
+// into; Zongheng #132 bet the game on that case), and the card 潛伏 named.
 export function determinize(view, side, rng) {
-  const st = E.clone(view);
-  st.log = [];
+  const st = E.clone({ ...view, log: [] });
   const opp = 1 - side;
   const known = new Set([...st.hands[side], ...st.discard, ...st.removed]);
-  if (Array.isArray(st.hands[opp])) for (const c of st.hands[opp]) known.add(c);
-  for (const h of st.headline) if (h && h !== "hidden") known.add(h);
-  const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
-  if (st.options.scoringSplit === "v2") {
-    decks.reform = decks.reform.filter((c) => c !== "score_west").concat("score_east");
-    decks.alliance = decks.alliance.filter((c) => c !== "score_east").concat("score_west");
+  const oppSeen = Array.isArray(st.hands[opp]);
+  if (oppSeen) for (const c of st.hands[opp]) known.add(c);
+  for (const h of st.headline) if (h && CARD[h]) known.add(h);
+  for (const p of st.plan) { if (p.card && CARD[p.card]) known.add(p.card); if (p.pair && CARD[p.pair]) known.add(p.pair); }
+  const later = Object.keys(view.laterCounts || {});
+  const merged = ERAS.map((e) => e.id).filter((id) => !later.includes(id));
+  const pool = E.shuffle(rng, merged.flatMap((e) => ERA_DECKS[e]).filter((c) => !known.has(c)));
+  st.later = Object.fromEntries(later.map((id) => [id, ERA_DECKS[id].slice()]));
+  if (!oppSeen) {
+    const n = (st.handCounts && st.handCounts[opp]) || 0, h = [];
+    const named = st.forced && st.forced[opp];
+    if (named && pool.includes(named)) { h.push(named); pool.splice(pool.indexOf(named), 1); }
+    while (h.length < n && pool.length) h.push(pool.shift());
+    st.hands[opp] = h;
+    const most = actionsLeft(st, opp);
+    for (let i = 0; i < h.length && h.filter((c) => CARD[c].scoring).length > most; i++) {
+      if (!CARD[h[i]].scoring) continue;
+      const j = pool.findIndex((c) => !CARD[c].scoring);
+      if (j < 0) break;
+      const swap = pool[j]; pool[j] = h[i]; h[i] = swap;
+    }
   }
-  const merged = ERAS.filter((e) => e.from <= Math.max(1, st.turn)).map((e) => e.id);
-  let pool = E.shuffle(rng, merged.flatMap((e) => decks[e]).filter((c) => !known.has(c)));
-  st.later = Object.fromEntries(ERAS.filter((e) => !merged.includes(e.id)).map((e) => [e.id, decks[e.id]]));
-  if (!Array.isArray(st.hands[opp])) st.hands[opp] = pool.splice(0, st.handCounts[opp]);
   if (st.headline[opp] === "hidden") st.headline[opp] = pool.shift() ?? null;
   st.draw = pool;
   st.rngState = rng.int(2 ** 31);
-  delete st.handCounts; delete st.drawCount; delete st.laterCounts;
+  delete st.handCounts; delete st.drawCount; delete st.laterCounts; delete st.homeCapitals;
   return st;
-}
-
-// ---------- #132: the turn-end check against a hidden hand ----------
-// The turn-end check (engine endTurnChecks, rulebook): a side still holding a
-// scoring card loses; both holding one is a Chu win. When `side` is the last to
-// act before it -- the other side has no action left this turn, which (Qin
-// acting first in a round) is Chu on the last round -- the one thing a guess of
-// the hidden hand decides is whether the other side holds a scoring card, and
-// one guess bet the game on it: a guess holding one made every move look like a
-// win (記分2), so the bot kept its own scoring card about as often as that guess
-// came up, and lost by 記分 whenever the real hand held none (#132; nn 59 : 13
-// of the 記分 ends were Chu's losses).
-//
-// So at that decision the guess is split into the two worlds the check can see:
-// the other hand WITHOUT a scoring card and WITH one, each dealt afresh from the
-// same unseen cards, and every candidate is valued as the weighted sum of both,
-// the weight of "with" being the chance a hand of that size drawn from those
-// cards holds one (the same uniform belief `determinize` deals from). Playing
-// one's scoring card then always beats keeping it: in the "with" world both win,
-// in the "without" world keeping is -1000. And a move that ends the game at
-// once is still weighed in both worlds, which the blunter "count a kept card as
-// a loss" would not do. Returns [{ st, w }] with w > 0, or null when there is
-// nothing to split (not that decision, the hand is seen, or no unseen scoring
-// card could be in it). Draws from `rng` only when it splits.
-// The other side's actions left this turn, `side` acting now (evaluate's count).
-function othersActionsLeft(st, side) {
-  return st.rounds - st.round + (side === CCP ? 1 : 0);
-}
-export function turnEndWorlds(view, side, st, rng) {
-  if (st.phase !== "action" || st.pending || st.actor !== side) return null;
-  const opp = 1 - side;
-  if (Array.isArray(view.hands[opp]) || othersActionsLeft(st, side) > 0) return null;
-  const h = st.hands[opp].length;
-  const pool = st.hands[opp].concat(st.draw);
-  const scoring = pool.filter((c) => CARD[c].scoring), plain = pool.filter((c) => !CARD[c].scoring);
-  if (!h || !scoring.length) return null;
-  // P(no scoring card in h cards drawn from the pool) = C(plain, h) / C(pool, h).
-  let pNone = 1;
-  for (let i = 0; i < h; i++) pNone *= Math.max(0, plain.length - i) / (pool.length - i);
-  const deal = (hand) => {
-    const s = E.clone(st);
-    const rest = pool.slice();
-    for (const c of hand) rest.splice(rest.indexOf(c), 1);
-    s.hands[opp] = hand;
-    s.draw = E.shuffle(rng, rest);
-    s.rngState = rng.int(2 ** 31);
-    return s;
-  };
-  const worlds = [];
-  if (pNone > 0) worlds.push({ st: deal(E.shuffle(rng, plain).slice(0, h)), w: pNone });
-  if (pNone < 1) {
-    const one = pickOne(scoring, rng);
-    const others = E.shuffle(rng, pool.filter((c) => c !== one)).slice(0, h - 1);
-    worlds.push({ st: deal([one, ...others]), w: 1 - pNone });
-  }
-  return worlds;
-}
-// The world a reason is read from at that decision (advisor.js): the one where
-// the choice matters, the other hand holding no scoring card, when it can.
-export function choiceWorld(view, side, st, rng) {
-  const worlds = turnEndWorlds(view, side, st, rng);
-  return worlds ? worlds[0].st : st;
 }
 
 // ---------- playing a candidate out, answering what it asks ----------
 export function simulate(st, action, rng) {
   let s = E.apply(st, action);
   for (let guard = 0; s.pending && s.winner == null && guard < 16; guard++) {
-    const who = s.pending.who;
-    s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
+    const who = s.pending.who, p = s.pending, choice = answer(s, p, who, rng);
+    // Not caught: re-thrown with what was asked, so a bad answer names itself.
+    try { s = E.apply(s, { type: "choose", side: who, choice }); }
+    catch (e) { throw new Error(`the bot's answer ${JSON.stringify(choice)} to ${JSON.stringify({ ...p, step: undefined })} was refused: ${e.message}`); }
   }
   return s;
 }
 // ---------- the ops a play will really have, for the card page ----------
 // An enemy card played for its ops EVENT FIRST has its ops read after the
-// event (engine.js, the "ops" step's `afterEvent`, owner 裁決 #119): 荊軻刺秦王
-// played by Qin lowers its own ops. So the page cannot print `opsOf` at play
-// time for that order (#122). This plays the event out on a guess of the
-// hidden cards -- the event's choices answered as the bot would, since no
-// event's ops effect depends on them -- and reads the ops the engine then
-// asks for. Ops first, own cards, 說客's pair: `opsOf` now, as always.
-// `view` is left untouched.
+// event (engine "ops" step's `afterEvent`): this plays the event out on a guess
+// and reads the ops the engine then asks for. A UI helper, never a decision:
+// any failure answers the ops of now. `view` is left untouched.
 export function opsForOrder(view, side, card, order) {
   const now = E.opsOf(view, side, card);
   const c = CARD[card];
@@ -363,51 +421,41 @@ export function opsForOrder(view, side, card, order) {
     return s.pending && s.pending.tag === "ops" && s.pending.card === card ? s.pending.ops : now;
   } catch { return now; }
 }
-// ---------- #130: 遊說 as a roll (lobby "realign" / "realign-mild") ----------
-// One simulation of a realignment is ONE roll of the dice. Ranking candidates by
-// one roll each picks the lucky ones: before this, 70 of the normal bot's 94
-// 遊說 under realign (12 games) were worth more than 1 point less, over 48
-// rolls, than its best other play (by 6 on average). So under realign a 遊說
-// is (1) offered only where one attempt is worth something on average, the
-// risk to the actor's own points counted (`realignExpect`), and (2) scored as
-// the mean over DICE_K rolls. Off realign nothing here runs and no RNG is drawn.
+// ---------- 遊說 as a roll (lobby "realign-own", the default) ----------
+// One simulation of a realignment is ONE roll of the dice. So a 遊說 is offered
+// only where one attempt gains on average (`realignExpect`), and scored as the
+// mean over DICE_K rolls. Off realign nothing here runs and no RNG is drawn.
 export const DICE_K = 6, DICE_K_REPLY = 2;
 function realigning(st) { return !!E.LOBBY[st.options.lobby]; }
-// The mean of (enemy points removed − own points lost) for ONE attempt by
-// `side` on `id` as the board stands: every pair of faces, the loss capped by
-// the option and by what the loser has there.
 export function realignExpect(st, side, id) {
   const o = E.realignOdds(st, side, id);
   return o ? o.net : 0;
 }
 function isLobby(action) { return action.type === "choose" ? !!action.choice && action.choice.use === "lobby" : action.use === "lobby"; }
 function rollsFor(st, action, k = DICE_K) { return realigning(st) && isLobby(action) ? k : 1; }
-// evaluate(after `action`) averaged over `k` rolls (k = 1: one simulation, as always).
+// evaluate(after `action`) averaged over `k` rolls (k = 1: one simulation).
 function meanEval(st, action, side, rng, k) {
   if (k <= 1) return evaluate(simulate(st, action, rng), side);
   let t = 0;
   for (let i = 0; i < k; i++) t += evaluate(simulate({ ...st, rngState: rng.int(2 ** 31) }, action, rng), side);
   return t / k;
 }
-function evalAction(st, action, side, rng) {
-  try { return meanEval(st, action, side, rng, rollsFor(st, action)); } catch { return -Infinity; }
-}
+function evalAction(st, action, side, rng) { return meanEval(st, action, side, rng, rollsFor(st, action)); }
 function bestOf(st, who, choices, rng) {
   let best = null, bestV = -Infinity;
   for (const ch of choices) {
-    let v;
     const a = { type: "choose", side: who, choice: ch };
-    try { v = meanEval(st, a, who, rng, rollsFor(st, a)); } catch { continue; }
+    const v = meanEval(st, a, who, rng, rollsFor(st, a));
     if (v > bestV) { bestV = v; best = ch; }
   }
   return best ?? choices[0];
 }
-// The 遊說 targets a bot considers: all of them off realign (as always); under
-// realign only those where one attempt gains on average.
 function lobbyTargetsFor(st, side, targets) {
   return realigning(st) ? targets.filter((t) => realignExpect(st, side, t.id) > 0) : targets;
 }
 
+// How many more of `id` a points choice can take with `counts` already in it:
+// the checks of the engine's `validateChoice`, in its order.
 function roomFor(p, s, side, id, counts) {
   let r = Infinity;
   if (p.distinct) r = Math.min(r, 1);
@@ -416,20 +464,24 @@ function roomFor(p, s, side, id, counts) {
   if (p.side != null) r = Math.min(r, E.capOf(s, id) - E.infOf(s, id)[side]);
   return r - (counts[id] || 0);
 }
-// Greedy per point on a scratch copy: try each option, keep the best, commit.
+// A points choice: greedy per point on a scratch copy, the room read as the engine reads it.
 function bestPoints(st, p, who, rng) {
   const s = E.clone(st); s.log = [];
   const counts = {}, out = [];
   const bump = (id, d, side) => { const a = s.inf[id] || (s.inf[id] = [0, 0]); a[side] += d; };
-  if (p.side === who) { // #134: an event's own points that win now (winTargets below)
-    const room = (_, x, pts) => p.options.includes(x) && roomFor(p, st, who, x, { [x]: pts.filter((y) => y === x).length }) > 0;
-    for (const pts of winningPoints(st, who, p.n, room, () => 1)) if (winsNow(st, { type: "choose", side: who, choice: pts })) return pts;
+  if (p.side === who) { // an event's own points that win now (winTargets below)
+    for (const pts of winningPoints(st, who, p.n, (_, x, pts) => p.options.includes(x) && roomFor(p, st, who, x, { [x]: pts.filter((y) => y === x).length }) > 0, () => 1)) {
+      // A choice of exactly `min` to `n` points only (a shorter win is left to the greedy rule below).
+      if (pts.length >= (p.min ?? 0) && winsNow(st, { type: "choose", side: who, choice: pts })) return pts;
+    }
   }
-  if (p.side != null) {
+  if (p.side != null) { // points of `p.side`'s: the best place for each
     for (let i = 0; i < p.n; i++) {
       let best = null, bestV = -Infinity;
       for (const id of p.options) {
-        if (roomFor(p, s, p.side, id, counts) <= 0) continue;
+        // The room is read on the board as asked (`st`), with `counts` already in the choice:
+        // `s` has them on it too, and reading it would count them twice (Zongheng's bug).
+        if (roomFor(p, st, p.side, id, counts) <= 0) continue;
         bump(id, 1, p.side); const v = evaluate(s, who); bump(id, -1, p.side);
         if (v > bestV) { bestV = v; best = id; }
       }
@@ -438,7 +490,7 @@ function bestPoints(st, p, who, rng) {
     }
     return out;
   }
-  if (p.maxOf) { // lifting your own points: lose the least
+  if (p.maxOf) { // lifting your own points (戰略機動): lose the least
     for (let i = 0; i < p.n; i++) {
       let best = null, bestV = -Infinity;
       for (const id of p.options) {
@@ -452,46 +504,57 @@ function bestPoints(st, p, who, rng) {
     return out;
   }
   if (p.n === 1) return bestOf(st, who, [...(p.min === 0 ? [[]] : []), ...p.options.map((id) => [id])], rng);
-  // Several distinct picks whose meaning is "hit the enemy here" (張儀連橫).
+  // Several distinct picks whose meaning is "hit the enemy here" (取締民盟).
   const scored = p.options.map((id) => { bump(id, -1, 1 - who); const v = evaluate(s, who); bump(id, 1, 1 - who); return { id, v }; });
   scored.sort((a, b) => b.v - a.v);
   return scored.slice(0, p.n).map((x) => x.id);
 }
 
-// Where to put `ops` points: greedy per point, costs and reach re-read as
-// control changes (under reach "ts" the eligible set is the one at the start).
-export function greedyPlacement(st, side, ops, restrict = null) {
+// ---------- 扶植: where the points go ----------
+// One point at a time, each on a space `E.placeTargets` lights for the next
+// point (reach, cost, cap, supply, 受降, 戰略反攻's jump, 蘇援's +1 and 美援's
+// airlift are all read there; `card` is the aid card's id for an aid card's
+// 扶植), so the list is legal by construction. Which lit space: the one whose
+// best run of points (1 to 3 there, the cost re-read as control changes) gains
+// the most per op spent on the evaluation; one point of it is committed and
+// the next is chosen again. `restrict` keeps the points to some spaces (蘇援
+// all in the Northeast, 美援 all in cities).
+export function greedyPlacement(st, side, ops, card, restrict = null) {
   const s = E.clone(st); s.log = [];
-  const reach = E.reachFrom(s, side);
   const points = [];
-  let left = ops;
-  while (left > 0) {
-    let best = null, bestV = -Infinity, bestCost = 0;
-    for (const sp of SPACES) {
-      if (restrict && !restrict(sp.id)) continue;
-      const cost = E.placeCost(s, side, sp.id);
-      if (cost > left || !E.canPlaceAt(s, side, sp.id, reach) || E.infOf(s, sp.id)[side] >= E.capOf(s, sp.id)) continue;
-      const a = s.inf[sp.id] || (s.inf[sp.id] = [0, 0]);
-      a[side]++; const v = evaluate(s, side) - 0.01 * cost; a[side]--;
-      if (v > bestV) { bestV = v; best = sp.id; bestCost = cost; }
+  for (let guard = 0; guard < 12; guard++) {
+    const { lit, left } = E.placeTargets(st, side, ops, points, card);
+    const ids = [...lit].filter((id) => !restrict || restrict(id));
+    if (!ids.length) break;
+    const bonus = card === "soviet_aid" && points.every(inNortheast) ? 1 : 0;
+    const base = evaluate(s, side);
+    let best = null, bestR = -Infinity;
+    for (const id of ids) {
+      const a = s.inf[id] || (s.inf[id] = [0, 0]), start = a[side], cap = E.capOf(s, id);
+      const budget = left + (bonus && inNortheast(id) ? 1 : 0);
+      let spent = 0, here = -Infinity;
+      for (let k = 0; k < 3 && a[side] < cap; k++) {
+        const c = E.placeCost(s, side, id);
+        if (spent + c > budget) break;
+        a[side]++; spent += c;
+        const r = (evaluate(s, side) - base) / spent;
+        if (r > here) here = r;
+      }
+      a[side] = start;
+      if (here > bestR) { bestR = here; best = id; }
     }
     if (best == null) break;
+    points.push(best);
     (s.inf[best] || (s.inf[best] = [0, 0]))[side]++;
-    points.push(best); left -= bestCost;
   }
   return points;
 }
-// ---------- #134: a win by placement is never missed ----------
-// The one place candidate per card is the greedy walk above, and the roads to
-// 滅 and 相印 in `evaluate` are steps (every need up to 2 points is worth the
-// same), so the first point on the last state gains nothing there and goes
-// elsewhere: before this the normal and hard bots took the last 滅 by placement
-// in 0 of 12 positions and the last 相印 in 1 of 12 (tests/bots-134.test.js).
-// So when one placement can end the game -- the last 滅 (Qin), the last 相印
-// (Chu), the enemy home capital under homeFall "lose" (or on the turn's last
-// round under the turn-end values) -- the points that complete it are offered
-// as candidates too; each caller keeps only a play the engine says wins. With
-// no such target nothing here runs, and no RNG is drawn either way.
+// ---------- a win by placement is never missed (Zongheng #134) ----------
+// When one placement can end the game -- the last 易幟 (the Communists), the
+// last 整編 (the Nationalists), the enemy capital under homeFall "lose" or at
+// the turn's last action -- the points that complete it are offered too; each
+// caller keeps only a play that the engine says wins.
+function lastAction(st, side) { return actionsLeft(st, side) <= 1 && actionsLeft(st, 1 - side) === 0; }
 function winTargets(st, side) {
   const out = [], opp = 1 - side;
   if (side === CCP && Object.keys(st.mie).length >= st.options.mie - 1) {
@@ -502,13 +565,13 @@ function winTargets(st, side) {
     for (const [id, s] of Object.entries(STATES)) if (!st.seals[id]) out.push({ ids: [s.capital], done: sealed });
   }
   const hf = st.options.homeFall;
-  if (hf && hf !== "none" && (hf === "lose" || st.round >= st.rounds)) {
+  if (hf && hf !== "none" && (hf === "lose" || lastAction(st, side))) {
     const held = hf === "lose-majority" ? (s, x) => E.infOf(s, x)[side] > E.infOf(s, x)[opp] : (s, x) => E.controller(s, x) === side;
     out.push({ ids: [E.homeCapital(st, opp)], done: held });
   }
   return out;
 }
-// For each target, the fewest points that complete it: `room(s, id)` says
+// For each target, the fewest points that complete it: `room(s, id, pts)` says
 // whether one more point may go there, `cost(s, id)` what it spends of `budget`.
 function winningPoints(st, side, budget, room, cost) {
   const out = [];
@@ -529,52 +592,66 @@ function winningPoints(st, side, budget, room, cost) {
   }
   return out;
 }
-// Placements of `ops` that complete a target; `restrict` as in greedyPlacement.
-export function winningPlacements(st, side, ops, restrict = null) {
-  return winningPoints(st, side, ops, (s, x) => (!restrict || restrict(x)) && E.infOf(s, x)[side] < E.capOf(s, x), (s, x) => E.placeCost(s, side, x));
+// A 扶植 of `ops` that completes a target, every point lit by `placeTargets`.
+export function winningPlacements(st, side, ops, card, restrict = null) {
+  const out = [];
+  for (const t of winTargets(st, side)) {
+    const pts = [];
+    let ok = true;
+    for (const x of t.ids) {
+      for (let guard = 0; ok && guard < 12; guard++) {
+        const trial = { ...st, inf: { ...st.inf } };
+        for (const y of pts) trial.inf[y] = [...E.infOf(trial, y)], trial.inf[y][side]++;
+        if (t.done(trial, x)) break;
+        if ((restrict && !restrict(x)) || !E.placeTargets(st, side, ops, pts, card).lit.has(x)) { ok = false; break; }
+        pts.push(x);
+      }
+    }
+    if (ok && pts.length) out.push(pts);
+  }
+  return out;
 }
-function winsNow(st, action) {
-  try { return E.apply(st, action).winner === action.side; } catch { return false; }
-}
-function bestOps(st, who, ops, allowed, rng) {
-  const o = E.opsOptions(st, who);
+function winsNow(st, action) { return E.apply(st, action).winner === action.side; }
+
+// Free ops (an enemy card's ops after its event): the best of every use allowed.
+function bestOps(st, who, ops, allowed, rng, card) {
+  const aid = card && E.isAid(card) ? card : undefined;
+  const o = E.opsOptions(st, who, aid);
   const cands = [];
   if (allowed.includes("place")) {
-    const points = greedyPlacement(st, who, ops); if (points.length) cands.push({ use: "place", points });
-    for (const pts of winningPlacements(st, who, ops)) cands.push({ use: "place", points: pts }); // #134
+    const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
+    for (const pts of winningPlacements(st, who, ops, aid)) cands.push({ use: "place", points: pts });
   }
   if (allowed.includes("campaign")) for (const t of o.campaignTargets) cands.push({ use: "campaign", target: t });
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
+  // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
+  if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", target: o.campaignTargets[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
   return bestOf(st, who, cands, rng);
+}
+// A card choice of `n` cards: every set of up to two, else greedy one by one.
+function cardSets(p) {
+  const min = p.min ?? 1, n = p.n ?? 1, o = p.options;
+  const out = [];
+  if (min === 0) out.push([]);
+  if (n >= 1 && min <= 1) for (const c of o) out.push([c]);
+  if (n >= 2 && min <= 2) for (let i = 0; i < o.length; i++) for (let j = i + 1; j < o.length; j++) out.push([o[i], o[j]]);
+  return out.length ? out : [o.slice(0, min)];
 }
 export function answer(st, p, who, rng) {
   switch (p.kind) {
     case "points": return bestPoints(st, p, who, rng);
-    case "card": return bestOf(st, who, [...((p.min ?? 1) === 0 ? [[]] : []), ...p.options.map((c) => [c])], rng);
-    // 收手 (realign-own): go on while the next attempt gains on average, as the
-    // board stands after the last roll (the same expectation that offers a 遊說).
+    case "card": return bestOf(st, who, cardSets(p), rng);
+    // 收手 (realign-own): go on while the next attempt gains on average.
     case "option": if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
       return bestOf(st, who, p.options.map((o) => o.id), rng);
-    case "ops": return bestOps(st, who, p.ops, p.allowed, rng);
+    case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card);
     default: throw new Error(`answer: ${p.kind}`);
   }
 }
 
-// #123 (owner: a self-collapse played with no warning, lost with a safe
-// alternative sitting in hand): never offer -- to the scored bots below, or
-// to the easy/random one further down -- a play that pushes weariness to 土
-// 崩 against `side` right now, unless every legal play does (forced is still
-// forced). `evaluate()` already scores an ended game at -1000/+1000 (win()'s
-// own bookkeeping), which already pushes a losing play for normal/hard to
-// the very bottom of the ranking -- but that is a strong bias, not a
-// guarantee once several candidates all lose the same way, and it says
-// nothing about the easy bot, which never evaluates anything. This filters
-// candidates BEFORE any of that, from `E.actionWouldCollapse` (engine.js),
-// the same simulate-don't-pattern-match check the card page's own warning
-// uses. Above weariness 4 nothing any sided card tires by today (1, or 2
-// through the one card that tires twice in a single play) can reach 土崩 (1)
-// in one play, so the (cloning, simulating) check is skipped there rather
-// than paid on every candidate all game.
+// Zongheng #123: never offer a play that pushes 民生 to 崩潰 against `side`
+// right now, unless every legal play does (`E.actionWouldCollapse`). Above
+// 民生 4 nothing a card does in one play can reach 1, so the check is skipped.
 const COLLAPSE_RISK_WEARINESS = 4;
 function dropSelfCollapse(st, side, list) {
   if (list.length <= 1 || st.weariness > COLLAPSE_RISK_WEARINESS) return list;
@@ -583,51 +660,64 @@ function dropSelfCollapse(st, side, list) {
 }
 
 // ---------- candidates for an action round ----------
+// Every card as its event, 變法, 扶植 (one greedy placement per number of ops,
+// plus the placements that win now), 奇襲 on every target, 遊說 where one
+// attempt gains on average; an enemy card's ops first, or its event first;
+// 馬歇爾調處 with its strongest pair; and the aid card (`legal().aid`): 扶植
+// (蘇援 also all in the Northeast for its +1, 美援 also all in cities for the
+// airlift), 奇襲 and 遊說.
 function actionCandidates(st, side, L) {
+  if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   const out = [];
   const lob = (targets) => lobbyTargetsFor(st, side, targets);
-  // #134: a placement that wins now, next to the greedy one (winTargets above).
-  const winPlace = (ops, make, restrict) => {
-    for (const points of winningPlacements(st, side, ops, restrict)) { const a = make(points); if (winsNow(st, a)) out.push(a); }
+  const memo = new Map();
+  const placed = (ops, card, restrict, tag) => {
+    const key = `${ops}/${card || ""}/${tag || ""}`;
+    if (!memo.has(key)) memo.set(key, greedyPlacement(st, side, ops, card, restrict));
+    return memo.get(key);
   };
-  if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
-  let dead = null;
+  const winPlace = (ops, make, card, restrict) => {
+    for (const points of winningPlacements(st, side, ops, card, restrict)) { const a = make(points); if (winsNow(st, a)) out.push(a); }
+  };
   for (const c of L.cards) {
     const u = c.uses, id = c.id;
-    // 說客 alone as its event does nothing (its effect is empty): a dead play,
-    // offered only when nothing else is legal (#115).
-    if (id === "shuoke") dead = { type: "play", side, card: id, use: "event" };
-    else out.push({ type: "play", side, card: id, use: "event" });
+    out.push({ type: "play", side, card: id, use: "event" });
+    if (CARD[id].scoring) continue;
+    const order = u.enemy ? { order: "opsFirst" } : {};
     if (u.reform) out.push({ type: "play", side, card: id, use: "reform" });
     if (u.place) {
-      const points = greedyPlacement(st, side, u.place.ops); if (points.length) out.push({ type: "play", side, card: id, use: "place", order: "opsFirst", points });
-      winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", order: "opsFirst", points: pts }));
+      const points = placed(u.place.ops);
+      if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, points });
+      winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", ...order, points: pts }));
     }
-    if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", order: "opsFirst", target: t });
-    if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", order: "opsFirst", target: t.id });
+    if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", ...order, target: t });
+    if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", ...order, target: t.id });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
-    if (u.pair && u.pair.length) {
+    if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
       const pair = u.pair.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));
       const pops = E.opsOf(st, side, pair);
-      const points = greedyPlacement(st, side, pops);
-      if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
-      winPlace(pops, (pts) => ({ type: "play", side, card: id, pair, use: "place", points: pts }));
+      if (u.place) {
+        const points = placed(pops);
+        if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
+        winPlace(pops, (pts) => ({ type: "play", side, card: id, pair, use: "place", points: pts }));
+      }
       if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, pair, use: "campaign", target: t });
       if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
     }
   }
-  if (L.jiuding) {
-    const j = L.jiuding, zhou = (id) => SPACE[id].region === "jin" || SPACE[id].region === "zhou";
-    if (j.place) {
-      const p4 = greedyPlacement(st, side, 4); if (p4.length) out.push({ type: "play", side, card: JIUDING, use: "place", points: p4 });
-      const p5 = greedyPlacement(st, side, 5, zhou); if (p5.length && p5.every(zhou)) out.push({ type: "play", side, card: JIUDING, use: "place", points: p5 });
-      winPlace(4, (pts) => ({ type: "play", side, card: JIUDING, use: "place", points: pts }));
-      winPlace(5, (pts) => ({ type: "play", side, card: JIUDING, use: "place", points: pts }), zhou);
+  if (L.aid) {
+    const a = L.aid, id = a.id, play = (use, rest) => ({ type: "play", side, card: id, use, ...rest });
+    if (a.place) {
+      const seen = new Set();
+      const offer = (points) => { const k = points.join(","); if (points.length && !seen.has(k)) { seen.add(k); out.push(play("place", { points })); } };
+      offer(placed(a.ops, id));
+      if (id === "soviet_aid") offer(placed(a.ops, id, inNortheast, "ne"));
+      if (id === "american_aid") offer(placed(a.ops, id, isCity, "city"));
+      winPlace(a.ops, (pts) => play("place", { points: pts }), id);
     }
-    if (j.campaign) for (const t of j.campaign.targets) out.push({ type: "play", side, card: JIUDING, use: "campaign", target: t });
-    if (j.lobby) for (const t of lob(j.lobby.targets)) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });
+    if (a.campaign) for (const t of a.campaign.targets) out.push(play("campaign", { target: t }));
+    if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
-  if (!out.length && dead) out.push(dead);
   return dropSelfCollapse(st, side, out);
 }
 
@@ -638,8 +728,7 @@ function replyValue(st, action, side, rng) {
   return replyOnce(st, action, side, rng);
 }
 function replyOnce(st, action, side, rng) {
-  let s;
-  try { s = simulate(st, action, rng); } catch { return -Infinity; }
+  const s = simulate(st, action, rng);
   if (s.winner != null) return evaluate(s, side);
   const opp = 1 - side;
   if (s.phase !== "action" || s.actor !== opp || s.pending) return evaluate(s, side);
@@ -647,77 +736,62 @@ function replyOnce(st, action, side, rng) {
   if (L.kind !== "action") return evaluate(s, side);
   let worst = Infinity;
   for (const b of actionCandidates(s, opp, L)) {
-    let v;
-    try { v = meanEval(s, b, side, rng, rollsFor(s, b, DICE_K_REPLY)); } catch { continue; }
+    const v = meanEval(s, b, side, rng, rollsFor(s, b, DICE_K_REPLY));
     if (v < worst) worst = v;
   }
   return worst === Infinity ? evaluate(s, side) : worst;
 }
 
-// Headline: average over a few guesses of the other hand and headline.
+// Headline: every card on the same few guesses of the other hand and its headline.
 function bestHeadline(view, side, cards, rng, level) {
-  const K = level === "hard" ? 10 : 5;
+  const K = level === "hard" ? 10 : 5, opp = 1 - side;
+  const guesses = [];
+  for (let k = 0; k < K; k++) {
+    const st = determinize(view, side, rng);
+    let theirs = st.headline[opp];
+    if (theirs == null) {
+      const h = hand(st, opp);
+      if (h.length) theirs = rng.next() < 0.5 ? h.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a)) : pickOne(h, rng);
+    }
+    guesses.push({ st, theirs, seed: rng.int(2 ** 31) });
+  }
   let best = null, bestV = -Infinity;
   for (const card of cards) {
-    let total = 0, n = 0;
-    for (let k = 0; k < K; k++) {
-      const st = determinize(view, side, rng);
-      const opp = 1 - side;
-      let theirs = st.headline[opp];
-      if (theirs == null) {
-        const hand = st.hands[opp].filter((c) => c !== JIUDING);
-        if (!hand.length) continue;
-        theirs = rng.next() < 0.5 ? hand.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a)) : pickOne(hand, rng);
+    let total = 0;
+    for (const g of guesses) {
+      const r = E.makeRng(g.seed);
+      let s = E.apply(g.st, { type: "headline", side, card });
+      if (s.phase === "headline" && s.headline[opp] == null && g.theirs) s = E.apply(s, { type: "headline", side: opp, card: g.theirs });
+      for (let guard = 0; s.pending && s.winner == null && guard < 16; guard++) {
+        const who = s.pending.who;
+        s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, r) });
       }
-      try {
-        let s = E.apply(st, { type: "headline", side, card });
-        if (s.headline[opp] == null) s = E.apply(s, { type: "headline", side: opp, card: theirs });
-        for (let guard = 0; s.pending && s.winner == null && guard < 16; guard++) {
-          const who = s.pending.who;
-          s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
-        }
-        total += evaluate(s, side); n++;
-      } catch { /* an unplayable guess; skip it */ }
+      total += evaluate(s, side);
     }
-    const v = n ? total / n : -Infinity;
+    const v = total / guesses.length;
     if (v > bestV) { bestV = v; best = card; }
   }
   return best ?? cards[0];
 }
 
 // ---------- random play (easy, and the fuzz driver) ----------
-// #9: the random player is its own module now (random.js); these are the same
-// functions, re-exported, so that there is one copy of it.
+// #9: the random player is its own module (random.js); re-exported here.
 export { randomAction, randomPoints, randomOps, randomChoice };
 
 // Every candidate with its value, best first: for tests, debugging and hints.
-export function scoreCandidates(view, side, rng, level = "normal") {
+export function scoreCandidates(view, side, rng) {
   const st = determinize(view, side, rng);
   const L = E.legal(st, side);
   if (L.kind !== "action") return [];
-  const worlds = turnEndWorlds(view, side, st, rng);
-  return actionCandidates(st, side, L).map((a) => ({ a, v: inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)) })).sort((x, y) => y.v - x.v);
-}
-// A value on the guess, or (#132, turnEndWorlds) the weighted sum over its worlds.
-function inWorlds(worlds, st, f) {
-  if (!worlds) return f(st);
-  let t = 0;
-  for (const { st: s, w } of worlds) t += w * f(s);
-  return t;
+  return actionCandidates(st, side, L).map((a) => ({ a, v: evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
 }
 
-// #134: several plays can win on the one guess the bot scored, and the noise
-// picked among them -- a 遊說 that won on its 6 rolls, or an event that won
-// against the guessed hand -- when another won for certain (7 decisions in 200
-// normal games, realign-own + lose-turn, after the placement fix above). So
-// every play that won on the guess is played again on WIN_CHECK fresh guesses
-// with fresh rolls, and the one that wins most often is taken (the scored
-// order breaks ties). The RNG is derived from the guess, not drawn from the
-// bot's, and nothing here runs without a win on the guess. At #132's turn-end
-// decision "a win on the guess" means a win in BOTH worlds (the weighted value
-// is 1000 only then); the fresh guesses are dealt by `determinize`, the same
-// uniform belief the worlds are weighted by, so they rank those plays by the
-// same odds and never re-admit a play that loses in one world.
+// Zongheng #134: several plays can win on the one guess the bot scored; every
+// play that won is played again on WIN_CHECK fresh guesses with fresh rolls,
+// and the one that wins most often is taken (the scored order breaks ties).
+// The RNG is derived from the guess, not drawn from the bot's. A play legal on
+// this guess is legal on any (it is this side's own play), so the try below is
+// only for a fresh guess on which an answer the play asks for cannot be given.
 const WIN_CHECK = 6;
 function surestWin(view, side, st, wins) {
   if (!wins.length) return null;
@@ -735,6 +809,7 @@ function surestWin(view, side, st, wins) {
 }
 
 // ---------- the decision ----------
+// `view` is `E.view(st, side)`; it is not changed. The only chance is `rng`.
 export function decide(view, side, level = "normal", rng) {
   if (level === "easy") { const a = randomAction(view, side, rng); if (a) a.why = "random"; return a; }
   const st = determinize(view, side, rng);
@@ -742,25 +817,21 @@ export function decide(view, side, level = "normal", rng) {
   const noise = NOISE[level] ?? 0.6;
   switch (L.kind) {
     case "pending": return { type: "choose", side, choice: answer(st, L.pending, side, rng), why: L.pending.kind };
-    case "headline": return { type: "headline", side, card: bestHeadline(view, side, L.cards, rng, level), why: "headline" };
+    case "headline": return L.cards.length ? { type: "headline", side, card: bestHeadline(view, side, L.cards, rng, level), why: "headline" } : null;
     case "action": {
       const cands = actionCandidates(st, side, L);
       if (!cands.length) return null;
-      // #132: at the last action before the turn-end check, over both worlds of the hidden hand.
-      const worlds = turnEndWorlds(view, side, st, rng);
-      const scored = cands.map((a) => { const raw = inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)); return { a, raw, v: raw + noise * gauss(rng) }; });
+      const scored = cands.map((a) => { const raw = evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) }; });
       scored.sort((x, y) => y.v - x.v);
-      // #134: a win in every world scored (the weighted sum of 1000s may round a hair below 1000).
       const sure = surestWin(view, side, st, scored.filter((x) => x.raw >= 1000 - 1e-6));
-      if (sure) { sure.why = `${sure.use}:${sure.card}`; return sure; }
-      let top = scored.slice(0, level === "hard" ? 4 : 1);
+      if (sure) return { ...sure, why: `${sure.use}:${sure.card}` };
+      const top = scored.slice(0, level === "hard" ? 4 : 1);
       if (level === "hard" && top.length > 1) {
-        for (const t of top) t.v = inWorlds(worlds, st, (s) => replyValue(s, t.a, side, rng)) + noise * gauss(rng);
+        for (const t of top) t.v = replyValue(st, t.a, side, rng) + noise * gauss(rng);
         top.sort((x, y) => y.v - x.v);
       }
       const a = top[0].a;
-      a.why = `${a.use}:${a.card}`;
-      return a;
+      return { ...a, why: `${a.use}:${a.card}` };
     }
     default: return null;
   }
