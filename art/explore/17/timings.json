@@ -1,0 +1,122 @@
+{
+  "airlift__qwen": {
+    "seconds": 34.9,
+    "file": "civil_war_17_qwen_airlift_00001.png"
+  },
+  "hu_takes_yanan__qwen": {
+    "seconds": 26.6,
+    "file": "civil_war_17_qwen_hu_takes_yanan_00001.png"
+  },
+  "return_to_nanjing__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_return_to_nanjing_00001.png"
+  },
+  "chiang_steps_down__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_chiang_steps_down_00001.png"
+  },
+  "into_manchuria__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_into_manchuria_00001.png"
+  },
+  "dabie_march__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_dabie_march_00001.png"
+  },
+  "land_law__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_land_law_00001.png"
+  },
+  "liaoshen_campaign__qwen": {
+    "seconds": 25.5,
+    "file": "civil_war_17_qwen_liaoshen_campaign_00001.png"
+  },
+  "chongqing_talks__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_chongqing_talks_00001.png"
+  },
+  "inflation__qwen": {
+    "seconds": 25.6,
+    "file": "civil_war_17_qwen_inflation_00001.png"
+  },
+  "airlift__zimage8": {
+    "seconds": 17.6,
+    "file": "civil_war_17_z8_airlift_00001_.png"
+  },
+  "hu_takes_yanan__zimage8": {
+    "seconds": 15.4,
+    "file": "civil_war_17_z8_hu_takes_yanan_00001_.png"
+  },
+  "return_to_nanjing__zimage8": {
+    "seconds": 15.5,
+    "file": "civil_war_17_z8_return_to_nanjing_00001_.png"
+  },
+  "chiang_steps_down__zimage8": {
+    "seconds": 15.4,
+    "file": "civil_war_17_z8_chiang_steps_down_00001_.png"
+  },
+  "into_manchuria__zimage8": {
+    "seconds": 15.4,
+    "file": "civil_war_17_z8_into_manchuria_00001_.png"
+  },
+  "dabie_march__zimage8": {
+    "seconds": 15.3,
+    "file": "civil_war_17_z8_dabie_march_00001_.png"
+  },
+  "land_law__zimage8": {
+    "seconds": 14.3,
+    "file": "civil_war_17_z8_land_law_00001_.png"
+  },
+  "liaoshen_campaign__zimage8": {
+    "seconds": 14.3,
+    "file": "civil_war_17_z8_liaoshen_campaign_00001_.png"
+  },
+  "chongqing_talks__zimage8": {
+    "seconds": 14.3,
+    "file": "civil_war_17_z8_chongqing_talks_00001_.png"
+  },
+  "inflation__zimage8": {
+    "seconds": 14.3,
+    "file": "civil_war_17_z8_inflation_00001_.png"
+  },
+  "airlift__zimage20": {
+    "seconds": 29.7,
+    "file": "civil_war_17_z20_airlift_00001_.png"
+  },
+  "hu_takes_yanan__zimage20": {
+    "seconds": 28.6,
+    "file": "civil_war_17_z20_hu_takes_yanan_00001_.png"
+  },
+  "return_to_nanjing__zimage20": {
+    "seconds": 29.7,
+    "file": "civil_war_17_z20_return_to_nanjing_00001_.png"
+  },
+  "chiang_steps_down__zimage20": {
+    "seconds": 28.7,
+    "file": "civil_war_17_z20_chiang_steps_down_00001_.png"
+  },
+  "into_manchuria__zimage20": {
+    "seconds": 29.7,
+    "file": "civil_war_17_z20_into_manchuria_00001_.png"
+  },
+  "dabie_march__zimage20": {
+    "seconds": 29.7,
+    "file": "civil_war_17_z20_dabie_march_00001_.png"
+  },
+  "land_law__zimage20": {
+    "seconds": 28.6,
+    "file": "civil_war_17_z20_land_law_00001_.png"
+  },
+  "liaoshen_campaign__zimage20": {
+    "seconds": 29.7,
+    "file": "civil_war_17_z20_liaoshen_campaign_00001_.png"
+  },
+  "chongqing_talks__zimage20": {
+    "seconds": 28.6,
+    "file": "civil_war_17_z20_chongqing_talks_00001_.png"
+  },
+  "inflation__zimage20": {
+    "seconds": 28.7,
+    "file": "civil_war_17_z20_inflation_00001_.png"
+  }
+}
