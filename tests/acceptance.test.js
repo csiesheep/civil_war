@@ -2006,6 +2006,8 @@ check("胡宗南佔延安 *(4):國軍對西北任一據點免費奇襲,行動點
   // With 轉戰陝北 in play (−2 against the villages of 西北): the attack is made first, at 4 + 2 − 2, and the lasting card goes after it.
   const T = holding(CCP, "northern_shaanxi", { weariness: 3, other: ["score_east", "hu_takes_yanan", "kunming_incident"] });
   const t1 = ev(T, CCP, "northern_shaanxi"), t2 = answer(ev(t1, KMT, "hu_takes_yanan"), KMT, "points", ["shanbei"], "轉戰陝北在場時的胡宗南佔延安");
+  const N = holding(CCP, "northern_shaanxi", { edits: { shanbei: { r: 0 } }, other: ["score_east", "hu_takes_yanan", "kunming_incident"] });
+  const n2 = ev(ev(N, CCP, "northern_shaanxi"), KMT, "hu_takes_yanan"); // reported by BE: no red in 西北 at all
   return all(
     eq(E.opsOptions(S, KMT).campaignTargets.includes("shanbei"), false, "通膨時國軍平常能奇襲陝北(對照組)"),
     eq(a.pending.n, 1, "要選的據點數"), same(opts(a), ["shanbei", "lanzhou"], "可以選的據點(西北、有紅)"),
@@ -2013,7 +2015,8 @@ check("胡宗南佔延安 *(4):國軍對西北任一據點免費奇襲,行動點
     eq(E.campaignMod(t1, KMT, "shanbei"), -2, "轉戰陝北在場時國軍打陝北的加減"),
     eq(rb(t2, "shanbei"), "0/0", "轉戰陝北在場時奇襲陝北(4 + 2 − 2:移除 4)之後 紅/藍"),
     eq(E.campaignMod(t2, KMT, "shanbei"), 0, "之後國軍打陝北的加減(轉戰陝北移除了)"), eq(where(t2, "northern_shaanxi"), "removed", "轉戰陝北那張牌在哪裡"),
-    ok(true, "通膨時照打陝北 4/0→0/2;轉戰陝北在場時只有 4 點(0/0),打完把它移出遊戲"),
+    eq(n2.pending, null, "西北沒有紅時還有待決定"), eq(E.campaignMod(n2, KMT, "shanbei"), 0, "西北沒有紅時,打完國軍打陝北的加減(轉戰陝北照樣移除)"), eq(where(n2, "northern_shaanxi"), "removed", "西北沒有紅時轉戰陝北那張牌在哪裡"),
+    ok(true, "通膨時照打陝北 4/0→0/2;轉戰陝北在場時只有 4 點(0/0),打完把它移出遊戲;沒有目標時照樣移除"),
   );
 });
 
@@ -2046,12 +2049,14 @@ check("取締民盟 *(2):移除任兩座城的紅各 1;民心往共軍移 1;美�
   const p = pendingIs(a, KMT, "points", "取締民盟"); if (p !== true) return p;
   const b = choose(a, ["wuhan", "jinan"]);
   const one = holding(KMT, "league_banned", { edits: { wuhan: { r: 2 } } }), o = ev(one, KMT, "league_banned");
+  const none = holding(KMT, "league_banned", { support: [1, 4] }), z = ev(none, KMT, "league_banned"); // reported by BE
   return all(
     eq(a.pending.n, 2, "要選的城數"), same(opts(a), ["jinan", "xuzhou", "wuhan"], "可以選的城(有紅的城)"),
     eq(thrown(() => choose(a, ["wuhan", "wuhan"])) != null, true, "同一座城選兩次沒有被拒絕"),
     eq(`${redOf(b, "wuhan")},${redOf(b, "jinan")},${redOf(b, "xuzhou")}`, "1,0,1", "武漢、濟南、徐州的紅"),
     eq(b.mandate - S.mandate, 1, "民心的變動(往共軍 1)"), eq(J(b.support), "[1,3]", "支持度"),
     eq(o.pending && o.pending.n, 1, "只有一座城有紅時要選的城數"), eq(where(b, "league_banned"), "removed", "牌在哪裡"),
+    eq(z.pending, null, "沒有城有紅時還有待決定"), eq(z.mandate - none.mandate, 1, "沒有城有紅時民心的變動"), eq(J(z.support), "[1,3]", "沒有城有紅時的支持度"),
     ok(true, "武漢 2→1、濟南 1→0;民心往共軍 1;美國支持 4→3"),
   );
 });
@@ -2170,12 +2175,14 @@ check("東北冬季攻勢 *(3):共軍對東北任一個鄉免費奇襲,行動點
   const c = choose(b, ["shenyang"]);
   const strong = holding(CCP, "winter_offensive", { edits: { siping: { b: 4 } } }), s = answer(ev(strong, CCP, "winter_offensive"), CCP, "points", ["siping"]);
   const five = holding(CCP, "winter_offensive", { turn: 5, edits }), f = answer(ev(five, CCP, "winter_offensive"), CCP, "points", ["siping"]);
+  const held = holding(CCP, "winter_offensive", { edits: { siping: { r: 4, b: 1 } } }), h = answer(ev(held, CCP, "winter_offensive"), CCP, "points", ["siping"]); // reported by BE: nothing held this
   return all(
     eq(a.pending.n, 1, "要選的鄉數"), same(opts(a), ["siping", "liaoxi"], "可以選的鄉(東北、有藍;瀋陽是城)"),
     eq(rb(b, "siping"), "2/0", "奇襲四平(3 + 1:移除 2、放 2)之後 紅/藍"), same(opts(b), ["changchun", "shenyang"], "可以放的城(與四平相鄰)"),
     eq(redOf(c, "shenyang"), 1, "選瀋陽:瀋陽的紅"), eq(c.pending, null, "還有待決定"),
     eq(rb(s, "siping"), "0/0", "四平藍 4 時(移除 4)之後 紅/藍"), eq(s.pending, null, "沒有因此控制時還有待決定"),
     eq(rb(f, "siping"), "3/0", "第 5 回合(戰略反攻,共軍打鄉再 +1)之後 紅/藍"),
+    eq(E.controller(held, "siping"), CCP, "四平紅 4 藍 1 時的控制者"), eq(rb(h, "siping"), "4/0", "本來就控制四平時奇襲之後 紅/藍"), eq(h.pending, null, "本來就控制時還有待決定"),
     eq(where(c, "winter_offensive"), "removed", "牌在哪裡"), ok(true, "四平 0/2→2/0,因此控制,瀋陽放 1;藍 4 時打成 0/0 不控制;第 5 回合是 5 點"),
   );
 });
