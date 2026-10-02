@@ -189,6 +189,26 @@ check("評估:有孤城的盤面,supply 開著時對國軍比較差、對共軍�
     ok(true, `濟南成孤城:國軍的評估 ${k.toFixed(2)}、共軍的評估 +${c.toFixed(2)}`));
 });
 
+check("評估的細目加得回總值;supply 關掉時孤城那兩項(isolatedAttrition、isolatedNoPlace)都不在,開著時兩項都算,而且開與關只差這兩項", () => {
+  if (TODO) return TODO;
+  // The gap between supply on and off (the check above) is blind to a term that stays when the
+  // switch is off: both sides of the subtraction carry it. So the evaluation's own breakdown is read
+  // (its third argument), after checking that the breakdown adds up to the value it returns.
+  const pre = eq(isolated(CUT1), "jinan", "這個盤面的孤城"); if (pre !== true) return pre;
+  const read = (supply, side) => { const terms = {}, v = B.evaluate(board(CUT1, { supply }), side, terms); return { v, terms, sum: Object.values(terms).reduce((a, b) => a + b, 0) }; };
+  const on = read(true, KMT), off = read(false, KMT), con = read(true, CCP), coff = read(false, CCP);
+  const iso = (r) => (r.terms.isolatedAttrition || 0) + (r.terms.isolatedNoPlace || 0);
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+  return all(
+    nonEmpty(Object.keys(on.terms).length, "評估回報的細目"),
+    ok([on, off, con, coff].every((r) => close(r.sum, r.v)), `細目的和要等於評估值(國軍 開 ${on.sum.toFixed(4)} / ${on.v.toFixed(4)}、關 ${off.sum.toFixed(4)} / ${off.v.toFixed(4)};共軍 開 ${con.sum.toFixed(4)} / ${con.v.toFixed(4)}、關 ${coff.sum.toFixed(4)} / ${coff.v.toFixed(4)})`),
+    eq(JSON.stringify([off.terms.isolatedAttrition || 0, off.terms.isolatedNoPlace || 0, coff.terms.isolatedAttrition || 0, coff.terms.isolatedNoPlace || 0]), "[0,0,0,0]", "supply 關掉時孤城兩項 [國軍的 a, b, 共軍的 a, b]"),
+    ok(on.terms.isolatedAttrition < 0 && on.terms.isolatedNoPlace < 0, `supply 開著時國軍的孤城兩項都要是負的(掉點 ${on.terms.isolatedAttrition}、不能扶植 ${on.terms.isolatedNoPlace})`),
+    ok(close(on.v - off.v, iso(on)) && close(con.v - coff.v, iso(con)), `開與關的差要正好是那兩項(國軍 差 ${(on.v - off.v).toFixed(4)}、兩項 ${iso(on).toFixed(4)};共軍 差 ${(con.v - coff.v).toFixed(4)}、兩項 ${iso(con).toFixed(4)})`),
+    ok(true, `細目加得回總值;國軍 掉點 ${on.terms.isolatedAttrition.toFixed(2)}、不能扶植 ${on.terms.isolatedNoPlace.toFixed(2)},關掉時兩項都不在`),
+  );
+});
+
 check("評估:兩座孤城比一座更差", () => {
   if (TODO) return TODO;
   const pre = all(eq(isolated(CUT1), "jinan", "一座的盤面"), eq(isolated(CUT2), "jinan,taiyuan", "兩座的盤面")); if (pre !== true) return pre;
