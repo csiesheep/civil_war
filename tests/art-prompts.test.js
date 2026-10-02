@@ -180,6 +180,7 @@ section("A5 owner 挑的圖(#21)");
 // A = the Qwen image, B = the Z-Image one, X = neither, render again.
 const PICKS = "1A 2A 3A 4A 5A 6A 7A 8A 9A 10A 11X 12X 13X 14A 15A 16X 17X 18A 19A 20A 21A 22A 23A 24X 25A 26A 27A 28A 29A 30A 31A 32A 33X 34A 35A 36X 37X 38A 39X 40A 41A 42A 43A 44A 45A 46B 47A 48B 49A 50A 51A 52A 53X 54A 55A 56A 57A 58A 59A 60A 61A 62A 63A 64X 65X 66A 67X 68A 69A 70A 71A 72X 美援A 蘇援A";
 const keyOfLabel = (n) => (n === "美援" ? "american_aid" : n === "蘇援" ? "soviet_aid" : (E.CARDS.find((c) => String(c.num) === n) || {}).id);
+const numOf = (key) => (E.CARDS.find((c) => c.id === key) || {}).num;
 const PICK = new Map(PICKS.split(" ").map((t) => { const m = /^(\d+|美援|蘇援)([ABX])$/.exec(t); return [keyOfLabel(m[1]), m[2]]; }));
 const REDO = WANT.filter((w) => PICK.get(w.key) === "X");
 // orchestrator 裁決(#21): the redo of these five may change the scene, because what is wrong is known and a new
@@ -224,19 +225,20 @@ check("X 的 15 張各有 4 張重出的候選(art/cards/redo/、redo.json):新�
   if (TODO) return TODO;
   const rec = dirOf("redo.json"), dir = dirOf("redo");
   if (!existsSync(rec) || !existsSync(dir)) return "TODO: art/cards/redo/ 與 art/cards/redo.json 還沒有";
-  const D = JSON.parse(readFileSync(rec, "utf8")), bad = [], used = new Set(P.map((e) => e.seed)), seeds = [];
+  const D = JSON.parse(readFileSync(rec, "utf8")), bad = [];
   let rewritten = 0;
   for (const w of REDO) {
-    const mine = Array.isArray(D) ? D.filter((e) => e.key === w.key) : [], orig = byKey.get(w.key).prompt;
+    const mine = Array.isArray(D) ? D.filter((e) => e.key === w.key) : [], orig = byKey.get(w.key).prompt, num = numOf(w.key);
     if (mine.length !== 4 || [1, 2, 3, 4].some((c) => mine.filter((e) => e.c === c).length !== 1)) { bad.push(`${w.zh}:候選要剛好 4 張(c = 1 到 4),現在 ${mine.length} 張`); continue; }
     for (const e of mine) {
       const model = w.style === "real_tech" && e.c === 4 ? "zimage" : "qwen", steps = model === "qwen" ? 25 : 20, tag = `${w.zh} 候選 ${e.c}`;
       if (e.model !== model || e.steps !== steps) bad.push(`${tag}:${e.model} / ${e.steps} 步(應該是 ${model} / ${steps})`);
-      if (!Number.isInteger(e.seed) || used.has(e.seed) || seeds.includes(e.seed)) bad.push(`${tag}:種子 ${e.seed}(不是整數、和 prompts.json 的種子相同、或重複)`);
-      seeds.push(e.seed);
+      // orchestrator 裁決(#21): the seed of a candidate is 21000 + card number × 10 + candidate number, so no seed of #19 or #20 can recur
+      if (e.seed !== 21000 + num * 10 + e.c) bad.push(`${tag}:種子 ${e.seed}(應該是 ${21000 + num * 10 + e.c})`);
       const heads = w.style === "com_oil" ? [STYLE.com_oil, COM_OIL_CIVIL] : [STYLE[w.style]];
       if (typeof e.prompt !== "string" || !heads.some((h) => e.prompt.startsWith(h + " Scene: ")) || !e.prompt.endsWith(" " + TAIL) || /[㐀-鿿]/.test(e.prompt)) bad.push(`${tag}:prompt 的開頭、結尾不是固定文字,或裡面有中文字`);
       else if (e.prompt !== orig) {
+        // once #22 has written the picked candidate's prompt into prompts.json, the other candidates of a rewritten card differ from it only if they used another text
         if (!MAY_REWRITE.includes(w.key)) bad.push(`${tag}:prompt 和 prompts.json 的不同(這張只能換種子)`);
         else if (sceneOf(e).length < 120 || !/\b19(3\d|4\d)\b/.test(sceneOf(e))) bad.push(`${tag}:改過的畫面太短或沒有寫年代`);
         else rewritten++;
@@ -247,7 +249,34 @@ check("X 的 15 張各有 4 張重出的候選(art/cards/redo/、redo.json):新�
   }
   const stray = (Array.isArray(D) ? D : []).filter((e) => !REDO.some((w) => w.key === e.key)).map((e) => e.key);
   return all(eq(REDO.length, 15, "X 的張數"), eq(Array.isArray(D) ? D.length : -1, 60, "redo.json 的筆數"), ok(!stray.length, stray.length ? `不是 X 的牌:${first(stray)}` : ""),
-    ok(!bad.length, bad.length ? first(bad) : `15 張各 4 張候選,共 60 張,都是 768 × 1024;其中 ${rewritten} 張候選用了改過的畫面`));
+    ok(!bad.length, bad.length ? first(bad) : `15 張各 4 張候選,共 60 張,都是 768 × 1024;其中 ${rewritten} 張候選的畫面和 prompts.json 現在的不同`));
+});
+
+// The owner's answer of 2026-10-02 to the 15 rows of candidates (#21), copied by hand: card-candidate.
+const PICKS2 = "11-2 12-3 13-3 16-1 17-4 24-1 33-1 36-2 37-4 39-2 53-3 64-4 65-3 67-4 72-4";
+const PICK2 = new Map(PICKS2.split(" ").map((t) => { const m = /^(\d+)-([1-4X])$/.exec(t); return [keyOfLabel(m[1]), m[2]]; }));
+
+check("owner 挑的候選(#22):15 張都進了 final/(和候選的檔案逐位元組相同),final.json、prompts.json 的 prompt 與種子都跟著挑中的候選走;final/ 有 74 張", () => {
+  if (TODO) return TODO;
+  const rec = dirOf("final.json"), dir = dirOf("final"), rrec = dirOf("redo.json");
+  if (!existsSync(rec) || !existsSync(dir) || !existsSync(rrec)) return "TODO: art/cards/final/、final.json 與 redo.json 還沒有";
+  const F = JSON.parse(readFileSync(rec, "utf8")), D = JSON.parse(readFileSync(rrec, "utf8")), bad = [];
+  let done = 0;
+  for (const w of REDO) {
+    const c = PICK2.get(w.key);
+    if (!c || c === "X") { bad.push(`${w.zh}:owner 沒有挑或又打了 X`); continue; }
+    const cand = D.find((e) => e.key === w.key && e.c === Number(c)), f = F.filter((e) => e.key === w.key), p = byKey.get(w.key);
+    if (!cand) { bad.push(`${w.zh}:redo.json 裡沒有候選 ${c}`); continue; }
+    if (f.length !== 1) { if (f.length) bad.push(`${w.zh}:final.json 裡有 ${f.length} 筆`); continue; } // none yet: counted below
+    const e = f[0], want = `redo/${w.key}__c${c}.jpg`;
+    if (e.from !== want || e.model !== cand.model || e.seed !== cand.seed || e.steps !== cand.steps) bad.push(`${w.zh}:final.json 寫的是 ${e.from} / ${e.model} / ${e.seed} / ${e.steps}(owner 挑的是候選 ${c}:${want} / ${cand.model} / ${cand.seed} / ${cand.steps})`);
+    else if (!same(dir + "/" + w.key + ".jpg", dirOf(want))) bad.push(`${w.zh}:final/ 的圖和 ${want} 不是同一個檔案`);
+    else if (p.prompt !== cand.prompt || p.seed !== cand.seed) bad.push(`${w.zh}:prompts.json 的 prompt 或種子(${p.seed})不是挑中的候選的(${cand.seed})`);
+    else done++;
+  }
+  if (!bad.length && done === 0) return "TODO: 15 張 X 的牌還沒有一張進 final/(#22)";
+  const files = readdirSync(dir).filter((n) => n.endsWith(".jpg")).length;
+  return all(ok(!bad.length, bad.length ? first(bad) : ""), eq(done, 15, "照 owner 第二次答案進了 final/ 的張數"), eq(files, 74, "final/ 的張數"), ok(true, "74 張都定案了;15 張重出的牌的 prompt 與種子已寫回 prompts.json"));
 });
 
 // ---------------------------------------------------------------- verdict
