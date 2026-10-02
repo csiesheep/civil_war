@@ -6,14 +6,20 @@ A free fan project, unofficial. The card-driven play is inspired by *Twilight St
 
 Will live at https://games.csiesheep.com/civil_war/ (a `noindex` placeholder for now).
 
-## Status: Phase 0
+## Status: the batch-1 engine, nearly done (M1)
 
-No game yet. What exists:
+The rules engine for the first batch is written. There is no screen and no bot yet. What exists:
 
-- the Worker and the placeholder page;
-- the map (29 spaces: 17 cities, 12 villages) and the 72 cards **as data** (no card event is implemented);
-- an engine that can set a game up and say what each side may do first;
-- the first guard, `tests/acceptance.test.js`, with its constants copied from the rulebook.
+- the map (29 spaces: 17 cities, 12 villages) and the 72 cards, **every card with its event**;
+- supply, the eight situation cards (時局) with a hand size and action rounds that differ by era and by side, and the two support tracks (American and Soviet);
+- American Aid and Soviet Aid (these replace Zongheng's Nine Cauldrons), the American garrison, and base-area scoring;
+- the guard, `node --test tests/acceptance.test.js`: 155 checks pass, none is pending; its constants are copied from the rulebook, not read from the engine;
+- a random-play fuzz, `node --test tests/fuzz.test.js`, which passes: it plays 2,000 random legal games; every game ends with no error, every tenth game replays identically from its seed, and all 67 events get resolved;
+- the random player, `public/shared/random.js` (`randomAction`, `randomPoints`, `randomOps`, `randomChoice`), which the fuzz uses; `bots.js` re-exports those four from it.
+
+Not there yet: the client (M3) and the real bots (M2). Apart from the random player in `random.js`, `public/shared/bots.js` and `tests/sim.js` are still Zongheng's files and cannot run.
+
+The year on each event card and the facts quoted in the rules are being checked against sources (issue #10); the rulebook says its dates were written from memory and must be checked before the numbers are printed for players.
 
 The rules are in the owner's vault: `Projects/civil_war/civil_war - rulebook.md` (batch 1), `civil_war plan.md` (decisions, milestones), `civil_war - mechanisms.md` (the mechanisms still to come).
 
@@ -31,16 +37,18 @@ Much of the copied engine still speaks Zongheng: its comments cite Zongheng's is
 | `weariness` | 民生 (Livelihood) |
 | `reform` | 建軍 / 行憲 |
 | `campaign`, `lobby` | 進攻 (奇襲), 策反 (遊說) |
-| `jiuding` | 外援; to be split into American Aid and Soviet Aid |
+| `AID` | 美援 and 蘇援, which replaced Zongheng's `jiuding` (Nine Cauldrons; gone from the engine; the part of `bots.js` outside the random player still reads it) |
 | `STATES` | the five regional powers |
 
-`bots.js` and `tests/sim.js` are **not adapted yet** and are not expected to run (M2).
+Apart from the random player in `random.js`, `bots.js` and `tests/sim.js` are **not adapted yet** and are not expected to run (M2).
+
 
 ## Develop
 
 ```bash
 npm install
-npm test                 # the first guard, as a node test
+npm test                 # node --test: the guard and the fuzz (the fuzz takes about a minute)
+node --test tests/acceptance.test.js   # the guard alone
 npm run dev              # http://localhost:8787/civil_war/
 ```
 
@@ -59,7 +67,7 @@ From a logged-in `wrangler`. Who deploys and when is in `TEAM.md`. Pushes to `ma
 | | |
 |---|---|
 | M0 | Phase 0: repo, placeholder live, `TEAM.md`, a first guard seen red |
-| M1 | the batch-1 engine: supply, the fixed situation card per turn, foreign support, 72 card events, a test per rule |
+| M1 | the batch-1 engine: supply, the fixed situation card per turn, foreign support, 72 card events, a test per rule — **in progress, close to done** (whether it is done is the owner's call) |
 | M2 | bots and the bot-vs-bot harness; the first numbers; a stop-or-go decision |
 | M2b… | mechanism batches (siege choice, power attitudes, …), each a loop of engine, bots, numbers |
 | M3 | the solo client |
