@@ -1,0 +1,60 @@
+// Builds prompts.json and README.md from scenes.mjs and the card data. Run: node art/cards/build.mjs
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import * as E from "../../public/shared/engine.js";
+import { SCENES } from "./scenes.mjs";
+const dir = fileURLToPath(new URL(".", import.meta.url));
+const STYLE = {
+  nat_closeup: "A vivid 1940s calendar-poster painting in a low-angle close-up composition, large heroic figures filling most of the frame, deep cobalt blue and crimson red with bright white highlights, hard glossy airbrushed modelling, intense saturated colour, dramatic and polished.",
+  com_oil: "A socialist-realist propaganda painting in the manner of a 1950s Soviet-style oil painting, a blazing red sky and red banners dominating the picture, heavy confident brushwork, monumental heroic composition, soldiers in earthy grey and khaki cotton uniforms, warm red light over everything.",
+  real_tech: "A 1950s Technicolor epic film still, rich saturated three-strip colour, glowing warm highlights, theatrical lighting, wide cinematic framing, painterly cinematic polish.",
+};
+const CIVIL = STYLE.com_oil.replace(", soldiers in earthy grey and khaki cotton uniforms", "");
+const TAIL = "Full-bleed image that runs to all four edges of the canvas: no border, no frame, no margin, no white edge, no vignette, no title, no caption, no slogan, no signature, no lettering of any kind anywhere.";
+const AID = { american_aid: ["K", "nat_closeup", "美援", 0], soviet_aid: ["C", "com_oil", "蘇援", 0] };
+const meta = new Map();
+for (const c of E.CARDS) meta.set(c.id, { zh: c.zh, num: c.num, year: c.year, side: c.side === 1 ? "K" : c.side === 0 ? "C" : "N" });
+for (const a of E.AID) meta.set(a.id, { zh: a.zh, num: "—", year: null, side: AID[a.id][0] });
+const styleOf = (m, id) => (AID[id] ? AID[id][1] : m.side === "K" ? "nat_closeup" : m.side === "C" ? "com_oil" : "real_tech");
+const byId = new Map(SCENES.map((s) => [s[0], s]));
+const order = [...E.CARDS.map((c) => c.id), "american_aid", "soviet_aid"];
+const out = [];
+order.forEach((id, i) => {
+  const s = byId.get(id); if (!s) throw new Error("no scene for " + id);
+  const m = meta.get(id), style = styleOf(m, id), civil = !!s[3];
+  if (civil && style !== "com_oil") throw new Error("civil on a non-Communist card " + id);
+  const head = civil ? CIVIL : STYLE[style];
+  out.push({ key: id, zh: m.zh, side: m.side, style, w: 768, h: 1024, seed: 16001 + i, scene_zh: s[2], prompt: `${head} Scene: ${s[1]} ${TAIL}` });
+});
+if (out.length !== 74 || SCENES.length !== 74) throw new Error("count " + out.length + "/" + SCENES.length);
+fs.writeFileSync(dir + "prompts.json", JSON.stringify(out, null, 2) + "\n");
+const civilN = SCENES.filter((s) => s[3]).length;
+const row = (e) => { const m = meta.get(e.key); const civil = e.prompt.startsWith(CIVIL + " Scene:"); return `| ${m.num} | ${e.zh} | ${m.year ?? "—"} | ${e.style}${civil ? "(無士兵版)" : ""} | ${e.scene_zh.replace(/\|/g, "/")} |`; };
+const sec = (title, pred) => `### ${title}\n\n| 編號 | 牌名 | 年 | 風格 | 畫面 |\n|---|---|---|---|---|\n${out.filter(pred).map(row).join("\n")}\n`;
+const isScoreOrAid = (e) => e.key.startsWith("score_") || e.key.endsWith("_aid");
+const md = `# 74 張牌的圖 prompt(#16)
+
+owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援),**還沒有出任何一張圖**。完整的 prompt、種子、尺寸在 \`prompts.json\`;下面的表是給你讀的:每張牌畫什麼。覺得哪張畫錯,說牌名和你想要的畫面。
+
+## 三種風格(你在 #14 挑的),與結尾
+
+- **國軍 \`nat_closeup\`**(24 張,含美援):${STYLE.nat_closeup}
+- **共軍 \`com_oil\`**(24 張,含蘇援):${STYLE.com_oil}
+- **其他 \`real_tech\`**(26 張:21 張中立牌 + 5 張記分卡):${STYLE.real_tech}
+- 共軍牌的畫面裡沒有士兵時(共 ${civilN} 張,表裡標「無士兵版」),風格文字拿掉「, soldiers in earthy grey and khaki cotton uniforms」,其餘不動。
+- 每一則的結尾:${TAIL}
+
+每一則的形狀:\`<風格文字> Scene: <畫面與年代細節> <結尾>\`,全英文,沒有要求圖裡出現任何字。種子 = 16000 + 該牌在 prompts.json 的序號。尺寸 768 × 1024。
+
+## 怎麼出其中一張(之後出圖的人)
+
+用 \`art/explore/14/r3/workflow_api.json\`(Qwen Image 2.1,25 步、cfg 1、euler / simple)當樣板,只換這四個欄位再送給 ComfyUI(\`http://127.0.0.1:8188/prompt\`):\`452.inputs.prompt\` = 該筆的 \`prompt\`,\`458.inputs.seed\` = \`seed\`,\`456.inputs.width / height\` = 768 / 1024,\`461.inputs.filename_prefix\` = 自訂。\`art/explore/14/r3/repro.mjs\` 是現成的寫法(把裡面讀 prompts.json 的路徑改成這個檔)。
+
+## 畫面表
+
+${sec("國軍(nat_closeup)", (e) => e.style === "nat_closeup" && !isScoreOrAid(e))}
+${sec("共軍(com_oil)", (e) => e.style === "com_oil" && !isScoreOrAid(e))}
+${sec("其他中立牌(real_tech)", (e) => e.style === "real_tech" && !isScoreOrAid(e))}
+${sec("記分卡與外援牌", isScoreOrAid)}`;
+fs.writeFileSync(dir + "README.md", md);
+console.log("ok", out.length, "civil", civilN);
