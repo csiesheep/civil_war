@@ -115,3 +115,14 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 | 5 | 後方記分 | 記分卡 | — | real_tech | 後方:1946 年十一月黃昏,重慶山城從長江對岸望去,石階、吊腳樓、帆船與薄霧。地景。 |
 | — | 美援 | 國軍外援 | — | nat_closeup | 1946 年中國港口碼頭:起重機從美國貨輪吊下卡車,吉普車與卡車整齊排在岸邊,碼頭工人、美軍水兵與國軍軍官(美援)。 |
 | — | 蘇援 | 共軍外援 | — | com_oil(無士兵版) | 1948 年 12 月哈爾濱松花江鐵橋:蘇聯鐵路專家與中國工人用吊車架設鋼樑,火車頭在橋頭等著(蘇援:東北鐵路)。 |
+
+## Z-Image Turbo 的那一半與挑圖(#20)
+
+owner:「圖片用 z image 和 qwen image 各產生一張，讓我選」。Qwen 的 74 張是上面的 `img/`;這裡是同一份 prompt、同一個種子的 Z-Image Turbo 版:
+
+- `img-zimage/<card id>.jpg`:74 張,768 × 1024,JPEG 品質 88,不後製。Z-Image Turbo 20 步、cfg 1、res_multistep / simple、shift 3(`art/explore/17/workflow_api_zimage.json`,走 8188)。一張牌只出一次,不為硬傷重出。
+- `zimage.json`:每張實際用的 `{ key, seed, steps }`(種子與 `prompts.json` 當時的種子相同;之後 Qwen 重出改了 `prompts.json` 的種子,Z-Image 的圖仍可靠這份紀錄重現)。
+- `render-zimage.mjs`:出圖,可續跑(已有的檔案跳過,一張失敗不停整批);`REPRO=1 node art/cards/render-zimage.mjs <key>` 從 `zimage.json` 重出並和交付的檔案逐像素比。
+- `CHECK-zimage.md`:74 列的硬傷清單(框 / 字 / 旗與機徽 / 畸形 / 認不認得出),最前面有統計。
+- `pick/pair-01.jpg` 到 `pair-07.jpg`:並排對照表(`node art/cards/pairs.mjs`),**左 A = Qwen Image 2.1,右 B = Z-Image Turbo**,編號是 `cards.js` 的數字,紅字是兩邊各自的硬傷。
+- `pick.html`:本機挑圖頁(`node art/cards/pick.mjs` 產生;雙擊開,不需伺服器、不載入外部資源)。點圖或按 A / B / X(X = 兩張都不要、重出)選;上方固定列有「已選 n / 74」、還沒選的編號、結果文字(`1A 2B 3X … 美援A 蘇援B`)與「複製」;選擇存在瀏覽器的 localStorage;「全部清除」要按兩次。
