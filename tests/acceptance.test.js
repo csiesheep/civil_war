@@ -807,7 +807,7 @@ check("受降:第 1 回合東北的城不能奇襲;第 2 回合起可以", () =>
   const err = thrown(() => act(t1, KMT, "kunming_incident", "campaign", { target: "shenyang" }));
   return all(
     eq(kt.includes("shenyang"), false, "第 1 回合國軍的奇襲目標有瀋陽"), eq(kt.includes("jizhong"), true, "第 1 回合國軍的奇襲目標沒有冀中"),
-    eq(ct.includes("jinzhou"), false, "第 1 回合共軍的奇襲目標有錦州"), eq(ct.includes("tianjin"), true, "第 1 回合共軍的奇襲目標沒有天津"),
+    eq(ct.includes("jinzhou"), false, "第 1 回合共軍的奇襲目標有錦州"), eq(ct.includes("beiping"), true, "第 1 回合共軍的奇襲目標沒有北平(東北以外的城;天津有美軍駐華,不拿來當對照)"),
     ok(err != null, err == null ? "第 1 回合國軍打出昆明事變奇襲瀋陽沒有被拒絕" : `第 1 回合瀋陽、錦州不在奇襲目標裡,奇襲瀋陽被拒絕(「${err}」);第 2 回合可以`),
   );
 });
@@ -1479,6 +1479,29 @@ check("外援牌不換手;空手的一方有外援牌就要行動;每回合重�
     eq(off.options.aid, false, "對照局的選項"), eq(off.actor, KMT, "aid: false 時空手的共軍被跳過"), eq(aidOf(off, KMT), null, "aid: false 時 legal 還給美援"),
     eq(thrown(() => act(off, KMT, "american_aid", "place", { points: ["tianjin"] })) != null, true, "aid: false 時用美援沒有被拒絕"),
     ok(true, "共軍只能用蘇援、國軍只能用美援;空手也要行動;第 7 回合兩張都回來(蘇援 2 點);aid: false 時沒有外援牌"),
+  );
+});
+
+// Reported by BE at delivery, ruled by the orchestrator on #4: an aid card with nothing it could legally do
+// is not a card to play. Without this a side with an empty hand would be asked to act and have no action.
+check("外援牌沒有任何合法用法時不算可用:空手的一方被跳過,不會卡住", () => {
+  const t = aidTodo(); if (t) return t;
+  // No red anywhere, blue only in 天津 and 上海. The Communists cannot 扶植 (no influence to reach from),
+  // cannot 遊說 (none of their own anywhere), and 美軍駐華 (美國支持 3) bars the only two spaces they could attack.
+  const edits = Object.fromEntries(Object.keys(SPEC_SPACES).map((id) => [id, { r: 0, b: id === "tianjin" || id === "shanghai" ? 3 : 0 }]));
+  const st = enter(6, { options: AID_ON, edits, support: [2, 3] }), free = enter(6, { options: AID_ON, edits, support: [2, 2] });
+  const o = E.opsOptions(st, CCP);
+  const pre = all(
+    eq(st.turn, 6, "回合"), eq(J(st.support), "[2,3]", "支持度"), eq(total(st, CCP), 0, "紅的合計"),
+    eq(E.placeTargets(st, CCP, 2, [], "soviet_aid").lit.size, 0, "共軍用蘇援可以扶植的據點數"), eq(o.campaignTargets.length, 0, "共軍可以奇襲的據點數"), eq(o.lobbyTargets.length, 0, "共軍可以遊說的據點數"),
+    eq(free.actor, CCP, "美國支持 2 時(天津、上海打得到)輪到誰(對照組)"), eq(aidOf(free, CCP) && aidOf(free, CCP).id, "soviet_aid", "美國支持 2 時 legal 給共軍的外援牌(對照組)"),
+  );
+  if (pre !== true) return pre;
+  return all(
+    eq(st.winner, null, "勝者"), eq(st.phase, "action", "phase"), eq(st.actor, KMT, "輪到誰(共軍沒有手牌,蘇援沒有任何用法)"),
+    eq(J(E.mustAct(st)), J([KMT]), "mustAct"), eq(E.legal(st, CCP).kind, "wait", "共軍的 legal"), eq(J(st.aidUsed), "[false,false]", "st.aidUsed(蘇援沒有被用掉)"),
+    eq(aidOf(st, KMT) && aidOf(st, KMT).id, "american_aid", "legal 給國軍的外援牌"),
+    ok(true, "蘇聯支持 2 但蘇援沒有地方可用:共軍被跳過,輪到國軍(美援可用);美國支持降到 2、天津上海打得到時,共軍就要行動"),
   );
 });
 
