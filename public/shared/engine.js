@@ -34,9 +34,13 @@
 //     `opsOptions` and by an event's free 奇襲 (`eventCampaignTargets`); the
 //     `campaignBan` effect (`campaignBanned`, also checked by `doOps`); and
 //     Zongheng's 說客 pairing is 馬歇爾調處's (`MARSHALL`, `marshallPairs`).
+//   - #7 the one hook the 22 cards of 易勢期 need (their events are in cards.js):
+//     a `campaign` effect may name a kind of space (`spaceKind`, read by
+//     `campaignMod`). 潛伏, 久攻不下 and 熊向暉 use Zongheng's `forced`, `bog`
+//     and `revealed` as they are.
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (the events of 易勢期 and 決戰期) is not done: that is the rest
+// differently (the events of 決戰期) is not done: that is the rest
 // of M1. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
@@ -854,13 +858,16 @@ function situationCampaignMod(st, side, target) {
     default: return 0;
   }
 }
+// A `campaign` effect may also name a kind of space (#7, `spaceKind`: "village"
+// or "city"; absent, both): 轉戰陝北 is −2 against the Northwest's villages only.
 export function campaignMod(st, side, target) {
-  const region = SPACE[target].region;
+  const region = SPACE[target].region, kind = SPACE[target].kind;
   let d = situationCampaignMod(st, side, target);
   for (const e of st.effects) {
     if (e.kind !== "campaign") continue;
     if (e.who !== side && e.who !== "both") continue;
     if (e.regions && !e.regions.includes(region)) continue;
+    if (e.spaceKind && e.spaceKind !== kind) continue;
     d += e.delta;
   }
   return d;
@@ -1105,7 +1112,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-6"; // #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan` ("2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-7"; // #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind` ("2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });

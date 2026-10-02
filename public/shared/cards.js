@@ -22,11 +22,16 @@
 //     within the card's list (`E.eventCampaignTargets`); 民生 is pushed by the
 //     player acting (`st.phasing`); no target, nothing;
 //   - a sided card's choices are its owner's, a neutral card's the player's.
-// The cards of the other two eras still carry `todo: true` and an `effect` that
+// #7: the 22 events of 易勢期, under the same rules, plus orchestrator 裁決 #7:
+//   - 「不受封鎖」 lifts only 民生's lock (`{ locks: false }`);
+//   - 「若因此控制」 is: not controlled before the event, controlled after it;
+//   - 潛伏、戰略機動、久攻不下、熊向暉 are Zongheng's 細作、徙民實邊、頓兵堅城 and
+//     its 「查看手牌」 (`st.forced`, `bog`, `st.revealed`).
+// The cards of 決戰期 still carry `todo: true` and an `effect` that
 // throws, loudly, so that a game which reaches one stops instead of quietly
 // doing nothing.
 import * as E from "./engine.js";
-import { SPACES, STATES, REGIONS, SCORED_REGIONS } from "./board.js";
+import { SPACES, SPACE, STATES, REGIONS, SCORED_REGIONS } from "./board.js";
 
 const C = 0, K = 1, N = null;
 
@@ -62,6 +67,20 @@ const CAPITALS = Object.values(STATES).map((s) => s.capital); // 本據: 察綏�
 const cities = (pred = () => true) => spaces((s) => s.kind === "city" && pred(s));
 const support = (st, side) => (st.support || [])[side] || 0;
 const until = (id, side, e) => ({ card: id, side, ...e, until: "turn" }); // 「本回合」「持續至回合結束」: gone at 結算's 「本回合的效果結束」
+const villages = (pred = () => true) => spaces((s) => s.kind === "village" && pred(s));
+const opp = (side) => 1 - side;
+// How many points `side` could still put among `options`, at most `maxPer` in each.
+const roomIn = (st, side, options, maxPer = Infinity) => options.reduce((r, id) => r + Math.min(maxPer, Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side])), 0);
+// 胡宗南佔延安 removes 轉戰陝北 (orchestrator 裁決 #7, 1): the lasting effect goes,
+// and the card leaves the game if it is in the discard or the draw pile; in a
+// hand it stays where it is.
+function dropNorthernShaanxi(st) {
+  E.removeEffect(st, (e) => e.card === "northern_shaanxi");
+  for (const pile of ["discard", "draw"]) {
+    const i = st[pile].indexOf("northern_shaanxi");
+    if (i >= 0) { st[pile].splice(i, 1); st.removed.push("northern_shaanxi"); }
+  }
+}
 
 // The events, by card id. The table at the bottom takes a card's event from here;
 // a card with none here is still `todo`. The decisions and their shapes are the
@@ -162,6 +181,147 @@ const EFFECTS = {
   june_truce(st, side) {
     E.addEffect(st, until("june_truce", side, { kind: "campaignBan", region: "northeast", spaceKind: null }));
     E.recover(st, 1);
+  },
+
+  // ---------- 易勢期・國軍 (#7) ----------
+  // A free 奇襲 on any space of the Northwest, 4 + 2, not locked by 民生 (only
+  // that: protection and the event bans still hold). The attack comes first, so
+  // 轉戰陝北 still takes its −2 from it; then 轉戰陝北 goes (`dropNorthernShaanxi`).
+  hu_takes_yanan(st, side, ch) {
+    const need = freeCampaign(st, K, ch, spaces((s) => s.region === "northwest"), CARD.hu_takes_yanan.ops + 2, { locks: false });
+    if (need) return need;
+    dropNorthernShaanxi(st);
+  },
+  // 魯中 red −2 first, then 濟南 or 徐州 (with room for blue) +2.
+  shandong_offensive(st, side, ch) {
+    if (!ch.length) {
+      E.remove(st, C, "luzhong", 2);
+      return pick(K, placeable(st, K, ["jinan", "xuzhou"]), { side: K });
+    }
+    const [id] = ch[0];
+    if (id) E.place(st, K, id, 2);
+  },
+  mobilisation_order(st) { E.addEffect(st, until("mobilisation_order", K, { kind: "opsAll", target: K, delta: 1 })); },
+  // Two cities with red (one if only one has any): each red −1; 民心 1 to the Communists; 美國支持 −1.
+  league_banned(st, side, ch) {
+    if (!ch.length) return pickN(K, 2, cities((s) => E.infOf(st, s.id)[C] > 0));
+    for (const id of ch[0]) E.remove(st, C, id, 1);
+    E.vp(st, C, 1);
+    E.moveSupport(st, K, -1);
+  },
+  chen_cheng(st) { E.place(st, K, "shenyang", 2); E.place(st, K, "changchun", 1); },
+  china_aid_act(st) { E.moveSupport(st, K, 1); E.draw(st, K, 1, { nonScoring: true }); },
+  // The box first (on turn 6 it sets off 行憲's 時局, after this event), then 南京 is read.
+  national_assembly(st) {
+    E.reformAdvance(st, K, 1);
+    if (st.winner != null) return;
+    if (E.controller(st, "nanjing") === K) E.vp(st, K, 1);
+  },
+  // 美國支持 is read once, when the card is played (orchestrator 裁決 #7, 4).
+  american_divisions(st) {
+    if (support(st, K) < 2) return;
+    E.addEffect(st, until("american_divisions", K, { kind: "campaign", who: K, delta: 1, regions: null }));
+  },
+
+  // ---------- 易勢期・共軍 (#7) ----------
+  // Lasting until 胡宗南佔延安 removes it: the Nationalists −2 against the
+  // Northwest's villages only. Played again it replaces itself, not stacks.
+  northern_shaanxi(st) {
+    E.removeEffect(st, (e) => e.card === "northern_shaanxi");
+    E.addEffect(st, { card: "northern_shaanxi", side: C, kind: "campaign", who: K, delta: -2, regions: ["northwest"], spaceKind: "village", until: "game" });
+  },
+  // 魯中 or 淮海, blue or not: up to 3 blue off.
+  menglianggu(st, side, ch) {
+    if (!ch.length) return pick(C, ["luzhong", "huaihai"]);
+    const [id] = ch[0];
+    if (id) E.remove(st, K, id, 3);
+  },
+  // 大別山 +3; only if that turns it Communist (it was not before: 「因此」,
+  // orchestrator 裁決 #7, 3), 武漢 or 鄭州 (with blue) blue −1.
+  dabie_march(st, side, ch) {
+    if (!ch.length) {
+      const had = E.controller(st, "dabieshan") === C;
+      E.place(st, C, "dabieshan", 3);
+      if (had || E.controller(st, "dabieshan") !== C) return null;
+      return pick(C, ["wuhan", "zhengzhou"].filter((id) => E.infOf(st, id)[K] > 0));
+    }
+    const [id] = ch[0];
+    if (id) E.remove(st, K, id, 1);
+  },
+  // The box first, then two villages the Communists control (with room): each +1.
+  land_law(st, side, ch) {
+    if (!ch.length) {
+      E.reformAdvance(st, C, 1);
+      if (st.winner != null) return null;
+      return pickN(C, 2, placeable(st, C, villages((s) => E.controller(st, s.id) === C)), { side: C });
+    }
+    for (const id of ch[0]) E.place(st, C, id, 1);
+  },
+  central_shanxi_campaign(st) { E.remove(st, K, "jinzhong", 3); E.place(st, C, "jinzhong", 1); },
+  // A free 奇襲 on a village of the Northeast, the printed 3 ops +1; if that
+  // turns it Communist (it was not before), a city next to it (with room) +1.
+  winter_offensive(st, side, ch) {
+    if (ch.length === 0) return pick(C, E.eventCampaignTargets(st, C, villages(inNE)));
+    if (ch.length === 1) {
+      const [t] = ch[0];
+      if (!t) return null;
+      const had = E.controller(st, t) === C;
+      E.campaign(st, C, t, CARD.winter_offensive.ops + 1, { pusher: st.phasing });
+      if (had || st.winner != null || E.controller(st, t) !== C) return null;
+      return pick(C, placeable(st, C, SPACE[t].adj.filter((a) => SPACE[a].kind === "city")), { side: C });
+    }
+    const [id] = ch[1];
+    if (id) E.place(st, C, id, 1);
+  },
+  // The Communists see the Nationalists' hand for the rest of the turn (`view`).
+  xiong_xianghui(st) { st.revealed[C] = true; },
+  // Two of 北平、上海、南京 (with room), not bound by adjacency: each +1; 民心 1 to the Communists.
+  may_twentieth(st, side, ch) {
+    if (!ch.length) return pickN(C, 2, placeable(st, C, ["beiping", "shanghai", "nanjing"]), { side: C });
+    for (const id of ch[0]) E.place(st, C, id, 1);
+    E.vp(st, C, 1);
+  },
+
+  // ---------- 易勢期・中立 (#7; `side` is the player) ----------
+  truman_doctrine(st) { E.moveSupport(st, K, 1); E.moveSupport(st, C, 1); },
+  // 復員 (5) or 動盪 (4): 美國支持 +1; any lower: −1.
+  wedemeyer_mission(st) { E.moveSupport(st, K, st.weariness >= 4 ? 1 : -1); },
+  // Every village of 華東中原: each side −1 there. The cities and the other regions are not touched.
+  yellow_river(st) {
+    for (const id of villages((s) => s.region === "east")) { E.remove(st, C, id, 1); E.remove(st, K, id, 1); }
+    E.recover(st, 1);
+  },
+  // Zongheng's 細作: the opponent's hand shown to the player (`showHand`), who
+  // names one card; the opponent must play it on its next action round, any use
+  // (`st.forced`, read through `E.forcedCard` by `legal` and `play`).
+  sleeper(st, side, ch) {
+    const h = st.hands[opp(side)];
+    if (!ch.length) return { kind: "card", who: side, n: 1, min: h.length ? 1 : 0, options: h.slice(), showHand: true };
+    if (ch[0][0]) st.forced[opp(side)] = ch[0][0];
+  },
+  // Zongheng's 徙民實邊: 4 of the player's own points off (no more from a space
+  // than it has there), then as many back anywhere, at most 2 to a space, not
+  // bound by adjacency, never into 受降's Northeast cities (`placeable`); with
+  // less room than that, the room is filled and the rest vanishes.
+  redeployment(st, side, ch) {
+    if (ch.length === 0) {
+      const mine = spaces((s) => E.infOf(st, s.id)[side] > 0);
+      const k = Math.min(4, mine.reduce((n, id) => n + E.infOf(st, id)[side], 0));
+      return { kind: "points", who: side, n: k, min: k, options: mine, maxOf: Object.fromEntries(mine.map((id) => [id, E.infOf(st, id)[side]])) };
+    }
+    if (ch.length === 1) {
+      for (const id of ch[0]) E.remove(st, side, id, 1);
+      const options = placeable(st, side, spaces(() => true));
+      return { kind: "points", who: side, side, n: ch[0].length, min: Math.min(ch[0].length, roomIn(st, side, options, 2)), maxPer: 2, options };
+    }
+    for (const id of ch[1]) E.place(st, side, id, 1);
+  },
+  // Zongheng's 頓兵堅城: the opponent's next action round is a discard of a card
+  // of 2+ printed ops, its event not set off, and then the effect is gone; with
+  // no such card the round is a normal one and the effect waits (`legal`, `play`).
+  stalled_siege(st, side) {
+    E.removeEffect(st, (e) => e.kind === "bog" && e.who === opp(side));
+    E.addEffect(st, { card: "stalled_siege", side, kind: "bog", who: opp(side), until: "game" });
   },
 };
 
