@@ -21,10 +21,17 @@
 //     and action rounds per era (`ERAS`, `st.rounds` = [Communists,
 //     Nationalists], `endAction`); the two support tracks (`st.support`,
 //     `moveSupport`) -- only the numbers, not the aid cards.
+//   - #3 the home-region lock binds only the attacker of the opponent's home
+//     (option `homeLockSide`, `homeLocked`).
+//   - #4 Zongheng's Nine Cauldrons are gone; each side has its own aid card
+//     (`AID`: 蘇援, 美援; option `aid`; `st.aidUsed`, `aidUsable`, `legal().aid`),
+//     ops = its support track (`opsOf`), 蘇援 +1 all in the Northeast
+//     (`aidBonus`), 美援's airlift into a 孤城 (`airliftOk`, `placeTargets` /
+//     `placePoints` / `opsOptions` take the card); and 美軍駐華 (`garrisoned`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (the two aid cards, scoring with base areas, every card event)
-// is not done: that is the rest of M1. The Phase 0
+// differently (scoring with base areas, every card event) is not done: that is
+// the rest of M1. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
@@ -58,7 +65,20 @@ export const CCP = 0, KMT = 1;
 export const SIDES = ["ccp", "kmt"];
 export const other = (s) => 1 - s;
 export const MIN_PLAYERS = 2, MAX_PLAYERS = 2;
-export const JIUDING = "jiuding";
+// 外援牌 (#4, rulebook 三, 外國勢力 1): Zongheng's Nine Cauldrons are gone. Each
+// side has its own aid card, indexed by seat, which never changes hands and is
+// not a card of the 72: it is never in a hand, the draw, the discard or the
+// removed pile. Once a turn (`st.aidUsed`, reset by `startTurn`), in its own
+// action round instead of a card from its hand, for 扶植 / 奇襲 / 遊說 only, with
+// ops = that side's support track (`opsOf`); not at 0. 蘇援 all in the
+// Northeast: +1 (`aidBonus`); 美援 all in cities: may 扶植 into a 孤城
+// (`airliftOk`). Option `aid` (DEFAULT_OPTIONS).
+export const AID = [
+  { id: "soviet_aid",   zh: "蘇援", en: "Soviet Aid" },
+  { id: "american_aid", zh: "美援", en: "American Aid" },
+];
+export function isAid(id) { return AID.some((a) => a.id === id); }
+const aidSide = (id) => AID.findIndex((a) => a.id === id);
 export const MANDATE_TO_WIN = 20;
 export const WEARINESS_NAMES = { 5: "復員", 4: "動盪", 3: "通膨", 2: "凋敝", 1: "崩潰" };
 // Era: the deck shuffled in before that turn's refill; hand size and action
@@ -159,7 +179,11 @@ export const REFORM = [
 // 民生 <= homeLock, as this game's rulebook says; "both" or absent is
 // Zongheng's lock (both home regions, both sides), kept as the control arm and
 // for games made before #3. See `homeLocked`.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent" };
+// `aid` (#4): true gives each side its aid card (`AID`). false or absent: no aid
+// card at all (nor the Cauldrons); the control arm for the aid cards' strength,
+// and what lets a side with an empty hand really have nothing to play. 美軍駐華
+// (`garrisoned`) is the support track's, not the card's: this does not touch it.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -378,22 +402,39 @@ export function reachFrom(st, side) {
 // it -- exactly the order `placePoints` checks them in, point by point.
 // 戰略反攻 (#2): within the one jump, the first point picked outside reach is
 // the jumped village, and from then on only that one is open beyond reach.
-export function placeTargets(st, side, ops, points = []) {
+// `card` (#4) is the aid card's id when the 扶植 is an aid card's, else absent;
+// `ops` is then the card's own ops (`legal().aid.ops`) and the two aid rules are
+// read here, per point, the way `placePoints` checks them:
+//   蘇援 -- while every point so far is in the Northeast, a Northeast space may
+//     use one op more; a space elsewhere may not (it would cost the +1).
+//   美援 -- a 孤城 is open while no point so far is in a village; a village is
+//     open while no point so far went into a 孤城 by the airlift.
+// `left` is the ops left without the 蘇援's +1.
+export function placeTargets(st, side, ops, points = [], card) {
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
   const trial = clone(st); trial.log = [];
-  let spent = 0, jumped = null;
+  let spent = 0, jumped = null, airlifted = false;
   for (const id of points) {
     if (jump && jumped == null && SPACE[id].kind === "village" && !canPlaceAt(trial, side, id, reach)) jumped = id;
+    if (placeBarred(trial, side)(id)) airlifted = true;
     spent += placeCost(trial, side, id); place(trial, side, id, 1);
   }
   const left = ops - spent;
+  const soviet = card === "soviet_aid" && points.every(inNortheast);
   const lit = new Set(), costs = {};
   // Supply, unlike reach, is re-read with `points` on the board (#1).
   const barred = placeBarred(trial, side);
+  const isolated = card === "american_aid" ? new Set(isolatedCities(trial)) : null;
+  const villageSoFar = points.some((id) => SPACE[id].kind === "village");
+  const open = (id) => {
+    if (SPACE[id].kind === "village") return !airlifted;
+    return !barred(id) || (!!isolated && isolated.has(id) && !villageSoFar);
+  };
   const reachable = (id) => canPlaceAt(trial, side, id, reach) || (jump && SPACE[id].kind === "village" && (jumped == null || jumped === id));
   for (const s of SPACES) {
     const cost = placeCost(trial, side, s.id);
-    if (cost <= left && reachable(s.id) && infOf(trial, s.id)[side] < capOf(trial, s.id) && !barred(s.id) && !sovietHeld(trial, s.id)) {
+    const budget = left + (soviet && inNortheast(s.id) ? 1 : 0);
+    if (cost <= budget && reachable(s.id) && infOf(trial, s.id)[side] < capOf(trial, s.id) && open(s.id) && !sovietHeld(trial, s.id)) {
       lit.add(s.id);
       costs[s.id] = cost;
     }
@@ -689,14 +730,49 @@ function constitutionStep(st, step) {
 }
 
 // ---------- ops ----------
+// An aid card's ops are its side's support track now (#4); at 0 the card is
+// 0 whatever the effects say (細則: 支持度是 0 時不能用,即使有 +1). Otherwise
+// it takes the 「所有牌行動點 ±1」 effects as a card does, never below 1.
 export function opsOf(st, side, cardId) {
-  const base = cardId === JIUDING ? 4 : CARD[cardId].ops;
+  const base = isAid(cardId) ? (st.support || [])[aidSide(cardId)] || 0 : CARD[cardId].ops;
   if (base === 0) return 0;
   let o = base;
   for (const e of st.effects) if (e.kind === "opsAll" && e.target === side) o += e.delta;
   return Math.max(1, o);
 }
-function inZhou(id) { const r = SPACE[id].region; return r === "jin" || r === "zhou"; }
+// Whether `side` may use its aid card now: the option is on, not used this
+// turn, and its support track above 0. Who acts, the bog and 細作 are `play`'s
+// and `legal`'s to read, as they were for the Cauldrons.
+export function aidUsable(st, side) {
+  return !!st.options.aid && !!st.aidUsed && !st.aidUsed[side] && ((st.support || [])[side] || 0) > 0;
+}
+const inNortheast = (id) => SPACE[id].region === "northeast";
+// 蘇援 used all in the Northeast: +1 (#4, orchestrator 裁決 3): a 扶植 whose
+// every point is there, a 奇襲 or 遊說 whose target is. Any other card: 0.
+function aidBonus(card, choice) {
+  if (card !== "soviet_aid" || !choice) return 0;
+  if (choice.use === "place") return Array.isArray(choice.points) && choice.points.length > 0 && choice.points.every((id) => SPACE[id] && inNortheast(id)) ? 1 : 0;
+  return SPACE[choice.target] && inNortheast(choice.target) ? 1 : 0;
+}
+// 美援's airlift (#4, orchestrator 裁決 4, 待 owner): a 美援 扶植 with every point
+// in a city may put points into a 孤城 -- a city with blue that no source
+// reaches (`isolatedCities`), read on the board as it stands before the point.
+// Only a 孤城: a city with no blue (out of supply, or held by the Communists)
+// stays barred, as the rulebook's exception names only 孤城.
+function airliftOk(st, id) {
+  return SPACE[id].kind === "city" && infOf(st, id)[KMT] > 0 && !supplied(st).has(id);
+}
+// 美軍駐華 (#4, rulebook 三, 外國勢力 2): while 美國支持 is at 3 or more, the
+// Communists may not 奇襲 天津 or 上海 -- by a card or by 蘇援. Only the 奇襲:
+// 扶植, 遊說 and events are not touched, nor the Nationalists. Not lifted by
+// 決戰 / 和談's unlock (`situationUnlocks` is about 民生) and not by `aid:
+// false`. `opsOptions` and `doOps` read it; an event's free 奇襲 is to read it
+// through the same target list (the card that ignores it, 平津戰役, will say so).
+export const GARRISON = ["tianjin", "shanghai"];
+export const GARRISON_SUPPORT = 3;
+export function garrisoned(st, id) {
+  return GARRISON.includes(id) && ((st.support || [])[KMT] || 0) >= GARRISON_SUPPORT;
+}
 // The 時局's modifiers (#2) come first, each for the side and the kind of
 // target the rulebook names and no other: 全面進攻 the Nationalists +1;
 // 重點進攻 the Nationalists +1 in 西北 and 華東中原, −1 elsewhere; 戰略反攻 the
@@ -866,9 +942,15 @@ export function lobby(st, side, target, ops) {
 // 戰略反攻 (#2): while the Communists' jump is open, the first point outside
 // reach may go into a village, and every point outside reach must then go into
 // that same village; a 扶植 that does so uses the jump up for the turn.
-export function placePoints(st, side, points, ops) {
+// `card` (#4): an aid card's id, or absent. 蘇援 with every point in the
+// Northeast has one op more than `ops`; 美援 with every point in a city may put
+// a point into a 孤城 (`airliftOk`). Nothing else changes: reach, cap, cost,
+// 受降's Northeast cities.
+export function placePoints(st, side, points, ops, card) {
   if (probe.place) probe.place(st, side, points);
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
+  ops += aidBonus(card, { use: "place", points });
+  const airlift = card === "american_aid" && points.every((id) => SPACE[id].kind === "city");
   let spent = 0, jumped = null;
   for (const id of points) {
     const cost = placeCost(st, side, id);
@@ -879,7 +961,7 @@ export function placePoints(st, side, points, ops) {
     }
     if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
     if (sovietHeld(st, id)) fail(`place: the Soviets hold ${id} this turn (受降)`);
-    if (placeBarred(st, side)(id)) fail(`place: ${id} is cut off from supply`);
+    if (placeBarred(st, side)(id) && !(airlift && airliftOk(st, id))) fail(`place: ${id} is cut off from supply`);
     place(st, side, id, 1);
     spent += cost;
   }
@@ -928,7 +1010,8 @@ export function discardCard(st, side, cardId, { noEvent = true } = {}) {
   log(st, { type: "discard", side, card: cardId, noEvent });
 }
 export function eraOf(turn) { return ERAS.filter((e) => turn >= e.from).pop(); }
-export function hasCards(st, side) { return st.hands[side].length > 0 || jiudingUsable(st, side); }
+// A side with an empty hand still acts while its aid card is usable (#4).
+export function hasCards(st, side) { return st.hands[side].length > 0 || aidUsable(st, side); }
 // 細作 (xizuo, 67) names a card the other side must play on its next action
 // round (`st.forced[side]`, cards.js). The obligation LAPSES when that card is
 // no longer in that side's hand -- orchestrator's ruling (#55), flagged to the
@@ -938,7 +1021,7 @@ export function hasCards(st, side) { return st.hands[side].length > 0 || jiuding
 // `legal()` then offered Chu nothing at all.
 //
 // This is the ONE place that decides it. Every reader of `st.forced` goes
-// through here (`legal`, both checks in `play`, the Nine Cauldrons guard), so
+// through here (`legal`, both checks in `play`, the aid cards' guard), so
 // a stale value can never reach a rule. It does not mutate: `legal` and the
 // per-seat `view` are read-only for the room and the bots. The stale value is
 // wiped once, in `beginAction`, so the state on the wire is honest too.
@@ -946,7 +1029,6 @@ export function forcedCard(st, side) {
   const c = st.forced[side];
   return c != null && st.hands[side].includes(c) ? c : null;
 }
-export function jiudingUsable(st, side) { return st.jiuding.holder === side && !st.jiuding.faceDown; }
 
 // ---------- creating a game ----------
 // #137: which rules a game was created under, kept in the state
@@ -958,7 +1040,7 @@ export function jiudingUsable(st, side) { return st.jiuding.holder === side && !
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-3"; // #3: homeLockSide, the home-region lock only on the opponent's home ("2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-4"; // #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華 ("2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -974,7 +1056,7 @@ function startGame(seed, options) {
     support: SUPPORT_START.slice(), situationUsed: { truce: false, jump: false },
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
     mie: {}, seals: {}, mieVp: {}, sealVp: {}, luoyiYields: false, // CIVIL WAR: no 洛邑
-    jiuding: { holder: KMT, faceDown: false },
+    aidUsed: [false, false], // #4: [蘇援, 美援] used this turn; reset by startTurn
     draw: [], discard: [], removed: [], later: {},
     hands: [[], []], headline: [null, null],
     effects: [], forced: [null, null], revealed: [false, false],
@@ -1111,11 +1193,6 @@ function exec(st, step) {
     }
     case "finishCard": return finishCard(st, step), true;
     case "realign": return realignStep(st, step);
-    case "jiudingPass": {
-      st.jiuding = { holder: other(step.side), faceDown: true };
-      log(st, { type: "jiuding", to: other(step.side) });
-      return true;
-    }
     case "endAction": return endAction(st), true;
     case "beginAction": return beginAction(st), true;
     case "endTurn": {
@@ -1157,11 +1234,11 @@ function eventMark(st) {
     inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
     hands: [st.hands[CCP].length, st.hands[KMT].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
     effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
-    jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
+    revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
     support: (st.support || []).join(),
   };
 }
-const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner", "support"];
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "revealed", "forced", "luoyiYields", "winner", "support"];
 const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
 // `effect`: did the event change anything at all. When it did not, `why`:
 // "noTarget" -- a choice it needed had nothing to choose from (no space with
@@ -1227,7 +1304,7 @@ function startTurn(st) {
   st.reformUsed = [0, 0]; st.perkUsed = [false, false]; st.forced = [null, null]; st.revealed = [false, false];
   st.headline = [null, null];
   st.situationUsed = { truce: false, jump: false };
-  if (st.jiuding.faceDown) st.jiuding.faceDown = false;
+  st.aidUsed = [false, false];
   // Rulebook 三, 回合結構: 1 the 時局 (its turn-start effect, which may ask),
   // then 2 the refill. Both are plan steps, so a 時局's decision parks the turn
   // before anyone draws (和談: the Nationalists offer from the hand they hold).
@@ -1423,7 +1500,7 @@ function finalScoring(st) {
 }
 function finishCard(st, step) {
   const c = step.card;
-  if (c === JIUDING) return;
+  if (isAid(c)) return; // never a pile's (#4); `play` plans no finishCard for one anyway
   if (st.hands[CCP].includes(c) || st.hands[KMT].includes(c) || st.removed.includes(c) || st.discard.includes(c)) return;
   if (step.triggered && CARD[c].remove) st.removed.push(c);
   else st.discard.push(c);
@@ -1438,20 +1515,21 @@ function doOps(st, side, card, ops, choice) {
   if (choice.use === "place") {
     if (!Array.isArray(choice.points)) fail("place: points must be a list");
     for (const id of choice.points) if (!SPACE[id]) fail(`place: unknown space ${id}`);
-    if (card === JIUDING && choice.points.every(inZhou)) ops += 1;
-    placePoints(st, side, choice.points, ops);
+    // `placePoints` reads the aid card itself (蘇援's +1, 美援's airlift).
+    placePoints(st, side, choice.points, ops, isAid(card) ? card : undefined);
   } else if (choice.use === "campaign") {
     if (!SPACE[choice.target]) fail(`campaign: unknown space ${choice.target}`);
-    if (card === JIUDING && inZhou(choice.target)) ops += 1;
+    ops += aidBonus(card, choice);
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("campaign: no enemy influence there");
     if (sovietHeld(st, t)) fail("campaign: the Soviets hold it this turn (受降)");
+    if (side === CCP && garrisoned(st, t)) fail("campaign: 美軍駐華 -- the Communists may not raid it while 美國支持 is 3 or more");
     if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
     campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
-    if (card === JIUDING && inZhou(choice.target)) ops += 1;
+    ops += aidBonus(card, choice);
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("lobby: no enemy influence there");
     if (!lobbyEligible(st, side, t)) fail("lobby: no influence of your own there");
@@ -1554,7 +1632,7 @@ function headline(st, action) {
   const side = action.side;
   if (st.headline[side] != null) fail("already headlined");
   const c = action.card;
-  if (c === JIUDING) fail("the Nine Cauldrons may not be headlined");
+  if (isAid(c)) fail("an aid card may not be headlined");
   const h = st.hands[side], i = h.indexOf(c);
   if (i < 0) fail("card not in hand");
   h.splice(i, 1);
@@ -1570,27 +1648,30 @@ function play(st, action) {
   if (side !== st.actor) fail("not your action");
   const c = action.card, use = action.use;
   const steps = [];
-  // 頓兵堅城 is read before anything is played, the Nine Cauldrons included:
-  // while a discard is owed AND possible the round IS the discard (#57), so
-  // every other play is refused with the bog's own message. The bog check used
-  // to sit after the JIUDING branch returned, so `play()` took the Cauldrons in
-  // a bog round although `legal()` offered none -- the round was spent and the
-  // bog still owed afterwards (#59, pre-existing; the table's UI and the bots
-  // never did it because they read `legal()`).
+  // 頓兵堅城 is read before anything is played, the aid card included (as it
+  // was for Zongheng's Cauldrons): while a discard is owed AND possible the
+  // round IS the discard (#57), so every other play is refused with the bog's
+  // own message (#59: `play()` must not take what `legal()` does not offer).
   const h = st.hands[side];
   const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
   const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
-  if (c === JIUDING) {
-    if (!jiudingUsable(st, side)) fail("the Nine Cauldrons are not yours to use");
+  if (isAid(c)) {
+    // The aid card (#4): one action round, instead of a card from the hand.
+    // Not a hand's card, so it goes to no pile and to nobody; `aidUsed` marks it.
+    if (aidSide(c) !== side) fail("that aid card is the other side's");
+    if (!st.options.aid) fail("no aid cards in this game");
+    if (st.aidUsed && st.aidUsed[side]) fail("the aid card is used already this turn");
+    if (!aidUsable(st, side)) fail("the aid card: support is 0");
     if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
     if (forcedCard(st, side)) fail("you must play the named card");
-    if (!["place", "campaign", "lobby"].includes(use)) fail("the Nine Cauldrons: place, campaign or lobby only");
-    validateOps(st, side, JIUDING, 4, { use, points: action.points, target: action.target }, true);
-    steps.push({ do: "ops", side, card: JIUDING, ops: 4, payload: { use, points: action.points, target: action.target } });
-    steps.push({ do: "jiudingPass", side }, { do: "endAction" });
+    if (!["place", "campaign", "lobby"].includes(use)) fail("the aid card: place, campaign or lobby only");
+    const ops = opsOf(st, side, c), payload = { use, points: action.points, target: action.target };
+    validateOps(st, side, c, ops, payload);
+    st.aidUsed[side] = true;
+    steps.push({ do: "ops", side, card: c, ops, payload }, { do: "endAction" });
     // Logged like any card's play, before its ops (#81): the news, the
     // opponent's-move reveal (#79) and the log panel read a move's start here.
-    log(st, { type: "play", side, card: JIUDING, use });
+    log(st, { type: "play", side, card: c, use });
     st.plan.unshift(...steps);
     return run(st);
   }
@@ -1676,21 +1757,26 @@ function play(st, action) {
   return run(st);
 }
 // Validate ops without mutating: replay the placement on a throwaway copy.
-function validateOps(st, side, card, ops, payload, jiuding = false) {
+function validateOps(st, side, card, ops, payload) {
   const trial = clone(st);
   trial.log = [];
-  doOps(trial, side, jiuding ? JIUDING : card, ops, payload);
+  doOps(trial, side, card, ops, payload);
 }
 
 // ---------- what a side may do now (for the UI and the bots) ----------
 // Where ops can go right now: placement targets with their cost per point,
 // campaign targets (enemy influence, not locked, not protected), lobby
 // targets with a positive edge.
-export function opsOptions(st, side) {
+// `card` (#4): an aid card's id, or absent. Only 美援 changes a list: its place
+// options also hold the 孤城 (`airliftOk`), as `placeTargets(…, card)` lights
+// them before the first point. 美軍駐華 (`garrisoned`) takes 天津 and 上海 out of
+// the Communists' campaign targets whatever the card.
+export function opsOptions(st, side, card) {
   const barred = placeBarred(st, side), jump = jumpOpen(st, side);
-  const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && !barred(s.id) && !sovietHeld(st, s.id))
+  const airlift = card === "american_aid" ? (id) => airliftOk(st, id) : () => false;
+  const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && (!barred(s.id) || airlift(s.id)) && !sovietHeld(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
-  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id, side) && !sovietHeld(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
+  const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id, side) && !sovietHeld(st, s.id) && !isProtected(st, s.id) && !(side === CCP && garrisoned(st, s.id))).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
   const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
     .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
@@ -1724,10 +1810,19 @@ export function legal(st, side) {
     if (c === "shuoke") uses.pair = h.filter((x) => CARD[x].side === other(side));
     return { id: c, ops, uses };
   });
-  const jiuding = !forced && jiudingUsable(st, side)
-    ? { ops: 4, place: placeOptions.length ? { options: placeOptions } : null, campaign: campaignTargets.length ? { targets: campaignTargets } : null, lobby: lobbyTargets.length ? { targets: lobbyTargets } : null }
-    : null;
-  return { kind: "action", cards, jiuding, forced };
+  // The aid card (#4): null when it may not be used now (option off, used this
+  // turn, support 0, or 細作 names a card; the bog returned above).
+  let aid = null;
+  if (!forced && aidUsable(st, side)) {
+    const id = AID[side].id, o = opsOptions(st, side, id);
+    aid = {
+      id, ops: opsOf(st, side, id),
+      place: o.placeOptions.length ? { options: o.placeOptions } : null,
+      campaign: o.campaignTargets.length ? { targets: o.campaignTargets } : null,
+      lobby: o.lobbyTargets.length ? { targets: o.lobbyTargets } : null,
+    };
+  }
+  return { kind: "action", cards, aid, forced };
 }
 
 // ---------- the per-seat view ----------
@@ -1817,7 +1912,8 @@ export function isolatedCities(st) {
 // action only -- `place()` (events, the free placements) does not read it.
 // Returns a predicate on a space id, for the board as it stands: placeTargets,
 // placePoints and opsOptions all ask it, so the three cannot disagree.
-// (美援 may place in a cut-off city: not yet, that is the foreign-aid issue.)
+// The one exception, 美援's airlift into a 孤城 (#4), is read on top of this by
+// the same three (`airliftOk`); this predicate itself stays the plain ban.
 function placeBarred(st, side) {
   if (!st.options.supply || side !== KMT) return () => false;
   const ok = supplied(st);
