@@ -1,0 +1,415 @@
+[
+  {
+    "key": "score_north",
+    "model": "qwen",
+    "seed": 16001,
+    "steps": 25,
+    "from": "img/score_north.jpg"
+  },
+  {
+    "key": "score_east",
+    "model": "qwen",
+    "seed": 16002,
+    "steps": 25,
+    "from": "img/score_east.jpg"
+  },
+  {
+    "key": "score_northeast",
+    "model": "qwen",
+    "seed": 16003,
+    "steps": 25,
+    "from": "img/score_northeast.jpg"
+  },
+  {
+    "key": "score_northwest",
+    "model": "qwen",
+    "seed": 16004,
+    "steps": 25,
+    "from": "img/score_northwest.jpg"
+  },
+  {
+    "key": "score_rear",
+    "model": "qwen",
+    "seed": 16005,
+    "steps": 25,
+    "from": "img/score_rear.jpg"
+  },
+  {
+    "key": "surrender_order",
+    "model": "qwen",
+    "seed": 19006,
+    "steps": 25,
+    "from": "img/surrender_order.jpg"
+  },
+  {
+    "key": "airlift",
+    "model": "qwen",
+    "seed": 16007,
+    "steps": 25,
+    "from": "img/airlift.jpg"
+  },
+  {
+    "key": "kunming_incident",
+    "model": "qwen",
+    "seed": 16008,
+    "steps": 25,
+    "from": "img/kunming_incident.jpg"
+  },
+  {
+    "key": "takeover_officials",
+    "model": "qwen",
+    "seed": 16009,
+    "steps": 25,
+    "from": "img/takeover_officials.jpg"
+  },
+  {
+    "key": "japanese_garrisons",
+    "model": "qwen",
+    "seed": 17010,
+    "steps": 25,
+    "from": "img/japanese_garrisons.jpg"
+  },
+  {
+    "key": "siping_taken",
+    "model": "qwen",
+    "seed": 16014,
+    "steps": 25,
+    "from": "img/siping_taken.jpg"
+  },
+  {
+    "key": "zhangjiakou_taken",
+    "model": "qwen",
+    "seed": 16015,
+    "steps": 25,
+    "from": "img/zhangjiakou_taken.jpg"
+  },
+  {
+    "key": "gao_shuxun",
+    "model": "qwen",
+    "seed": 16018,
+    "steps": 25,
+    "from": "img/gao_shuxun.jpg"
+  },
+  {
+    "key": "soviet_arms",
+    "model": "qwen",
+    "seed": 16019,
+    "steps": 25,
+    "from": "img/soviet_arms.jpg"
+  },
+  {
+    "key": "may_fourth_directive",
+    "model": "qwen",
+    "seed": 16020,
+    "steps": 25,
+    "from": "img/may_fourth_directive.jpg"
+  },
+  {
+    "key": "arms_embargo",
+    "model": "qwen",
+    "seed": 16021,
+    "steps": 25,
+    "from": "img/arms_embargo.jpg"
+  },
+  {
+    "key": "chongqing_talks",
+    "model": "qwen",
+    "seed": 16022,
+    "steps": 25,
+    "from": "img/chongqing_talks.jpg"
+  },
+  {
+    "key": "january_truce",
+    "model": "qwen",
+    "seed": 16023,
+    "steps": 25,
+    "from": "img/january_truce.jpg"
+  },
+  {
+    "key": "pcc_resolutions",
+    "model": "qwen",
+    "seed": 16025,
+    "steps": 25,
+    "from": "img/pcc_resolutions.jpg"
+  },
+  {
+    "key": "soviets_delay",
+    "model": "qwen",
+    "seed": 16026,
+    "steps": 25,
+    "from": "img/soviets_delay.jpg"
+  },
+  {
+    "key": "soviet_removals",
+    "model": "qwen",
+    "seed": 16027,
+    "steps": 25,
+    "from": "img/soviet_removals.jpg"
+  },
+  {
+    "key": "inflation",
+    "model": "qwen",
+    "seed": 16028,
+    "steps": 25,
+    "from": "img/inflation.jpg"
+  },
+  {
+    "key": "june_truce",
+    "model": "qwen",
+    "seed": 16029,
+    "steps": 25,
+    "from": "img/june_truce.jpg"
+  },
+  {
+    "key": "hu_takes_yanan",
+    "model": "qwen",
+    "seed": 16030,
+    "steps": 25,
+    "from": "img/hu_takes_yanan.jpg"
+  },
+  {
+    "key": "shandong_offensive",
+    "model": "qwen",
+    "seed": 16031,
+    "steps": 25,
+    "from": "img/shandong_offensive.jpg"
+  },
+  {
+    "key": "mobilisation_order",
+    "model": "qwen",
+    "seed": 17032,
+    "steps": 25,
+    "from": "img/mobilisation_order.jpg"
+  },
+  {
+    "key": "chen_cheng",
+    "model": "qwen",
+    "seed": 19034,
+    "steps": 25,
+    "from": "img/chen_cheng.jpg"
+  },
+  {
+    "key": "china_aid_act",
+    "model": "qwen",
+    "seed": 16035,
+    "steps": 25,
+    "from": "img/china_aid_act.jpg"
+  },
+  {
+    "key": "northern_shaanxi",
+    "model": "qwen",
+    "seed": 16038,
+    "steps": 25,
+    "from": "img/northern_shaanxi.jpg"
+  },
+  {
+    "key": "dabie_march",
+    "model": "qwen",
+    "seed": 16040,
+    "steps": 25,
+    "from": "img/dabie_march.jpg"
+  },
+  {
+    "key": "land_law",
+    "model": "qwen",
+    "seed": 16041,
+    "steps": 25,
+    "from": "img/land_law.jpg"
+  },
+  {
+    "key": "central_shanxi_campaign",
+    "model": "qwen",
+    "seed": 16042,
+    "steps": 25,
+    "from": "img/central_shanxi_campaign.jpg"
+  },
+  {
+    "key": "winter_offensive",
+    "model": "qwen",
+    "seed": 16043,
+    "steps": 25,
+    "from": "img/winter_offensive.jpg"
+  },
+  {
+    "key": "xiong_xianghui",
+    "model": "qwen",
+    "seed": 16044,
+    "steps": 25,
+    "from": "img/xiong_xianghui.jpg"
+  },
+  {
+    "key": "may_twentieth",
+    "model": "qwen",
+    "seed": 16045,
+    "steps": 25,
+    "from": "img/may_twentieth.jpg"
+  },
+  {
+    "key": "truman_doctrine",
+    "model": "zimage",
+    "seed": 16046,
+    "steps": 20,
+    "from": "img-zimage/truman_doctrine.jpg"
+  },
+  {
+    "key": "wedemeyer_mission",
+    "model": "qwen",
+    "seed": 16047,
+    "steps": 25,
+    "from": "img/wedemeyer_mission.jpg"
+  },
+  {
+    "key": "yellow_river",
+    "model": "zimage",
+    "seed": 16048,
+    "steps": 20,
+    "from": "img-zimage/yellow_river.jpg"
+  },
+  {
+    "key": "sleeper",
+    "model": "qwen",
+    "seed": 16049,
+    "steps": 25,
+    "from": "img/sleeper.jpg"
+  },
+  {
+    "key": "redeployment",
+    "model": "qwen",
+    "seed": 16050,
+    "steps": 25,
+    "from": "img/redeployment.jpg"
+  },
+  {
+    "key": "stalled_siege",
+    "model": "qwen",
+    "seed": 16051,
+    "steps": 25,
+    "from": "img/stalled_siege.jpg"
+  },
+  {
+    "key": "gold_yuan",
+    "model": "qwen",
+    "seed": 16052,
+    "steps": 25,
+    "from": "img/gold_yuan.jpg"
+  },
+  {
+    "key": "airlift_to_cut_off_city",
+    "model": "qwen",
+    "seed": 16054,
+    "steps": 25,
+    "from": "img/airlift_to_cut_off_city.jpg"
+  },
+  {
+    "key": "chiang_steps_down",
+    "model": "qwen",
+    "seed": 16055,
+    "steps": 25,
+    "from": "img/chiang_steps_down.jpg"
+  },
+  {
+    "key": "guningtou",
+    "model": "qwen",
+    "seed": 16056,
+    "steps": 25,
+    "from": "img/guningtou.jpg"
+  },
+  {
+    "key": "liaoshen_campaign",
+    "model": "qwen",
+    "seed": 16057,
+    "steps": 25,
+    "from": "img/liaoshen_campaign.jpg"
+  },
+  {
+    "key": "huaihai_campaign",
+    "model": "qwen",
+    "seed": 16058,
+    "steps": 25,
+    "from": "img/huaihai_campaign.jpg"
+  },
+  {
+    "key": "pingjin_campaign",
+    "model": "qwen",
+    "seed": 16059,
+    "steps": 25,
+    "from": "img/pingjin_campaign.jpg"
+  },
+  {
+    "key": "fu_dongju",
+    "model": "qwen",
+    "seed": 16060,
+    "steps": 25,
+    "from": "img/fu_dongju.jpg"
+  },
+  {
+    "key": "siege_of_changchun",
+    "model": "qwen",
+    "seed": 16061,
+    "steps": 25,
+    "from": "img/siege_of_changchun.jpg"
+  },
+  {
+    "key": "jiawang_defection",
+    "model": "qwen",
+    "seed": 16062,
+    "steps": 25,
+    "from": "img/jiawang_defection.jpg"
+  },
+  {
+    "key": "yangtze_crossing",
+    "model": "qwen",
+    "seed": 16063,
+    "steps": 25,
+    "from": "img/yangtze_crossing.jpg"
+  },
+  {
+    "key": "beiping_talks",
+    "model": "qwen",
+    "seed": 17066,
+    "steps": 25,
+    "from": "img/beiping_talks.jpg"
+  },
+  {
+    "key": "amethyst_incident",
+    "model": "qwen",
+    "seed": 16068,
+    "steps": 25,
+    "from": "img/amethyst_incident.jpg"
+  },
+  {
+    "key": "defection_at_the_front",
+    "model": "qwen",
+    "seed": 16069,
+    "steps": 25,
+    "from": "img/defection_at_the_front.jpg"
+  },
+  {
+    "key": "supplies_run_short",
+    "model": "qwen",
+    "seed": 16070,
+    "steps": 25,
+    "from": "img/supplies_run_short.jpg"
+  },
+  {
+    "key": "clearing_the_outskirts",
+    "model": "qwen",
+    "seed": 16071,
+    "steps": 25,
+    "from": "img/clearing_the_outskirts.jpg"
+  },
+  {
+    "key": "american_aid",
+    "model": "qwen",
+    "seed": 16073,
+    "steps": 25,
+    "from": "img/american_aid.jpg"
+  },
+  {
+    "key": "soviet_aid",
+    "model": "qwen",
+    "seed": 17074,
+    "steps": 25,
+    "from": "img/soviet_aid.jpg"
+  }
+]

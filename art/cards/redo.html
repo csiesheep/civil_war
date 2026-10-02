@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>挑重出的圖:候選 1 到 4</title>
+<style>
+:root{color-scheme:light dark;--bg:#fafaf7;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#d8d6cf;--red:#c00000;--sel:#1a7f37;--selbg:#e6f4ea;--blue:#1565c0}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ececE6;--mut:#9a9a92;--card:#1f1f1c;--line:#3a3a35;--red:#ff6b6b;--sel:#4cc26b;--selbg:#12301b;--blue:#6ab0ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "Microsoft JhengHei","PingFang TC",system-ui,sans-serif}
+#bar{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:2px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+#bar b{font-size:18px}#left{color:var(--mut);font-size:14px;max-width:100%;overflow-wrap:anywhere}
+#out{flex:1 1 360px;min-width:200px;font:15px ui-monospace,Consolas,monospace;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);resize:none;height:2.6em}
+button{font:inherit;padding:6px 14px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}
+button.danger.arm{background:var(--red);color:#fff;border-color:var(--red)}
+#note{padding:6px 14px;color:var(--mut);font-size:14px}
+.card{margin:18px auto;max-width:1600px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px}
+.card h2{margin:0;font-size:22px}
+.scene{margin:2px 0 4px;color:var(--mut);font-size:15px}
+.why{margin:0 0 8px;color:var(--blue);font-size:15px}
+.cands{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:1000px){.cands{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.cands{grid-template-columns:1fr}}
+.opt{border:4px solid transparent;border-radius:8px;padding:4px;cursor:pointer}
+.opt.on{border-color:var(--sel);background:var(--selbg)}
+.opt .tag{font-weight:700;font-size:26px;line-height:1.2;margin-bottom:4px}.opt .tag span{font-weight:400;color:var(--mut);font-size:14px;margin-left:8px}
+.opt img{display:block;width:100%;min-width:0;height:auto;aspect-ratio:3/4;background:#8883;border-radius:4px}
+.bad{color:var(--red);font-size:14px;min-height:1.4em;margin-top:4px}
+.opt a{font-size:13px;color:var(--mut)}
+.btns{display:flex;gap:8px;margin-top:10px;align-items:center}.btns button.on{background:var(--sel);color:#fff;border-color:var(--sel)}
+.btns .x{margin-left:auto}
+</style></head><body>
+<div id="bar">
+  <b id="count">已選 0 / 15</b>
+  <span id="left"></span>
+  <textarea id="out" readonly rows="2" aria-label="結果文字"></textarea>
+  <button id="copy">複製</button>
+  <button id="clear" class="danger">全部清除</button>
+</div>
+<div id="note">每張牌 4 張候選,由左到右是 1、2、3、4。點圖就是選那一張;X = 四張都不要。結果文字:11-2 = 第 11 張用候選 2;11-X = 四張都不要。選擇存在這個瀏覽器的 localStorage,重新整理還在。「全部清除」要按兩次。</div>
+<div id="cards"></div>
+<script>
+const DATA = [{"key":"sino_soviet_treaty","num":"11","zh":"中蘇友好同盟條約","scene":"1945 年 8 月 14 日夜莫斯科克里姆林宮:王世杰與莫洛托夫簽中蘇友好同盟條約,史達林叼著菸斗站在後面,宋子文在旁。","why":"條約紙上有成行的像字的筆跡","cand":[{"c":1,"model":"Qwen","seed":21111,"file":"redo/sino_soviet_treaty__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21112,"file":"redo/sino_soviet_treaty__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21113,"file":"redo/sino_soviet_treaty__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21114,"file":"redo/sino_soviet_treaty__c4.jpg","bad":["畸形:握手的西裝男子也是史達林的臉(兩個史達林)"]}]},{"key":"return_to_nanjing","num":"12","zh":"還都南京","scene":"1946 年 5 月 5 日還都南京:蔣介石與宋美齡並肩登上中山陵石階,群眾揮舞青天白日旗,春天。","why":"","cand":[{"c":1,"model":"Qwen","seed":21121,"file":"redo/return_to_nanjing__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21122,"file":"redo/return_to_nanjing__c2.jpg","bad":["字:殿門的匾額上有成形的假漢字(紅字)"]},{"c":3,"model":"Qwen","seed":21123,"file":"redo/return_to_nanjing__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21124,"file":"redo/return_to_nanjing__c4.jpg","bad":[]}]},{"key":"reorganisation_conference","num":"13","zh":"軍事整編會議","scene":"1946 年 2 月 25 日重慶(上清寺堯廬,國民政府軍事參謀機關):窗外是冬霧與陡坡山城,馬歇爾站在大地圖前,一手握張治中、一手握周恩來,簽下整軍方案(「軍事整編會議」我畫成這件事,史上沒有同名的單一會議)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21131,"file":"redo/reorganisation_conference__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21132,"file":"redo/reorganisation_conference__c2.jpg","bad":["字:地圖旁貼著一張有成排假漢字的直式標籤"]},{"c":3,"model":"Qwen","seed":21133,"file":"redo/reorganisation_conference__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21134,"file":"redo/reorganisation_conference__c4.jpg","bad":[]}]},{"key":"into_manchuria","num":"16","zh":"闖關東","scene":"1945 年 10 月山海關:共軍部隊與幹部穿過關門進入東北,舉著素面紅旗(「闖關東」我畫成共軍進入東北,不是民間移民)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21161,"file":"redo/into_manchuria__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21162,"file":"redo/into_manchuria__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21163,"file":"redo/into_manchuria__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21164,"file":"redo/into_manchuria__c4.jpg","bad":[]}]},{"key":"shangdang_campaign","num":"17","zh":"上黨戰役","scene":"1945 年秋天山西上黨:共軍從種滿紅柿子的黃土梯田衝向山下的城鎮,劉伯承在山脊用望遠鏡指揮。","why":"","cand":[{"c":1,"model":"Qwen","seed":21171,"file":"redo/shangdang_campaign__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21172,"file":"redo/shangdang_campaign__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21173,"file":"redo/shangdang_campaign__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21174,"file":"redo/shangdang_campaign__c4.jpg","bad":[]}]},{"key":"marshall_mission","num":"24","zh":"馬歇爾調處","scene":"1946 年南京花園:馬歇爾站在蔣介石與周恩來之間,雙手朝兩邊撐開,桌上鋪著地圖(馬歇爾調處)。","why":"原來圖上只有兩個人,三人小組缺一個","cand":[{"c":1,"model":"Qwen","seed":21241,"file":"redo/marshall_mission__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21242,"file":"redo/marshall_mission__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21243,"file":"redo/marshall_mission__c3.jpg","bad":[]},{"c":4,"model":"Z-Image","seed":21244,"file":"redo/marshall_mission__c4.jpg","bad":[]}]},{"key":"league_banned","num":"33","zh":"取締民盟","scene":"1947 年 10 月上海弄堂黃昏:警察與便衣搬走文件箱與油印機,白山羊鬍的老先生(民盟主席張瀾)拄杖站在門口,大門被上鎖(取締民盟)。","why":"門邊有帶字的門牌,換三次種子都有","cand":[{"c":1,"model":"Qwen","seed":21331,"file":"redo/league_banned__c1.jpg","bad":["字:待確認:警察領章的小紅牌上有像字的筆畫(放大 5 倍才看出,很小)"]},{"c":2,"model":"Qwen","seed":21332,"file":"redo/league_banned__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21333,"file":"redo/league_banned__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21334,"file":"redo/league_banned__c4.jpg","bad":[]}]},{"key":"national_assembly","num":"36","zh":"行憲國大","scene":"1948 年 4 月南京國民大會堂:代表們排隊把選票投進大木箱,後面是孫中山像與國旗(行憲國大,選總統)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21361,"file":"redo/national_assembly__c1.jpg","bad":["旗:牆上的畫像是穿軍裝、沒有鬍子的人像,不像孫中山"]},{"c":2,"model":"Qwen","seed":21362,"file":"redo/national_assembly__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21363,"file":"redo/national_assembly__c3.jpg","bad":["旗:待確認:畫像是穿軍裝的人像,沒有八字鬍,不確定是不是孫中山"]},{"c":4,"model":"Qwen","seed":21364,"file":"redo/national_assembly__c4.jpg","bad":["旗:待確認:畫像是穿軍裝的人像,沒有八字鬍,不確定是不是孫中山"]}]},{"key":"american_divisions","num":"37","zh":"美械整編師","scene":"1946 年昆明操場傍晚:戴美式鋼盔的國軍砲手在 105 毫米榴彈砲旁瞄準,後面是戰車、卡車與列隊的美式裝備步兵(美械整編師)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21371,"file":"redo/american_divisions__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21372,"file":"redo/american_divisions__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21373,"file":"redo/american_divisions__c3.jpg","bad":["字:砲手的紅色領章與另一名士兵的臂章上有白色假漢字"]},{"c":4,"model":"Qwen","seed":21374,"file":"redo/american_divisions__c4.jpg","bad":[]}]},{"key":"menglianggu","num":"39","zh":"孟良崮","scene":"1947 年 5 月山東孟良崮:共軍士兵爬上光禿的灰色石山,山下山谷裡國軍的車隊與戰車冒著黑煙。","why":"","cand":[{"c":1,"model":"Qwen","seed":21391,"file":"redo/menglianggu__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21392,"file":"redo/menglianggu__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21393,"file":"redo/menglianggu__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21394,"file":"redo/menglianggu__c4.jpg","bad":[]}]},{"key":"fu_holds_the_north","num":"53","zh":"傅作義守華北","scene":"1948 年 12 月北平城牆:傅作義穿大衣拿望遠鏡站在雪晨的城牆上,沙包機槍陣地與守軍(傅作義守北平、天津的城防)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21531,"file":"redo/fu_holds_the_north__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21532,"file":"redo/fu_holds_the_north__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21533,"file":"redo/fu_holds_the_north__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21534,"file":"redo/fu_holds_the_north__c4.jpg","bad":[]}]},{"key":"new_consultative_conference","num":"64","zh":"新政協","scene":"1949 年 9 月北平大禮堂:毛澤東舉手站在講台上,台下各族各界代表(喇嘛、蒙古人、回族、女幹部、學者)(新政協開幕)。","why":"紅旗上有黃星,換三次種子都有","cand":[{"c":1,"model":"Qwen","seed":21641,"file":"redo/new_consultative_conference__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21642,"file":"redo/new_consultative_conference__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21643,"file":"redo/new_consultative_conference__c3.jpg","bad":[]},{"c":4,"model":"Qwen","seed":21644,"file":"redo/new_consultative_conference__c4.jpg","bad":[]}]},{"key":"peaceful_changeover","num":"65","zh":"和平起義","scene":"1949 年 1 月 31 日北平城門外:守軍把槍架成槍堆,整隊走出城門,共軍軍官在旁點收(和平起義:北平和平解放)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21651,"file":"redo/peaceful_changeover__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21652,"file":"redo/peaceful_changeover__c2.jpg","bad":["旗:紅旗左上角有黃色五角星"]},{"c":3,"model":"Qwen","seed":21653,"file":"redo/peaceful_changeover__c3.jpg","bad":["字:待確認:城門上方的石匾有模糊的像字筆畫(放大 4 倍仍不成形)"]},{"c":4,"model":"Qwen","seed":21654,"file":"redo/peaceful_changeover__c4.jpg","bad":[]}]},{"key":"stalins_advice","num":"67","zh":"史達林的建議","scene":"1949 年初西柏坡雪天農舍:毛澤東、劉少奇、周恩來、朱德與蘇聯米高揚圍著木桌看地圖,煤爐燒著(史達林的建議,史家有爭議)。","why":"原來三個人都是中國人,認不出蘇聯來的米高揚","cand":[{"c":1,"model":"Qwen","seed":21671,"file":"redo/stalins_advice__c1.jpg","bad":[]},{"c":2,"model":"Qwen","seed":21672,"file":"redo/stalins_advice__c2.jpg","bad":[]},{"c":3,"model":"Qwen","seed":21673,"file":"redo/stalins_advice__c3.jpg","bad":[]},{"c":4,"model":"Z-Image","seed":21674,"file":"redo/stalins_advice__c4.jpg","bad":[]}]},{"key":"ta_kung_pao","num":"72","zh":"大公報社評","scene":"1948 年清晨天津報攤:人們舉著剛印好的報紙在讀(只看到紙的背面),報童抱著報紙跑,印刷機在門裡發亮(大公報社評)。","why":"","cand":[{"c":1,"model":"Qwen","seed":21721,"file":"redo/ta_kung_pao__c1.jpg","bad":["字:左側直式布招牌上有成形的大字、門邊小牌有字,舉著的報紙正面有成行排版字"]},{"c":2,"model":"Qwen","seed":21722,"file":"redo/ta_kung_pao__c2.jpg","bad":["字:店頭橫匾與門邊直牌有成形的字,報紙正面有成行排版字"]},{"c":3,"model":"Qwen","seed":21723,"file":"redo/ta_kung_pao__c3.jpg","bad":["字:門兩側直式對聯牌有成形的字;前排 3 張報紙是空白背面,後排有排版字"]},{"c":4,"model":"Z-Image","seed":21724,"file":"redo/ta_kung_pao__c4.jpg","bad":["字:報紙正面有標題與排版字,地磚上有假字符,門內牆上有字形裝飾"]}]}];
+const KEY = 'civil_war_21_redo_pick';
+let pick = {};
+try { pick = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { pick = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pick)); } catch (e) {} };
+const $ = (id) => document.getElementById(id);
+const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+const root = $('cards');
+function opt(c, k) {
+  const d = el('div', 'opt'); d.dataset.pick = String(k.c);
+  const t = el('div', 'tag', String(k.c)); t.appendChild(el('span', '', k.model + ' · seed ' + k.seed)); d.appendChild(t);
+  const img = el('img'); img.loading = 'lazy'; img.src = k.file; img.alt = c.num + ' ' + c.zh + ' 候選 ' + k.c; d.appendChild(img);
+  d.appendChild(el('div', 'bad', k.bad.join(';')));
+  const l = el('a', '', '原尺寸'); l.href = img.src; l.target = '_blank'; l.rel = 'noopener'; l.addEventListener('click', (e) => e.stopPropagation()); d.appendChild(l);
+  d.addEventListener('click', () => set(c.num, String(k.c)));
+  return d;
+}
+for (const c of DATA) {
+  const s = el('section', 'card'); s.dataset.num = c.num; s.id = 'c' + c.num;
+  const h = el('h2', '', c.num + ' ' + c.zh); s.appendChild(h);
+  s.appendChild(el('div', 'scene', c.scene));
+  if (c.why) s.appendChild(el('div', 'why', '這張改了畫面:為了' + c.why + '。'));
+  const p = el('div', 'cands'); for (const k of c.cand) p.appendChild(opt(c, k)); s.appendChild(p);
+  const b = el('div', 'btns');
+  for (const w of ['1', '2', '3', '4', 'X']) { const k = el('button', w === 'X' ? 'x' : '', w === 'X' ? 'X 四張都不要' : w); k.dataset.pick = w; k.addEventListener('click', () => set(c.num, w)); b.appendChild(k); }
+  s.appendChild(b); root.appendChild(s);
+}
+function set(num, w) { pick[num] = w; save(); render(); }
+function render() {
+  let n = 0; const left = [], parts = [];
+  for (const c of DATA) {
+    const w = pick[c.num], sec = $('c' + c.num);
+    if (['1', '2', '3', '4', 'X'].includes(w)) { n++; parts.push(c.num + '-' + w); } else left.push(c.num);
+    for (const e of sec.querySelectorAll('[data-pick]')) e.classList.toggle('on', e.dataset.pick === w);
+  }
+  $('count').textContent = '已選 ' + n + ' / ' + DATA.length;
+  $('left').textContent = left.length ? '還沒選:' + left.join(' ') : '全部選完了';
+  $('out').value = parts.join(' ');
+}
+$('copy').addEventListener('click', async () => {
+  const t = $('out').value;
+  try { await navigator.clipboard.writeText(t); } catch (e) { $('out').select(); document.execCommand('copy'); }
+  $('copy').textContent = '已複製'; setTimeout(() => { $('copy').textContent = '複製'; }, 1500);
+});
+let armed = 0;
+$('clear').addEventListener('click', () => {
+  const b = $('clear');
+  if (!armed) { armed = setTimeout(() => { armed = 0; b.classList.remove('arm'); b.textContent = '全部清除'; }, 4000); b.classList.add('arm'); b.textContent = '再按一次確認清除'; return; }
+  clearTimeout(armed); armed = 0; b.classList.remove('arm'); b.textContent = '全部清除';
+  pick = {}; try { localStorage.removeItem(KEY); } catch (e) {} render();
+});
+render();
+</script></body></html>
