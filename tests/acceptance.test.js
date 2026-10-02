@@ -422,6 +422,36 @@ check("沒有藍也沒有補給的城:國軍的第一點也放不進去(orchestr
   );
 });
 
+// Added after #1 was delivered: BE reported it, and no check held it. It follows from two things
+// together, the Phase 0 reading (`supplied` counts the city itself as part of the path) and
+// ruling 3 above (the ban asks `supplied`). Both wait for the owner; the other reading, in which
+// the city itself is not part of its own path, turns every expectation in this check around.
+check("共軍控制的城不在補給範圍內:國軍不能扶植進去(連空城),裡面的藍每回合掉 1(Phase 0 的讀法,待 owner)", () => {
+  const t = supplyTodo(); if (t) return t;
+  // 鄭州 (安定 2) held by the Communists with red 2 and no blue; every neighbour but 冀魯豫 is open and supplied.
+  const empty = { zhengzhou: { r: 2, b: 0 } }, st = position(empty), off = position(empty, { supply: false });
+  const sup = E.supplied(st), offT = E.placeTargets(off, KMT, 2);
+  const pre = all(
+    eq(E.controller(st, "zhengzhou"), CCP, "鄭州的控制者"),
+    eq(["huaihai", "dabieshan", "xian"].every((id) => sup.has(id)), true, "鄭州的鄰居淮海、大別山、西安都有補給"),
+    eq(E.isolatedCities(st).length, 0, "孤城數(鄭州沒有藍,照定義不是孤城)"),
+    eq(offT.lit.has("zhengzhou"), true, "supply 關掉時鄭州可以扶植"), eq(offT.costs.zhengzhou, 2, "supply 關掉時鄭州每點的花費(共軍控制)"),
+  );
+  if (pre !== true) return pre;
+  const err = thrown(() => E.placePoints(E.clone(st), KMT, ["zhengzhou"], 2));
+  // The same city with blue 2 under red 4: a 孤城 by this reading, and it loses a point at the end of the turn.
+  const held = position({ zhengzhou: { r: 4, b: 2 } });
+  const pre2 = all(eq(E.controller(held, "zhengzhou"), CCP, "鄭州(紅 4 藍 2)的控制者"), same(E.isolatedCities(held), ["zhengzhou"], "孤城"));
+  if (pre2 !== true) return pre2;
+  const after = settle(held);
+  return all(
+    eq(E.placeTargets(st, KMT, 2).lit.has("zhengzhou"), false, "placeTargets 亮了共軍控制的空城鄭州"),
+    eq(err != null, true, "placePoints 讓國軍把點放進了共軍控制的鄭州"),
+    settled(after, "結算"), eq(blueOf(after, "zhengzhou"), 1, "結算後鄭州(紅 4 藍 2)的藍"),
+    ok(true, `共軍控制的空城鄭州:不亮、拒絕(「${err}」);紅 4 藍 2 的鄭州是孤城,結算 2→1`),
+  );
+});
+
 check("經過 apply:打一張牌扶植進孤城被拒絕,legal 不列它;先打通就可以", () => {
   const t = supplyTodo(); if (t) return t;
   let st = position(JINAN_CUT);
