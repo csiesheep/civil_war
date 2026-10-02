@@ -8,12 +8,16 @@
 //     the turn-1 時局 (受降), over a list of spaces rather than of regions;
 //   - 洛邑 yields nothing (there is no such space);
 //   - the export module is not imported;
-//   - `supplied` / `isolatedCities` at the end are new (rulebook 三, 補給), and
-//     nothing calls them yet.
+//   - `supplied` / `isolatedCities` at the end are new (rulebook 三, 補給).
+// And since then, in M1 (one line per issue, the details at the code):
+//   - #1 supply's effects (option `supply`): the Nationalists may not 扶植 into
+//     a city out of supply (`placeBarred`, read by placeTargets, placePoints and
+//     opsOptions), and each 孤城 loses blue at the end of the turn, after the
+//     capital check (`supplyAttrition` in endTurnChecks, log `attrition`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. What the rulebook of this game says
-// differently (supply's effects, 時局, the two aid cards, asymmetric rounds,
-// scoring with base areas, every card event) is not done: that is M1. This
+// differently (時局, the two aid cards, asymmetric rounds, scoring with base
+// areas, every card event) is not done: that is the rest of M1. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
 //
 // Pure rules. Runs unchanged in the browser (solo) and in the room Durable
@@ -126,7 +130,11 @@ export const REFORM = [
 // This game drops the ones that named Zongheng's cards and spaces (hangu,
 // wuguo, westBonus, yue, qinFarStart, comp), sets `luoyi` to 0 (no such
 // space), and starts from 遷都 (`homeFall: "move"`), as its rulebook says.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move" };
+// `supply` (#1): true turns on supply's two effects (孤城 may not take 扶植;
+// 孤城 lose blue at the end of the turn). false or absent turns both off and
+// leaves the readings (`supplied`, `isolatedCities`) as they are; the harness
+// uses it as the control arm.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -333,9 +341,9 @@ export function reachFrom(st, side) {
 //
 // `st` is the state at the START of the place action and `points` the points
 // picked so far but not yet committed. That split is the rule: the eligible set
-// comes from `st` (under "ts" it is fixed there), while the cost and the cap are
-// re-read on the board with `points` already on it -- exactly the order
-// `placePoints` checks them in, point by point.
+// comes from `st` (under "ts" it is fixed there), while the cost, the cap and
+// supply (`placeBarred`, #1) are re-read on the board with `points` already on
+// it -- exactly the order `placePoints` checks them in, point by point.
 export function placeTargets(st, side, ops, points = []) {
   const reach = reachFrom(st, side);
   const trial = clone(st); trial.log = [];
@@ -343,9 +351,11 @@ export function placeTargets(st, side, ops, points = []) {
   for (const id of points) { spent += placeCost(trial, side, id); place(trial, side, id, 1); }
   const left = ops - spent;
   const lit = new Set(), costs = {};
+  // Supply, unlike reach, is re-read with `points` on the board (#1).
+  const barred = placeBarred(trial, side);
   for (const s of SPACES) {
     const cost = placeCost(trial, side, s.id);
-    if (cost <= left && canPlaceAt(trial, side, s.id, reach) && infOf(trial, s.id)[side] < capOf(trial, s.id)) {
+    if (cost <= left && canPlaceAt(trial, side, s.id, reach) && infOf(trial, s.id)[side] < capOf(trial, s.id) && !barred(s.id)) {
       lit.add(s.id);
       costs[s.id] = cost;
     }
@@ -727,6 +737,8 @@ export function lobby(st, side, target, ops) {
 }
 // Points one at a time, so the cost re-evaluates as control changes.
 // Under reach "ts" the eligible set is taken once, before the first point.
+// Supply is read before every point (#1): a point that lifts a siege opens the
+// city for the next point of the same action.
 export function placePoints(st, side, points, ops) {
   if (probe.place) probe.place(st, side, points);
   const reach = reachFrom(st, side);
@@ -736,6 +748,7 @@ export function placePoints(st, side, points, ops) {
     if (spent + cost > ops) fail(`place: not enough ops for ${id}`);
     if (!canPlaceAt(st, side, id, reach)) fail(`place: ${id} is not reachable`);
     if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
+    if (placeBarred(st, side)(id)) fail(`place: ${id} is cut off from supply`);
     place(st, side, id, 1);
     spent += cost;
   }
@@ -809,7 +822,7 @@ export function jiudingUsable(st, side) { return st.jiuding.holder === side && !
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-09-27";
+export const RULES_VERSION = "2026-10-01"; // #1: supply's effects
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1148,6 +1161,9 @@ function endTurnChecks(st) {
   if (holding.length === 1) return win(st, other(holding[0]), "scoring");
   homeFallAtTurnEnd(st);
   if (st.winner != null) return;
+  // CIVIL WAR (#1): rulebook 三, 回合結構 5 -- 遷都判定 → 孤城藍 −1 → 民生回復 1.
+  supplyAttrition(st);
+  if (st.winner != null) return;
   recover(st, 1);
   if (st.luoyiYields) {
     const ctl = controller(st, "luoyi");
@@ -1427,7 +1443,8 @@ function validateOps(st, side, card, ops, payload, jiuding = false) {
 // campaign targets (enemy influence, not locked, not protected), lobby
 // targets with a positive edge.
 export function opsOptions(st, side) {
-  const placeOptions = SPACES.filter((s) => canPlaceAt(st, side, s.id) && infOf(st, s.id)[side] < capOf(st, s.id))
+  const barred = placeBarred(st, side);
+  const placeOptions = SPACES.filter((s) => canPlaceAt(st, side, s.id) && infOf(st, s.id)[side] < capOf(st, s.id) && !barred(s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
   const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
@@ -1528,8 +1545,9 @@ export function view(st, side) {
 // A space is supplied when a path of adjacent spaces, none of them controlled
 // by the Communists, leads from it to a source; the source itself is on the
 // path, so a capital the Communists control supplies nothing.
-// PHASE 0: only the reading exists. Nothing calls these yet: the ban on
-// placing in a cut-off city and the loss at the end of the turn are M1.
+// The readings below answer whatever `options.supply` says; the two effects
+// (`placeBarred`, `supplyAttrition`, #1) are on only when it is true. An absent
+// key is off: a game created before #1 keeps its rules (createGame merges once).
 export function supplySources(st) {
   const capital = homeCapital(st, KMT);
   return SPACES.filter((s) => (s.port && controller(st, s.id) === KMT) || s.id === capital).map((s) => s.id);
@@ -1546,4 +1564,38 @@ export function supplied(st) {
 export function isolatedCities(st) {
   const ok = supplied(st);
   return SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && !ok.has(s.id)).map((s) => s.id);
+}
+// 孤城的效果 1 (#1): the Nationalists may not 扶植 into a city no source reaches.
+// The test is `supplied`, not `isolatedCities`: a city with no blue and no
+// supply takes no first point either (orchestrator 裁決 #1, flagged to the
+// owner), else the first point would go in and only then make it a 孤城.
+// Villages are never barred, nor the Communists. This is the ban on the 扶植
+// action only -- `place()` (events, the free placements) does not read it.
+// Returns a predicate on a space id, for the board as it stands: placeTargets,
+// placePoints and opsOptions all ask it, so the three cannot disagree.
+// (美援 may place in a cut-off city: not yet, that is the foreign-aid issue.)
+function placeBarred(st, side) {
+  if (!st.options.supply || side !== KMT) return () => false;
+  const ok = supplied(st);
+  return (id) => SPACE[id].kind === "city" && !ok.has(id);
+}
+// 孤城的效果 2 (#1): how many points each 孤城 loses at the end of this turn.
+// The one place to change it: turn 7's 時局 makes it 2, and a card may stop it
+// for a turn (neither is done yet).
+function attritionLoss(st) { return st.options.supply ? 1 : 0; }
+// At the end of the turn, after the capital check (so a capital that moved
+// supplies already): read the 孤城 once, each loses `attritionLoss` (not below
+// 0), one `attrition` entry if any did, then the markers once (rulebook 四,
+// 細則: a loss may cost control, a 整編 marker, or give an 易幟).
+function supplyAttrition(st) {
+  const n = attritionLoss(st);
+  if (n <= 0) return;
+  const losses = {};
+  for (const id of isolatedCities(st)) {
+    const k = remove(st, KMT, id, n);
+    if (k > 0) losses[id] = k;
+  }
+  if (!Object.keys(losses).length) return;
+  log(st, { type: "attrition", losses });
+  checkMarkers(st);
 }
