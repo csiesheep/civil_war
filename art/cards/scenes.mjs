@@ -16,12 +16,12 @@ const ROUNDEL = "the small Chinese Nationalist air force roundel (a white twelve
 const NATU = "Nationalist soldiers in khaki-green wool and cotton uniforms and American steel helmets, officers in peaked caps";
 const COMU = "Communist soldiers in grey and khaki cotton uniforms, soft cloth caps and cloth puttees on their legs";
 
-const CKS = "Chiang Kai-shek, a lean upright man with a shaved bald head, a clean-shaven long angular face, a sharp nose and a stern tight mouth";
+const CKS = "Chiang Kai-shek, a lean upright man with a close-shaved bald head and a lean long face";
 const MADAME = "Madame Chiang, slender and elegant, her hair in a smooth chignon";
 const MAO = "Mao Zedong, a stocky man with a broad round face, a high forehead and thick black hair combed straight back";
 const ZHOU = "Zhou Enlai, a slim man with a narrow face, thick straight black eyebrows and short neat dark hair";
 const MARSHALL = "General George Marshall, tall and straight with silver-grey hair and a lined, stern face";
-const HU = "General Hu Zongnan, a stocky heavy-faced man with a small moustache";
+const HU = "General Hu Zongnan, a stocky heavy-faced man";
 const FU = "General Fu Zuoyi, a stocky broad-faced man with close-cropped hair";
 const LIU = "General Liu Bocheng, a weathered square-jawed man with short cropped hair";
 
@@ -66,8 +66,8 @@ export const SCENES = [
     `The long granite stairway of the Sun Yat-sen Mausoleum on Purple Mountain in Nanjing on 5 May 1946: ${CKS}, in a plain khaki military uniform with no decorations and his peaked cap in his hand, and ${MADAME} in a blue qipao climbing the steps side by side, an honour guard in khaki, a throng of cheering civilians waving small flags of the Republic of China (a red field with a blue canton bearing a white twelve-pointed sun, no yellow star), plane trees in fresh spring green, the deep blue glazed-tile roof of the mausoleum above, bright blue sky. Nanjing, May 1946.`,
     "1946 年 5 月 5 日還都南京:蔣介石與宋美齡並肩登上中山陵石階,群眾揮舞青天白日旗,春天。"],
   ["reorganisation_conference",
-    `A tall bright hall in Beiping on 25 February 1946, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it ${MARSHALL}, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator ${ZHOU} in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold winter light from tall windows, low angle. Beiping, February 1946, no readable documents.`,
-    "1946 年 2 月 25 日北平:馬歇爾站在大地圖前,一手握張治中、一手握周恩來,簽下整軍方案(「軍事整編會議」我畫成這件事,史上沒有同名的單一會議)。"],
+    `A plain office room in the hill city of Chongqing on 25 February 1946, winter mist and steep terraced slopes of grey-tiled roofs seen through the tall windows, no table in the picture: a huge wall map of China covered in coloured division markers fills the background, and standing in front of it ${MARSHALL}, in a US Army general's uniform, clasps the right hand of Nationalist General Zhang Zhizhong in a khaki uniform and the left hand of Communist negotiator ${ZHOU} in a grey Zhongshan suit, drawing them together over a thick folder, aides holding files, cold grey winter light, low angle. Chongqing, February 1946, no readable documents.`,
+    "1946 年 2 月 25 日重慶(上清寺堯廬,國民政府軍事參謀機關):窗外是冬霧與陡坡山城,馬歇爾站在大地圖前,一手握張治中、一手握周恩來,簽下整軍方案(「軍事整編會議」我畫成這件事,史上沒有同名的單一會議)。"],
   ["siping_taken",
     `The battered brick city of Siping on 19 May 1946 after a month of fighting: Nationalist soldiers of the American-equipped New First Army in khaki-green uniforms and American steel helmets raise ${ROCF} on a shell-torn brick building, grey smoke drifting from burning ruins, an olive-drab M4 Sherman tank with its hatch open rolling through broken walls behind, a grinning soldier in the foreground wiping his brow, green spring fields beyond the ruins. Northeast China, May 1946, American-equipped Nationalist troops, no signboards.`,
     "1946 年 5 月 19 日四平:國軍新一軍士兵在彈痕累累的磚房上升起國旗,謝爾曼戰車駛過廢墟。"],
@@ -195,8 +195,8 @@ export const SCENES = [
 
   // ---------------- neutral cards (real_tech), takeover era
   ["chongqing_talks",
-    `Jiulongpo airfield outside Chongqing on 28 August 1945: ${MAO}, in a white pith helmet and a grey Zhongshan suit, stands at the foot of the steps of a bare-metal silver C-47 transport with ${ZHOU} behind him, receiving a handshake from American ambassador Patrick Hurley, a white-haired man in a dark suit, and Nationalist General Zhang Zhizhong in a khaki uniform, a crowd and press photographers with flashbulb cameras, misty green mountains and the river valley behind. Chongqing, August 1945, the aircraft is bare silver metal with a plain unmarked fuselage and tail, no star, no roundel, no stripes, no signboards.`,
-    "1945 年 8 月 28 日重慶九龍坡機場:戴白色遮陽帽的毛澤東走下飛機,赫爾利與張治中握手迎接,周恩來在後(重慶談判)。"],
+    `Jiulongpo airfield outside Chongqing on 28 August 1945: three men come down the steps of a bare-metal silver C-47 transport together, ${MAO}, in a white pith helmet and a grey Zhongshan suit, in front, American ambassador Patrick Hurley, a white-haired man in a dark suit, and Nationalist General Zhang Zhizhong in a khaki uniform beside and just behind him, ${ZHOU} following down the steps, a welcoming crowd and press photographers with flashbulb cameras waiting on the apron, misty green mountains and the river valley behind. Chongqing, August 1945, the aircraft is bare silver metal with a plain unmarked fuselage and tail, no star, no roundel, no stripes, no signboards.`,
+    "1945 年 8 月 28 日重慶九龍坡機場:戴白色遮陽帽的毛澤東走在最前面,與赫爾利、張治中一起走下飛機舷梯(他們飛去延安接他),周恩來跟在後面,機坪上是歡迎的人群與記者(重慶談判)。"],
   ["january_truce",
     `A snowy plain in northern China at dawn: a US Army olive-drab jeep carrying three officers, one Nationalist in khaki, one Communist in grey cotton and one American, drives between two lines of troops with three small flags on its bonnet (${ROCF}, ${REDF}, and the American Stars and Stripes), soldiers on both sides in the snow lowering their rifles, frozen trenches, grey winter light. Northern China, January 1946.`,
     "1946 年 1 月清晨華北雪原:插著三面小旗(國旗、紅旗、美國旗)的吉普車載著三方軍官開在兩軍之間,雙方士兵放下槍(一月停戰令)。"],
