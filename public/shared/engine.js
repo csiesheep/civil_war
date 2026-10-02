@@ -155,7 +155,11 @@ export const REFORM = [
 // 孤城 lose blue at the end of the turn). false or absent turns both off and
 // leaves the readings (`supplied`, `isolatedCities`) as they are; the harness
 // uses it as the control arm.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true };
+// `homeLockSide` (#3): "opponent" locks only the other side's home region at
+// 民生 <= homeLock, as this game's rulebook says; "both" or absent is
+// Zongheng's lock (both home regions, both sides), kept as the control arm and
+// for games made before #3. See `homeLocked`.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -425,10 +429,22 @@ function situationUnlocks(st, side, id) {
   const sit = situationOf(st.turn);
   return side === CCP && SPACE[id].kind === "city" && !!sit && (sit.id === "decisive_battle" || sit.id === "peace_talks");
 }
+// 本土 (#3, owner 裁決(#2)「只鎖對手的本土,照規則書」): with `homeLockSide:
+// "opponent"` the home-region level locks only the OTHER side's home region
+// (Communists kept out of 後方, Nationalists out of 西北); each side may still
+// attack inside its own. "both", an absent key (a game made before #3), or a
+// call without `side` lock both home regions for both sides, as in Zongheng.
+// Only this level: 華北 and the 城的要衝 below stay locked for both sides.
+function homeLocked(st, region, side) {
+  const home = REGIONS[region].home;
+  if (!home) return false;
+  if (st.options.homeLockSide !== "opponent" || (side !== CCP && side !== KMT)) return true;
+  return home !== SIDES[side];
+}
 export function campaignLocked(st, id, side) {
   if (situationUnlocks(st, side, id)) return false;
   const sp = SPACE[id], w = st.weariness;
-  if (w <= st.options.homeLock && REGIONS[sp.region].home) return true;
+  if (w <= st.options.homeLock && homeLocked(st, sp.region, side)) return true;
   if (w <= 3 && REGIONS[sp.region].front) return true;
   if (w <= 2 && sp.battleground) return true;
   return false;
@@ -942,7 +958,7 @@ export function jiudingUsable(st, side) { return st.jiuding.holder === side && !
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-01-2"; // #2: 時局, asymmetric rounds, support tracks (#1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-01-3"; // #3: homeLockSide, the home-region lock only on the opponent's home ("2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
