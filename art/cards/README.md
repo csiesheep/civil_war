@@ -1,6 +1,11 @@
-# 74 張牌的圖 prompt(#16)
+# 74 張牌的圖 prompt(#16 → #22)
 
-owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援),圖已經出了(#19):`img/<key>.jpg`,逐張的檢查在 `CHECK.md`,三張對照表是 `sheet-nationalist.jpg`、`sheet-communist.jpg`、`sheet-neutral.jpg`。完整的 prompt、種子、尺寸在 `prompts.json`;下面的表是給你讀的:每張牌畫什麼。覺得哪張畫錯,說牌名和你想要的畫面。
+owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 張牌 + 美援、蘇援)。
+- **#19**(第一輪):完整的 Qwen Image 與 Z-Image Turbo 各 74 張對照,`img/<key>.jpg` 與 `img-zimage/<key>.jpg`,三張對照表是 `sheet-nationalist.jpg`、`sheet-communist.jpg`、`sheet-neutral.jpg`,逐張的檢查在 `CHECK.md` 與 `CHECK-zimage.md`。
+- **#21**(挑圖):owner 選定 59 張(57 張 Qwen + 2 張 Z-Image),15 張重出 4 張候選,在 `redo/<card id>__c<1-4>.jpg`,檢查在 `CHECK-redo.md`,挑圖頁是 `pick.html` / `redo.html`。
+- **#22**(定案):final/ 下 74 張是定案的圖像,59 張來自 #19 和 #21,15 張來自 #21 的 redo 候選,見下「定案」一節。
+
+完整的 prompt、種子、尺寸在 `prompts.json`;下面的表是給你讀的:每張牌畫什麼。
 
 ## 三種風格(你在 #14 挑的),與結尾
 
@@ -19,6 +24,39 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 用 `art/explore/14/r3/workflow_api.json`(Qwen Image 2.1,25 步、cfg 1、euler / simple)當樣板,只換這四個欄位再送給 ComfyUI(`http://127.0.0.1:8188/prompt`):`452.inputs.prompt` = 該筆的 `prompt`,`458.inputs.seed` = `seed`,`456.inputs.width / height` = 768 / 1024,`461.inputs.filename_prefix` = 自訂。`art/explore/14/r3/repro.mjs` 是現成的寫法(把裡面讀 prompts.json 的路徑改成這個檔)。
 
 用 Z-Image Turbo 出的話,樣板是 `art/explore/17/workflow_api_zimage.json`(8 或 20 步),`art/explore/17/gen.mjs` 是現成的寫法;#17 看到 Z-Image 會多出紙邊與小字(結尾那一段擋不住),Qwen 沒有。
+
+## 定案(#22)
+
+**`final/<key>.jpg`**:定案的 74 張,每張都是最終選定的圖像,不再改動。
+- 59 張來自 #19 (#19 直接採用或經 #21 挑選)
+- 15 張來自 #21 的 redo 候選:owner 對 15 張重出候選的選擇是「11-2 12-3 13-3 16-1 17-4 24-1 33-1 36-2 37-4 39-2 53-3 64-4 65-3 67-4 72-4」
+
+**`final.json`**:74 筆記錄,每筆包括 `key`(牌 ID)、`model`(模型:qwen/zimage)、`seed`(種子)、`steps`(步數)、`from`(來源)。
+
+**模型統計**:
+- Qwen Image 2.1(25 步):59 張(所有 Qwen 圖像) + 13 張新加(來自 redo 候選)= 72 張
+- Z-Image Turbo(20 步):0 張(從定案中移除) + 2 張新加(67-4、72-4)= 2 張
+
+**15 張重出的定案**:
+| 牌 | 牌名 | 候選 | 模型 | 種子 |
+|---|---|---|---|---|
+| 11 | 中蘇友好同盟條約 | 2 | Qwen | 21112 |
+| 12 | 還都南京 | 3 | Qwen | 21123 |
+| 13 | 軍事整編會議 | 3 | Qwen | 21133 |
+| 16 | 闖關東 | 1 | Qwen | 21161 |
+| 17 | 上黨戰役 | 4 | Qwen | 21174 |
+| 24 | 馬歇爾調處 | 1 | Qwen | 21241 |
+| 33 | 取締民盟 | 1 | Qwen | 21331 |
+| 36 | 行憲國大 | 2 | Qwen | 21362 |
+| 37 | 美械整編師 | 4 | Qwen | 21374 |
+| 39 | 孟良崮 | 2 | Qwen | 21392 |
+| 53 | 傅作義守華北 | 3 | Qwen | 21533 |
+| 64 | 新政協 | 4 | Qwen | 21644 |
+| 65 | 和平起義 | 3 | Qwen | 21653 |
+| 67 | 史達林的建議 | 4 | Z-Image | 21674 |
+| 72 | 大公報社評 | 4 | Z-Image | 21724 |
+
+**定案對照表**(`final/sheet-*.jpg`):三張聯絡單,格式同 #19,每格下面標編號與牌名,圖來源改成 `final/`(不標紅字)。
 
 ## 畫面表
 
@@ -115,26 +153,3 @@ owner 說:「先產生好所有圖片的prompts」。這裡是 74 則 prompt(72 
 | 5 | 後方記分 | 記分卡 | — | real_tech | 後方:1946 年十一月黃昏,重慶山城從長江對岸望去,石階、吊腳樓、帆船與薄霧。地景。 |
 | — | 美援 | 國軍外援 | — | nat_closeup | 1946 年中國港口碼頭:起重機從美國貨輪吊下卡車,吉普車與卡車整齊排在岸邊,碼頭工人、美軍水兵與國軍軍官(美援)。 |
 | — | 蘇援 | 共軍外援 | — | com_oil(無士兵版) | 1948 年 12 月哈爾濱松花江鐵橋:蘇聯鐵路專家與中國工人用吊車架設鋼樑,火車頭在橋頭等著(蘇援:東北鐵路)。 |
-
-## Z-Image Turbo 的那一半與挑圖(#20)
-
-owner:「圖片用 z image 和 qwen image 各產生一張，讓我選」。Qwen 的 74 張是上面的 `img/`;這裡是同一份 prompt、同一個種子的 Z-Image Turbo 版:
-
-- `img-zimage/<card id>.jpg`:74 張,768 × 1024,JPEG 品質 88,不後製。Z-Image Turbo 20 步、cfg 1、res_multistep / simple、shift 3(`art/explore/17/workflow_api_zimage.json`,走 8188)。一張牌只出一次,不為硬傷重出。
-- `zimage.json`:每張實際用的 `{ key, seed, steps }`(種子與 `prompts.json` 當時的種子相同;之後 Qwen 重出改了 `prompts.json` 的種子,Z-Image 的圖仍可靠這份紀錄重現)。
-- `render-zimage.mjs`:出圖,可續跑(已有的檔案跳過,一張失敗不停整批);`REPRO=1 node art/cards/render-zimage.mjs <key>` 從 `zimage.json` 重出並和交付的檔案逐像素比。
-- `CHECK-zimage.md`:74 列的硬傷清單(框 / 字 / 旗與機徽 / 畸形 / 認不認得出),最前面有統計。
-- `pick/pair-01.jpg` 到 `pair-07.jpg`:並排對照表(`node art/cards/pairs.mjs`),**左 A = Qwen Image 2.1,右 B = Z-Image Turbo**,編號是 `cards.js` 的數字,紅字是兩邊各自的硬傷。
-- `pick.html`:本機挑圖頁(`node art/cards/pick.mjs` 產生;雙擊開,不需伺服器、不載入外部資源)。點圖或按 A / B / X(X = 兩張都不要、重出)選;上方固定列有「已選 n / 74」、還沒選的編號、結果文字(`1A 2B 3X … 美援A 蘇援B`)與「複製」;選擇存在瀏覽器的 localStorage;「全部清除」要按兩次。
-
-## owner 挑完之後:定案 59 張與重出 15 張的候選(#21)
-
-owner 的答案(2026-10-02):A 57 張、B 2 張(46 杜魯門主義、48 黃河歸故)、X 15 張(11、12、13、16、17、24、33、36、37、39、53、64、65、67、72)。
-
-- `final/<card id>.jpg`:定案的 59 張,從挑中的 `img/` 或 `img-zimage/` **原檔複製**(逐位元組相同);`final.json` 記 `{ key, model, seed, steps, from }`。`node art/cards/finalize.mjs` 產生。X 的 15 張要等重出的候選被挑中才進來。
-- `redo/<card id>__c<1-4>.jpg`:X 的 15 張各 4 張候選(768 × 1024,JPEG 品質 88,不後製);`redo.json` 記 60 筆 `{ key, c, model, seed, steps, prompt }`(`node art/cards/redo-prompts.mjs`)。種子 = 21000 + 牌的編號 × 10 + 候選編號。候選 1 到 4 是 Qwen Image 2.1(25 步);`real_tech` 的 X 牌(24、67、72)的候選 4 是 Z-Image Turbo(20 步)。
-- 其中 10 張的 prompt 和 `prompts.json` 一字不差,只換種子;11、24、33、64、67 改寫了 Scene(原文與改文在 `CHECK-redo.md` 最後一節)。
-- `node art/cards/render-redo.mjs` 出圖,可續跑(已有的檔案跳過,一張失敗不停整批);`REPRO=1 node art/cards/render-redo.mjs <key> <N>` 重出候選 N 並和交付的檔案逐像素比。
-- `CHECK-redo.md`:60 列硬傷清單(由 `check-redo-notes.json` 與 `check-redo-build.mjs` 產生)。
-- `redo/sheet-01.jpg` 到 `sheet-03.jpg`:對照表,一列一張牌、候選 1 到 4 由左到右(`node art/cards/redo-sheets.mjs`)。
-- `redo.html`:本機挑圖頁(`node art/cards/redo.mjs` 產生;雙擊開,不需伺服器)。點圖或按 1 / 2 / 3 / 4 / X 選;結果文字 `11-2 12-X 13-4 …`;選擇存在 localStorage(key `civil_war_21_redo_pick`)。

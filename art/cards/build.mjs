@@ -14,9 +14,12 @@ const TAIL = "Full-bleed image that runs to all four edges of the canvas: no bor
 const NOTEXT = "No text, no characters, no seals, no writing.";
 const AID = { american_aid: ["K", "nat_closeup", "美援", 0], soviet_aid: ["C", "com_oil", "蘇援", 0] };
 // Seeds that were changed by a re-render (#19: seed + 1000 * n after a hard defect in the picture); every other card keeps 16001 + its index.
+// Updated for #22 final set: 15 cards now use seeds from redo candidates
 const RESEED = {
-  surrender_order: 19006, league_banned: 17033, chen_cheng: 19034, new_consultative_conference: 19064, beiping_talks: 17066,
-  japanese_garrisons: 17010, sino_soviet_treaty: 17011, mobilisation_order: 17032, ta_kung_pao: 17072, soviet_aid: 17074,
+  surrender_order: 19006, japanese_garrisons: 17010, sino_soviet_treaty: 21112, mobilisation_order: 17032, league_banned: 21331, chen_cheng: 19034, beiping_talks: 17066,
+  return_to_nanjing: 21123, reorganisation_conference: 21133, into_manchuria: 21161, shangdang_campaign: 21174, marshall_mission: 21241,
+  national_assembly: 21362, american_divisions: 21374, menglianggu: 21392, fu_holds_the_north: 21533, new_consultative_conference: 21644,
+  peaceful_changeover: 21653, stalins_advice: 21674, ta_kung_pao: 21724, soviet_aid: 17074,
 };
 const meta = new Map();
 for (const c of E.CARDS) meta.set(c.id, { zh: c.zh, num: c.num, year: c.year, side: c.side === 1 ? "K" : c.side === 0 ? "C" : "N" });

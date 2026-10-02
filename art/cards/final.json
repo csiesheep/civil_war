@@ -70,6 +70,27 @@
     "from": "img/japanese_garrisons.jpg"
   },
   {
+    "key": "sino_soviet_treaty",
+    "model": "qwen",
+    "seed": 21112,
+    "steps": 25,
+    "from": "redo/sino_soviet_treaty__c2.jpg"
+  },
+  {
+    "key": "return_to_nanjing",
+    "model": "qwen",
+    "seed": 21123,
+    "steps": 25,
+    "from": "redo/return_to_nanjing__c3.jpg"
+  },
+  {
+    "key": "reorganisation_conference",
+    "model": "qwen",
+    "seed": 21133,
+    "steps": 25,
+    "from": "redo/reorganisation_conference__c3.jpg"
+  },
+  {
     "key": "siping_taken",
     "model": "qwen",
     "seed": 16014,
@@ -82,6 +103,20 @@
     "seed": 16015,
     "steps": 25,
     "from": "img/zhangjiakou_taken.jpg"
+  },
+  {
+    "key": "into_manchuria",
+    "model": "qwen",
+    "seed": 21161,
+    "steps": 25,
+    "from": "redo/into_manchuria__c1.jpg"
+  },
+  {
+    "key": "shangdang_campaign",
+    "model": "qwen",
+    "seed": 21174,
+    "steps": 25,
+    "from": "redo/shangdang_campaign__c4.jpg"
   },
   {
     "key": "gao_shuxun",
@@ -124,6 +159,13 @@
     "seed": 16023,
     "steps": 25,
     "from": "img/january_truce.jpg"
+  },
+  {
+    "key": "marshall_mission",
+    "model": "qwen",
+    "seed": 21241,
+    "steps": 25,
+    "from": "redo/marshall_mission__c1.jpg"
   },
   {
     "key": "pcc_resolutions",
@@ -182,6 +224,13 @@
     "from": "img/mobilisation_order.jpg"
   },
   {
+    "key": "league_banned",
+    "model": "qwen",
+    "seed": 21331,
+    "steps": 25,
+    "from": "redo/league_banned__c1.jpg"
+  },
+  {
     "key": "chen_cheng",
     "model": "qwen",
     "seed": 19034,
@@ -196,11 +245,32 @@
     "from": "img/china_aid_act.jpg"
   },
   {
+    "key": "national_assembly",
+    "model": "qwen",
+    "seed": 21362,
+    "steps": 25,
+    "from": "redo/national_assembly__c2.jpg"
+  },
+  {
+    "key": "american_divisions",
+    "model": "qwen",
+    "seed": 21374,
+    "steps": 25,
+    "from": "redo/american_divisions__c4.jpg"
+  },
+  {
     "key": "northern_shaanxi",
     "model": "qwen",
     "seed": 16038,
     "steps": 25,
     "from": "img/northern_shaanxi.jpg"
+  },
+  {
+    "key": "menglianggu",
+    "model": "qwen",
+    "seed": 21392,
+    "steps": 25,
+    "from": "redo/menglianggu__c2.jpg"
   },
   {
     "key": "dabie_march",
@@ -294,6 +364,13 @@
     "from": "img/gold_yuan.jpg"
   },
   {
+    "key": "fu_holds_the_north",
+    "model": "qwen",
+    "seed": 21533,
+    "steps": 25,
+    "from": "redo/fu_holds_the_north__c3.jpg"
+  },
+  {
     "key": "airlift_to_cut_off_city",
     "model": "qwen",
     "seed": 16054,
@@ -364,11 +441,32 @@
     "from": "img/yangtze_crossing.jpg"
   },
   {
+    "key": "new_consultative_conference",
+    "model": "qwen",
+    "seed": 21644,
+    "steps": 25,
+    "from": "redo/new_consultative_conference__c4.jpg"
+  },
+  {
+    "key": "peaceful_changeover",
+    "model": "qwen",
+    "seed": 21653,
+    "steps": 25,
+    "from": "redo/peaceful_changeover__c3.jpg"
+  },
+  {
     "key": "beiping_talks",
     "model": "qwen",
     "seed": 17066,
     "steps": 25,
     "from": "img/beiping_talks.jpg"
+  },
+  {
+    "key": "stalins_advice",
+    "model": "zimage",
+    "seed": 21674,
+    "steps": 20,
+    "from": "redo/stalins_advice__c4.jpg"
   },
   {
     "key": "amethyst_incident",
@@ -397,6 +495,13 @@
     "seed": 16071,
     "steps": 25,
     "from": "img/clearing_the_outskirts.jpg"
+  },
+  {
+    "key": "ta_kung_pao",
+    "model": "zimage",
+    "seed": 21724,
+    "steps": 20,
+    "from": "redo/ta_kung_pao__c4.jpg"
   },
   {
     "key": "american_aid",
