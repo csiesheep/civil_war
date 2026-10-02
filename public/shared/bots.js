@@ -106,7 +106,7 @@ const W = {
   // an action round more than the other side this turn.
   tempo: 0.5,
 };
-const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = 20;
+const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = E.MANDATE_TO_WIN;
 // #130 / Zongheng: a capital is a road to a loss (homeFall). FALL is what
 // losing it is worth to a one-ply bot that must see it coming; the road is the
 // share of it by the points the enemy still lacks and by who acts next. Under
