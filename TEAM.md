@@ -113,7 +113,8 @@ cwd 就是它。每個 `_wt/` 工作樹有 `__MARKER_ORCH.txt`(name + SHA)。
 `node --test tests/bots.test.js`(bot 對局約 150 局,幾分鐘;取 `BOTS-VERDICT`;`BOTS_SCALE=0.25` 快速看一眼)。`npm test` 是 `node --test`,三支都跑。
 模擬的目標(計畫「第一輪模擬」那八個數字):`node tests/targets.mjs <out>.state.json`,讀 `tests/sim.js` 寫的狀態檔,
 每個 cell 印八項的通過 / 失敗與 `TARGETS <cell> 通過 n / 8` 那一行;停損的兩項是民心曲線與孤城時間。
-`node --test` 不要寫成 `node --test tests/`(Windows 上會出錯)。Node 在這台機器上長時間跑會隨機當掉:失敗的測試先重跑一次再相信。
+`node --test` 不要寫成 `node --test tests/`(Windows 上會出錯)。Node 在這台機器上長時間跑曾經隨機當掉:失敗的測試先重跑一次再相信。
+2026-10-03 owner 換了新 CPU(i9-13900K,32 執行緒,48 GB),隨機重開機應該解了:模擬可以開大的平行數(`--jobs` 到 28 左右);`--resume` 照用。
 `.gitignore` 加 `__MARKER_ORCH.txt`、`__orch_*` 與 `.claude/worktrees/`。建議 alias:`alias orch='bash tools/orch.sh'`。
 ⚠ `orch rm` 之前先離開那個目錄——cwd 在裡面時 Windows 刪不掉。
 
