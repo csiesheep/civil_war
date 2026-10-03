@@ -220,6 +220,17 @@ export const VARIANTS = {
     why: "規則書第三節自己的設計:「易幟則要打下華北兩家,再加蘭州或桂系,那是 1949 年的事」",
     options: { mieNeeds: ["sui", "jin"] },
   },
+  // ---- 第三輪(owner 裁決 #23:開放民心門檻與最早的民心勝利)
+  "L-mfrom5": { what: "民心勝利從第 5 回合起才判(之前照記,第 5 回合開始時超過門檻就結束)", why: "", options: { mandateFrom: 5 } },
+  "L-mfrom6": { what: "民心勝利從第 6 回合起才判", why: "", options: { mandateFrom: 6 } },
+  "L-mfrom7": { what: "民心勝利從第 7 回合(決戰期)起才判", why: "", options: { mandateFrom: 7 } },
+  "L-mclamp": { what: "民心勝利以前,民心最多只到門檻減 1(不再往上記)", why: "", options: { mandateEarly: "clamp" } },
+  "L-mwin25": { what: "民心勝利的門檻 20 → 25(兩邊)", why: "", options: { mandateWin: [25, 25] } },
+  "L-mwinK25": { what: "國軍的民心門檻 20 → 25(共軍仍 20)", why: "", options: { mandateWin: [20, 25] } },
+  "L-turning86": { what: "易勢期行動回合 共 8 / 國 6", why: "", options: { eraRounds: { turning: { rounds: [8, 6] } } } },
+  "L-mcapK10": { what: "決戰期以前國軍的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 10] } },
+  "L-mcap10": { what: "決戰期以前雙方的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [10, 10] } },
+  "L-mcapK12": { what: "決戰期以前國軍的民心領先最多 12", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 12] } },
   "L-mie4": {
     what: "易幟的即時勝利要四家(3 → 4)",
     why: "",
@@ -328,6 +339,32 @@ export const PROPOSAL4 = PROPOSAL3.filter((l) => l !== "L-seatbar");
 combo("P4", "提案(第二輪,最後)", PROPOSAL4);
 // 消去表裡差距在雜訊內的兩項(後方 0/1/2、太原藍 1)一起拿掉,看它們是不是合起來才承重
 minus("P5", "P4", ["L-rear012", "L-taiyuan1"]);
+// 第三輪的候選
+combo("M1", "P4 + 民心勝利從第 7 回合", ["P4", "L-mfrom7"]);
+combo("M2", "P4 + 民心勝利從第 7 回合(之前夾在門檻內)", ["P4", "L-mfrom7", "L-mclamp"]);
+combo("M3", "P4 + 門檻 25", ["P4", "L-mwin25"]);
+combo("M4", "P4 + 民心勝利從第 5 回合", ["P4", "L-mfrom5"]);
+combo("M5", "P4 + 民心勝利從第 6 回合", ["P4", "L-mfrom6"]);
+combo("M6", "P4 + 門檻 25 + 從第 5 回合", ["P4", "L-mwin25", "L-mfrom5"]);
+minus("M7", "P4", ["L-seal4"], ["L-mfrom7"]);
+minus("N1", "M2", ["L-turning76"], ["L-turning86"]);
+combo("N2", "M2 + 戰略反攻 +2", ["M2", "L-counter2"]);
+combo("N3", "P4 + 從第 7 回合 + 國軍前期領先最多 10", ["P4", "L-mfrom7", "L-mcapK10"]);
+combo("N4", "P4 + 從第 7 回合 + 雙方前期領先最多 10", ["P4", "L-mfrom7", "L-mcap10"]);
+minus("N5", "N3", ["L-turning76"], ["L-turning86"]);
+minus("N6", "N3", ["L-rear012"]);
+minus("N7", "N3", ["L-taiyuan1"]);
+minus("N8", "N3", ["L-mcapK10"], ["L-mcapK12"]);
+minus("N9", "N3", ["L-rear012", "L-taiyuan1"]);
+minus("N10", "N9", ["L-mcapK10"], ["L-mcapK12"]);
+minus("N11", "N9", ["L-soviet2"]);
+minus("N12", "N9", ["L-turning76"]);
+minus("N13", "N9", ["L-chasui4"]);
+minus("N14", "N9", ["L-seal4"]);
+// 第三輪的提案(= N13)
+export const PROPOSAL6 = ["L-ccpheld", "L-rounds77", "L-soviet2", "L-turning76", "L-mienorth", "L-seal4", "L-mfrom7", "L-mcapK10"];
+combo("P6", "提案(第三輪)", PROPOSAL6);
+for (const l of PROPOSAL6) minus(`P6-no-${l.slice(2)}`, "P6", [l]);
 combo("Q", "孤城最晚的對照組", ["P", "L-huaihai3", "L-pinghan", "L-jinzhong3", "L-jinpu", "L-nerail", "L-zhengzhou3"]);
 // ---- 搜尋:`S~i~j~…` 是 LEVERS 第 i、j…根疊起來(tuning/23/search.mjs 用;名字短,檔名才不會太長)
 export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4",
