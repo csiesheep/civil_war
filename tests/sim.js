@@ -11,6 +11,12 @@
 // per child process, default 10), --ccp=normal --kmt=normal (levels). --json (one cell) prints the
 // chunk's sums as JSON: that is how the children talk to the parent.
 //
+// #23, variants: --variant=<name> plays every game under the named options of
+// tuning/23/variants.mjs (`VARIANTS`), with the cell's own switches laid over them (a cell's key
+// wins). The state file's meta records the name and the whole options object. --cell=X with --out
+// runs that one cell in child processes and writes a state file, like --cells does for all five:
+//   node tests/sim.js 300 --cell=full --variant=P --jobs=10 --out=tuning/23/P.txt
+//
 // The contract (#15, orchestrator's ruling; tests/sim.test.js replays every game and measures again):
 //   CELLS          the options of each cell
 //   playGame       one game -> { st, rec }
@@ -141,10 +147,18 @@ function addSums(a, b) {
 // ---------------------------------------------------------------- a chunk (one child process)
 // The games of seeds first .. first + count - 1 in one cell: their sums, and every game that threw
 // (by seed) kept out of the sums and reported.
-function runChunk({ cell, first, count, ccp, kmt }) {
+// #23: the variants, read from tuning/23/variants.mjs only when one is named.
+async function variantOptions(name) {
+  if (!name) return {};
+  const { VARIANTS, searchVariant } = await import("../tuning/23/variants.mjs");
+  const v = VARIANTS[name] || (searchVariant && searchVariant(name));
+  if (!v) throw new Error(`unknown variant ${name}; the variants are ${Object.keys(VARIANTS).join(", ")}`);
+  return v.options;
+}
+function runChunk({ cell, first, count, ccp, kmt, variant = {} }) {
   const t0 = Date.now(), list = [], errors = [];
   for (let seed = first; seed < first + count; seed++) {
-    try { list.push(playGame(seed, { ccp, kmt, options: CELLS[cell] })); }
+    try { list.push(playGame(seed, { ccp, kmt, options: { ...variant, ...CELLS[cell] } })); }
     catch (e) { errors.push({ seed, message: String((e && e.message) || e).slice(0, 400) }); }
   }
   return { cell, first, count, sum: summarize(list), errors, ms: Date.now() - t0 };
@@ -152,7 +166,7 @@ function runChunk({ cell, first, count, ccp, kmt }) {
 
 // ---------------------------------------------------------------- command line
 function parseArgs(argv) {
-  const cfg = { games: 100, seed: 1, ccp: "normal", kmt: "normal", cell: "full", cells: false, jobs: 8, chunk: 10, out: null, resume: false, json: false, report: null };
+  const cfg = { games: 100, seed: 1, ccp: "normal", kmt: "normal", cell: "full", cells: false, jobs: 8, chunk: 10, out: null, resume: false, json: false, report: null, variant: null };
   for (const a of argv) {
     const [k, v] = a.includes("=") ? [a.slice(0, a.indexOf("=")), a.slice(a.indexOf("=") + 1)] : [a, null];
     if (/^\d+$/.test(a)) cfg.games = Number(a);
@@ -167,6 +181,7 @@ function parseArgs(argv) {
     else if (k === "--resume") cfg.resume = true;
     else if (k === "--json") cfg.json = true;
     else if (k === "--report") cfg.report = v;
+    else if (k === "--variant") cfg.variant = v;
     else throw new Error(`unknown argument ${a}`);
   }
   if (!cfg.cells && !(cfg.cell in CELLS)) throw new Error(`unknown cell ${cfg.cell}; the cells are ${Object.keys(CELLS).join(", ")}`);
@@ -177,7 +192,7 @@ function parseArgs(argv) {
 const NODE_FLAGS = (process.env.SIM_NODE_FLAGS || "").split(" ").filter(Boolean);
 const SELF = fileURLToPath(import.meta.url);
 function runChild(job, tries) {
-  const args = [String(job.count), `--cell=${job.cell}`, `--seed=${job.first}`, `--ccp=${job.ccp}`, `--kmt=${job.kmt}`, "--json"];
+  const args = [String(job.count), `--cell=${job.cell}`, `--seed=${job.first}`, `--ccp=${job.ccp}`, `--kmt=${job.kmt}`, ...(job.variant ? [`--variant=${job.variant}`] : []), "--json"];
   return new Promise((done, fail) => {
     const child = spawn(process.execPath, [...NODE_FLAGS, SELF, ...args], { stdio: ["ignore", "pipe", "inherit"] });
     let out = "";
@@ -211,24 +226,30 @@ function saveState(path, state) {
   renameSync(tmp, path);
 }
 async function runCells(cfg) {
-  const meta = { games: cfg.games, seed: cfg.seed, ccp: cfg.ccp, kmt: cfg.kmt, cells: CELLS };
+  // #23: --cells plays all five; --cell=X with --out only that one. A variant's name and its whole
+  // options object go into the meta, so the state file says what it played.
+  const names = cfg.cells ? Object.keys(CELLS) : [cfg.cell];
+  const vopts = await variantOptions(cfg.variant);
+  const meta = { games: cfg.games, seed: cfg.seed, ccp: cfg.ccp, kmt: cfg.kmt, cells: Object.fromEntries(names.map((n) => [n, CELLS[n]])) };
+  if (cfg.variant) { meta.variant = cfg.variant; meta.variantOptions = vopts; }
   const statePath = cfg.out ? cfg.out + ".state.json" : null;
   let state = null;
   if (statePath && cfg.resume && existsSync(statePath)) {
     state = JSON.parse(readFileSync(statePath, "utf8"));
     const was = state.meta;
-    if (was.seed !== meta.seed || was.ccp !== meta.ccp || was.kmt !== meta.kmt || JSON.stringify(was.cells) !== JSON.stringify(meta.cells)) {
+    if (was.seed !== meta.seed || was.ccp !== meta.ccp || was.kmt !== meta.kmt || JSON.stringify(was.cells) !== JSON.stringify(meta.cells)
+      || (was.variant ?? null) !== (meta.variant ?? null) || JSON.stringify(was.variantOptions ?? null) !== JSON.stringify(meta.variantOptions ?? null)) {
       throw new Error(`--resume: ${statePath} is another batch (${JSON.stringify(was)}); start a new --out`);
     }
     state.meta.games = Math.max(was.games, meta.games); // a resume may ask for more games
   }
   if (!state) state = { meta, cells: {} };
-  for (const name of Object.keys(CELLS)) state.cells[name] ??= { done: [], sum: summarize([]), errors: [], ms: 0 };
+  for (const name of names) state.cells[name] ??= { done: [], sum: summarize([]), errors: [], ms: 0 };
 
   // A chunk is skipped when every one of its seeds lies in a finished chunk, so a resume with another
   // --chunk never counts a game twice.
   const queue = [];
-  for (const name of Object.keys(CELLS)) {
+  for (const name of names) {
     const covered = new Set();
     for (const d of state.cells[name].done) { const [f, c] = d.split(":").map(Number); for (let k = 0; k < c; k++) covered.add(f + k); }
     for (let start = 0; start < cfg.games; start += cfg.chunk) {
@@ -238,14 +259,14 @@ async function runCells(cfg) {
       // Split a partly covered chunk into the runs of seeds still to play.
       for (let k = 0; k < todo.length;) {
         let j = k; while (j + 1 < todo.length && todo[j + 1] === todo[j] + 1) j++;
-        queue.push({ cell: name, first: todo[k], count: j - k + 1, ccp: cfg.ccp, kmt: cfg.kmt });
+        queue.push({ cell: name, first: todo[k], count: j - k + 1, ccp: cfg.ccp, kmt: cfg.kmt, variant: cfg.variant });
         k = j + 1;
       }
     }
   }
   const total = queue.reduce((a, j) => a + j.count, 0);
   const note = (text) => { console.error(text); if (cfg.out) appendFileSync(cfg.out, text + "\n"); };
-  note(`# ${new Date().toISOString()} ${queue.length} chunks, ${total} games to play (${cfg.games} per cell, seeds ${cfg.seed}..${cfg.seed + cfg.games - 1}, ${cfg.ccp} vs ${cfg.kmt}, ${cfg.jobs} jobs)`);
+  note(`# ${new Date().toISOString()} ${queue.length} chunks, ${total} games to play (${cfg.games} per cell, seeds ${cfg.seed}..${cfg.seed + cfg.games - 1}, ${cfg.ccp} vs ${cfg.kmt}, ${cfg.jobs} jobs${cfg.variant ? `, variant ${cfg.variant}` : ""})`);
   if (statePath) saveState(statePath, state);
   let played = 0;
   const worker = async () => {
@@ -320,6 +341,7 @@ function report(state) {
   out.push(`# 第一輪模擬`);
   out.push("");
   out.push(`${m.ccp || "normal"}(共軍)對 ${m.kmt || "normal"}(國軍),每個 cell 種子 ${m.seed}..${m.seed + m.games - 1}(五個 cell 打同一批種子)。`);
+  if (m.variant) out.push(`\n變體 \`${m.variant}\`(cell 的開關疊在上面):\`${JSON.stringify(m.variantOptions)}\``);
   out.push(`比例後面是 Wilson 95% 區間與 (局數/分母);平均後面是 n。民心:正 = 偏共軍,負 = 偏國軍。「回合末」是引擎的 \`probe.turnEnd\`:在結算途中結束的那一回合沒有回合末,所以 n 會比局數少。`);
   out.push("");
   out.push(head("cell"));
@@ -445,12 +467,12 @@ if (process.argv[1] && resolve(process.argv[1]) === SELF) {
   const cfg = parseArgs(process.argv.slice(2));
   if (cfg.report) {
     console.log(report(JSON.parse(readFileSync(cfg.report, "utf8"))));
-  } else if (cfg.cells) {
+  } else if (cfg.cells || cfg.out) {
     const state = await runCells(cfg);
     if (!cfg.out) console.log(report(state));
     else console.error(`# the table: node tests/sim.js --report=${cfg.out}.state.json`);
   } else {
-    const r = runChunk({ cell: cfg.cell, first: cfg.seed, count: cfg.games, ccp: cfg.ccp, kmt: cfg.kmt });
+    const r = runChunk({ cell: cfg.cell, first: cfg.seed, count: cfg.games, ccp: cfg.ccp, kmt: cfg.kmt, variant: await variantOptions(cfg.variant) });
     if (cfg.json) console.log(JSON.stringify(r));
     else {
       const only = { meta: { games: cfg.games, seed: cfg.seed, ccp: cfg.ccp, kmt: cfg.kmt }, cells: { [cfg.cell]: { done: [], sum: r.sum, errors: r.errors, ms: r.ms } } };

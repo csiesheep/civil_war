@@ -289,7 +289,7 @@ const EFFECTS = {
       const had = E.controller(st, t) === C;
       E.campaign(st, C, t, CARD.winter_offensive.ops + 1, { pusher: st.phasing });
       if (had || st.winner != null || E.controller(st, t) !== C) return null;
-      return pick(C, placeable(st, C, SPACE[t].adj.filter((a) => SPACE[a].kind === "city")), { side: C });
+      return pick(C, placeable(st, C, E.adjOf(st, t).filter((a) => SPACE[a].kind === "city")), { side: C });
     }
     const [id] = ch[1];
     if (id) E.place(st, C, id, 1);
