@@ -24,6 +24,11 @@
 // isolation item is now 「開局(第 0 回合,免費放置)沒有城成孤城」 (孤城數逐回合上升 is item 6 already); the
 // old reading is still printed, as 只看. The stop items stay the mandate curve and this isolation item.
 //
+// owner 裁決(#23, 2026-10-03, second pop-up): after round two (P4: both stop items pass, but 60% of the
+// games end by turn 5 and 民心 ends 69% of them) the owner chose 「開放民心門檻,再調一輪」, whose text read:
+// 讓 BE 試「民心勝利的門檻」與「最早哪一回合可以民心勝利」。目的是讓多數對局打到決戰期,「共軍後期佔優」才看得到;
+// 保住 P4 已經過的五項. So a ninth item: 多數對局打到決戰期 -- more than half of the games end at turn 7 or later.
+//
 // How each sentence is read is the orchestrator's (#23), written next to each check below. Every
 // per-turn number only counts the games that reached the end of that turn, so a late turn is the
 // picture of the few long games: a turn is judged only when at least MIN_N games reached it.
@@ -113,6 +118,13 @@ export function judge(sum, meta = {}) {
     for (const t of ts) { const u = avg(t, "us"), s = avg(t, "su"); if (Math.abs(u - US[t - 1]) > 1) off.push(`美 ${t}:${u.toFixed(1)}`); if (Math.abs(s - SU[t - 1]) > 1) off.push(`蘇 ${t}:${s.toFixed(1)}`); }
     add("support", "兩條支持度軌大致照腳本(每回合平均和腳本差不到一格)", ts.length > 0 && !off.length,
       `美 ${ts.map((t) => avg(t, "us").toFixed(1)).join(" ")}(腳本 ${fmt(US)});蘇 ${ts.map((t) => avg(t, "su").toFixed(1)).join(" ")}(腳本 ${fmt(SU)})` + (off.length ? `;差一格以上:${off.join("、")}` : ""));
+  }
+  // 9 多數對局打到決戰期 (owner 裁決 #23, second pop-up): more than half of the games end at turn 7 or later
+  {
+    const ended = (lo, hi) => Object.entries(sum.endTurns).filter(([t]) => Number(t) >= lo && Number(t) <= hi).reduce((a, [, k]) => a + k, 0);
+    const late = ended(7, 99);
+    add("length", "多數對局打到決戰期(第 7 回合以後才結束的過半)", late / g > 0.5,
+      `第 7 回合以後結束 ${pct(late, g)};第 5 回合以前結束 ${pct(ended(0, 5), g)};各回合 ${Object.keys(sum.endTurns).sort((a, b) => a - b).map((t) => `${t}:${sum.endTurns[t]}`).join(" ")}`);
   }
   return out;
 }
