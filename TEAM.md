@@ -110,6 +110,8 @@ cwd 就是它。每個 `_wt/` 工作樹有 `__MARKER_ORCH.txt`(name + SHA)。
 再從 log 裡取 `VERDICT` 那一行和 `失敗 ·` 開頭的每一行。等有畫面(M3)再加頁面版。
 另外兩支(一樣先落檔再取判決那一行):`node --test tests/fuzz.test.js`(隨機合法對局兩千局加五個控制組,約兩分鐘;取 `FUZZ-VERDICT` 與 `FUZZ-CELLS-VERDICT`)、
 `node --test tests/bots.test.js`(bot 對局約 150 局,幾分鐘;取 `BOTS-VERDICT`;`BOTS_SCALE=0.25` 快速看一眼)。`npm test` 是 `node --test`,三支都跑。
+模擬的目標(計畫「第一輪模擬」那八個數字):`node tests/targets.mjs <out>.state.json`,讀 `tests/sim.js` 寫的狀態檔,
+每個 cell 印八項的通過 / 失敗與 `TARGETS <cell> 通過 n / 8` 那一行;停損的兩項是民心曲線與孤城時間。
 `node --test` 不要寫成 `node --test tests/`(Windows 上會出錯)。Node 在這台機器上長時間跑會隨機當掉:失敗的測試先重跑一次再相信。
 `.gitignore` 加 `__MARKER_ORCH.txt`、`__orch_*` 與 `.claude/worktrees/`。建議 alias:`alias orch='bash tools/orch.sh'`。
 ⚠ `orch rm` 之前先離開那個目錄——cwd 在裡面時 Windows 刪不掉。
