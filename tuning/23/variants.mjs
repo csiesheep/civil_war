@@ -174,6 +174,16 @@ export const VARIANTS = {
     why: "同上,調得更低",
     options: { regionValues: { rear: { presence: 0, domination: 0, control: 1 } } },
   },
+  "L-regions75": {
+    what: "四個戰區的分值約打七五折:華北、華東中原 4/8/10 → 3/6/8,東北 3/6/8 → 2/5/6,西北 2/3/4 不動",
+    why: "",
+    options: { regionValues: { north: { presence: 3, domination: 6, control: 8 }, east: { presence: 3, domination: 6, control: 8 }, northeast: { presence: 2, domination: 5, control: 6 } } },
+  },
+  "L-regions50": {
+    what: "四個戰區的分值打對折:華北、華東中原 2/4/5,東北 2/3/4,西北 1/2/2",
+    why: "",
+    options: { regionValues: { north: { presence: 2, domination: 4, control: 5 }, east: { presence: 2, domination: 4, control: 5 }, northeast: { presence: 2, domination: 3, control: 4 }, northwest: { presence: 1, domination: 2, control: 2 } } },
+  },
   "L-kmtfirst": {
     what: "受降的免費放置國軍先放(未決項 13)",
     why: "一般命令第一號讓國軍先受降;共軍是看著國軍的部署去搶",
@@ -229,6 +239,21 @@ minus("H5", "G2", ["L-seats1", "L-soviet2"], ["L-seats1b"]);
 minus("H6", "G2", ["L-seats1", "L-soviet2"], ["L-seats1b", "L-ccpbase"]);
 minus("H7", "G2", ["L-soviet2"]);
 minus("H8", "G1", ["L-soviet2"]);
+combo("G2+r75", "G2 + 分值七五折", ["G2", "L-regions75"]);
+combo("G2+r50", "G2 + 分值對折", ["G2", "L-regions50"]);
+combo("G1+r75", "G1 + 分值七五折", ["G1", "L-regions75"]);
+// ---- 提案(第四節 3 的消去表:P-no-<項> 是提案拿掉那一項)
+// G1 少了「本據不收免費放置」:在 G1 裡拿掉它,200 局一局不差(S~3~8~10~12~13~16~20~21),不承重。
+export const PROPOSAL = ["L-chasui4", "L-seats1", "L-rounds77", "L-soviet2", "L-sealall", "L-turning76", "L-rear012", "L-sovt4"];
+combo("P", "提案", PROPOSAL);
+for (const l of PROPOSAL) minus(`P-no-${l.slice(2)}`, "P", [l]);
+// 孤城時間最好的那一個(爬山搜尋第一步走到的 S~0~3~5~6~8~10~12~13~14~15~16~18~20~21~23,本據不收免費放置在那裡也不承重):對照用,不是提案
+// 第二輪:P 的消去表(1,000 局,種子 1–1000)裡,拿掉「蘇聯第 4 回合 +1」沒有一項變壞、數字也幾乎沒動(共軍勝 52.8% → 50.2%,
+// 民心第 6 回合末 +0.5 → +0.1,其他各項差不到 1 個百分點),刪掉。P2 是刪掉之後的提案。
+export const PROPOSAL2 = PROPOSAL.filter((l) => l !== "L-sovt4");
+combo("P2", "提案(第二輪)", PROPOSAL2);
+for (const l of PROPOSAL2) minus(`P2-no-${l.slice(2)}`, "P2", [l]);
+combo("Q", "孤城最晚的對照組", ["P", "L-huaihai3", "L-pinghan", "L-jinzhong3", "L-jinpu", "L-nerail", "L-zhengzhou3"]);
 // ---- 搜尋:`S~i~j~…` 是 LEVERS 第 i、j…根疊起來(tuning/23/search.mjs 用;名字短,檔名才不會太長)
 export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4",
   "L-rounds77", "L-uscap3", "L-seats1", "L-seats1b", "L-sealall", "L-rear012", "L-jinzhong3", "L-jinpu", "L-soviet2", "L-counter2",
