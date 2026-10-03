@@ -125,8 +125,8 @@ export function eraLimits(st, turn = st.turn) {
     const s = SYMMETRIC_ERAS.filter((e) => t >= e.from).pop();
     return { hand: [s.hand, s.hand], rounds: [s.rounds, s.rounds] };
   }
-  const e = eraOf(t);
-  return { hand: e.hand.slice(), rounds: e.rounds.slice() };
+  const e = eraOf(t), o = tune(st, "eraRounds") && st.options.eraRounds[e.id];
+  return { hand: (o && o.hand ? o.hand : e.hand).slice(), rounds: (o && o.rounds ? o.rounds : e.rounds).slice() };
 }
 // 時局 (mechanism F, rulebook 三): eight, in a fixed order, one per turn, face up
 // from the start. What each does is read from the turn number (`situationOf`)
@@ -262,6 +262,34 @@ export function reformName(side, box) {
 // `garrison`: false and only false removes 美軍駐華 (`garrisoned`); #4 kept it
 // out of `aid`, so H's control cell is `aid: false` with `garrison: false`.
 export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true, situations: true, rounds: "asymmetric", garrison: true };
+// #23, the tuning options: what a variant (tuning/23/variants.mjs) may change,
+// so the harness can measure a rule before the owner adopts it. NONE of them is
+// a key of DEFAULT_OPTIONS, and an absent one plays as today, byte for byte
+// (tests/fuzz.test.js's action count is the fingerprint). Each is read in one
+// place, named here:
+//   setupPoints        { ccp: { <space>: n }, kmt: { <space>: n } }: the named
+//                      spaces start with n instead of SETUP's (0 = none) (`startGame`)
+//   setupFree          [Communists, Nationalists]: the free placement's points (`startGame`)
+//   setupFreeBar       { ccp: [...], kmt: [...] }: spaces taken out of that side's
+//                      free placement list (`startGame`)
+//   setupOrder         "kmt-first": the Nationalists place first (open item 13) (`startGame`)
+//   eraRounds          { <era id>: { hand: [c, k], rounds: [c, k] } }: the era's
+//                      hand sizes and action rounds; "symmetric" still wins (`eraLimits`)
+//   regionValues       { <region>: { presence, domination, control } } (`regionTally`)
+//   supportStart       [蘇聯支持, 美國支持] at the start (`startGame`)
+//   supportSchedule    a whole replacement of SUPPORT_SCHEDULE (`supportSchedule`)
+//   aidCap             [蘇援, 美援]: an aid card's ops are min(track, cap) (`opsOf`)
+//   situationCampaign  { general_offensive: n, focused_offensive: [plus, minus],
+//                      counteroffensive: n, decisive_battle: n }: the 時局's
+//                      奇襲 modifiers (`situationCampaignMod`)
+//   attritionLosses    [usual, 決戰]: what a 孤城 loses at a turn's end (`attritionLoss`)
+//   sealNeeds          "all": 整編 also needs every space of the power controlled
+//                      by the Nationalists, as 易幟 needs them all red (`checkMarkers`)
+//   adjacency          { add: [[a, b], …], remove: [[a, b], …] } (`adjOf`)
+//   withdrawalKmt      { n, spaces }: 停戰's 蘇軍撤離, the Nationalists' points
+//                      and where they may go (today 4 among the Northeast's
+//                      three cities) (`situationStep`)
+const tune = (st, key) => st.options && st.options[key] != null;
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -425,6 +453,22 @@ const fail = (msg) => { throw new Error(msg); };
 
 // ---------- the board ----------
 export function infOf(st, id) { return st.inf[id] || [0, 0]; }
+// #23 `adjacency`: { add: [[a, b], …], remove: [[a, b], …] }, both directions.
+// Every rule that reads a neighbour asks here (placing, 遊說's 局勢 and its
+// realignment, supply); without the option it is board.js's own list.
+const adjMemo = new WeakMap();
+export function adjOf(st, id) {
+  const A = st.options && st.options.adjacency;
+  if (!A) return SPACE[id].adj;
+  let m = adjMemo.get(A);
+  if (!m) {
+    m = Object.fromEntries(SPACES.map((s) => [s.id, s.adj.slice()]));
+    for (const [a, b] of A.remove || []) { m[a] = m[a].filter((x) => x !== b); m[b] = m[b].filter((x) => x !== a); }
+    for (const [a, b] of A.add || []) { if (!m[a].includes(b)) m[a].push(b); if (!m[b].includes(a)) m[b].push(a); }
+    adjMemo.set(A, m);
+  }
+  return m[id];
+}
 function ensure(st, id) { if (!st.inf[id]) st.inf[id] = [0, 0]; return st.inf[id]; }
 export function controller(st, id) {
   const [q, c] = infOf(st, id), S = SPACE[id].stability;
@@ -460,8 +504,8 @@ export function controlled(st, side) { return SPACES.filter((s) => controller(st
 export function canPlaceAt(st, side, id, reach = null) {
   if (reach) return reach.has(id);
   if (infOf(st, id)[side] > 0) return true;
-  if (st.options.reach === "ts") return SPACE[id].adj.some((a) => infOf(st, a)[side] > 0);
-  return SPACE[id].adj.some((a) => controller(st, a) === side);
+  if (st.options.reach === "ts") return adjOf(st, id).some((a) => infOf(st, a)[side] > 0);
+  return adjOf(st, id).some((a) => controller(st, a) === side);
 }
 export function reachFrom(st, side) {
   if (st.options.reach !== "ts") return null;
@@ -531,7 +575,7 @@ export function placeCost(st, side, id) { return controller(st, id) === other(si
 // 局勢 for 遊說: my controlled neighbours minus theirs.
 export function edge(st, side, id) {
   let e = 0;
-  for (const a of SPACE[id].adj) {
+  for (const a of adjOf(st, id)) {
     const c = controller(st, a);
     if (c === side) e++; else if (c === other(side)) e--;
   }
@@ -732,7 +776,8 @@ export function checkMarkers(st) {
       if (st.mieHold) delete st.mieHold[id];
       if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, CCP, s.vp); }
     }
-    const sealed = capCtl === KMT && (st.options.sealAt !== "cap" || infOf(st, s.capital)[KMT] >= capOf(st, s.capital));
+    const sealed = capCtl === KMT && (st.options.sealAt !== "cap" || infOf(st, s.capital)[KMT] >= capOf(st, s.capital))
+      && (st.options.sealNeeds !== "all" || sp.every((x) => controller(st, x) === KMT));
     if (sealed && !st.seals[id]) {
       st.seals[id] = true; log(st, { type: "seal", state: id });
       if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, KMT, 1); }
@@ -755,7 +800,7 @@ function scoringKey(st, id) {
   return SPACE[id].battleground || (st.options.baseScoring === true && SPACE[id].base === true);
 }
 export function regionTally(st, region) {
-  const ids = spacesOf(region), R = REGIONS[region];
+  const ids = spacesOf(region), R = tune(st, "regionValues") && st.options.regionValues[region] ? { ...REGIONS[region], ...st.options.regionValues[region] } : REGIONS[region];
   const res = [CCP, KMT].map((side) => {
     const ctl = ids.filter((id) => controller(st, id) === side);
     return { spaces: ctl.length, bg: ctl.filter((id) => scoringKey(st, id)).length, ids: ctl };
@@ -847,8 +892,9 @@ function constitutionStep(st, step) {
 // 0 whatever the effects say (細則: 支持度是 0 時不能用,即使有 +1). Otherwise
 // it takes the 「所有牌行動點 ±1」 effects as a card does, never below 1.
 export function opsOf(st, side, cardId) {
-  const base = isAid(cardId) ? (st.support || [])[aidSide(cardId)] || 0 : CARD[cardId].ops;
+  let base = isAid(cardId) ? (st.support || [])[aidSide(cardId)] || 0 : CARD[cardId].ops;
   if (base === 0) return 0;
+  if (isAid(cardId) && tune(st, "aidCap") && st.options.aidCap[aidSide(cardId)] != null) base = Math.min(base, st.options.aidCap[aidSide(cardId)]);
   let o = base;
   for (const e of st.effects) if (e.kind === "opsAll" && e.target === side) o += e.delta;
   return Math.max(1, o);
@@ -917,6 +963,16 @@ export function garrisoned(st, id) {
 function situationCampaignMod(st, side, target) {
   const sit = situationNow(st), sp = SPACE[target];
   if (!sit) return 0;
+  if (tune(st, "situationCampaign")) {
+    const m = { general_offensive: 1, focused_offensive: [1, 1], counteroffensive: 1, decisive_battle: 1, ...st.options.situationCampaign };
+    switch (sit.id) {
+      case "general_offensive": return side === KMT ? m.general_offensive : 0;
+      case "focused_offensive": return side !== KMT ? 0 : sp.region === "northwest" || sp.region === "east" ? m.focused_offensive[0] : -m.focused_offensive[1];
+      case "counteroffensive": return side === CCP && sp.kind === "village" ? m.counteroffensive : 0;
+      case "decisive_battle": return side === CCP && sp.kind === "city" ? m.decisive_battle : 0;
+      default: return 0;
+    }
+  }
   switch (sit.id) {
     case "general_offensive": return side === KMT ? 1 : 0;
     case "focused_offensive": return side !== KMT ? 0 : sp.region === "northwest" || sp.region === "east" ? 1 : -1;
@@ -982,9 +1038,9 @@ export function realignMod(st, side, id) {
 export function realignWhy(st, side, id) {
   const sp = SPACE[id], home = HOME_REGION[side];
   return {
-    adj: sp.adj.filter((a) => controller(st, a) === side),
+    adj: adjOf(st, id).filter((a) => controller(st, a) === side),
     more: infOf(st, id)[side] > infOf(st, id)[other(side)],
-    home: sp.region === home || sp.adj.some((a) => SPACE[a].region === home),
+    home: sp.region === home || adjOf(st, id).some((a) => SPACE[a].region === home),
   };
 }
 // 遊說 under `lobby: "realign"` / "realign-mild": `ops` attempts on `target`,
@@ -1179,7 +1235,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-02"; // #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")
+export const RULES_VERSION = "2026-10-02-2"; // #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1209,7 +1265,10 @@ function startGame(seed, options) {
   };
   for (const side of [CCP, KMT]) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
+    // #23 `setupPoints`: the named spaces start with the variant's number instead.
+    if (tune(st, "setupPoints")) for (const [id, n] of Object.entries(st.options.setupPoints[SIDES[side]] || {})) ensure(st, id)[side] = n;
   }
+  if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   // CIVIL WAR: the first era's deck is drawn from; the other two wait in
   // `later` under their era ids, which `startTurn` shuffles in at turns 4 and 7.
@@ -1222,11 +1281,16 @@ function startGame(seed, options) {
   // as Qin did in Zongheng (the rulebook does not give an order: flagged).
   // With `situations: false` (#13) there is no 受降 and so no free placement:
   // the game goes straight to turn 1.
+  // #23: `setupFree`, `setupFreeBar` and `setupOrder` change the free placement.
+  const free = [CCP, KMT].map((side) => {
+    const S = SETUP[SIDES[side]];
+    const n = tune(st, "setupFree") ? st.options.setupFree[side] : S.free;
+    const bar = (tune(st, "setupFreeBar") && st.options.setupFreeBar[SIDES[side]]) || null;
+    return { do: "setup", side, n, spaces: bar ? S.freeIn.filter((id) => !bar.includes(id)) : S.freeIn, choices: [] };
+  });
+  if (st.options.setupOrder === "kmt-first") free.reverse();
   st.plan = [
-    ...(situationNow(st)?.id === "surrender" ? [
-      { do: "setup", side: CCP, n: SETUP.ccp.free, spaces: SETUP.ccp.freeIn, choices: [] },
-      { do: "setup", side: KMT, n: SETUP.kmt.free, spaces: SETUP.kmt.freeIn, choices: [] },
-    ] : []),
+    ...(situationNow(st)?.id === "surrender" ? free : []),
     { do: "startTurn" },
   ];
   return run(st);
@@ -1490,7 +1554,7 @@ export const SUPPORT_SCHEDULE = [
   { turn: 8, side: KMT, delta: -2 },
 ];
 function supportSchedule(st) {
-  for (const m of SUPPORT_SCHEDULE) {
+  for (const m of tune(st, "supportSchedule") ? st.options.supportSchedule : SUPPORT_SCHEDULE) {
     if (m.turn === st.turn && (m.kmtReform == null || st.reform[KMT] >= m.kmtReform)) moveSupport(st, m.side, m.delta);
   }
 }
@@ -1520,10 +1584,12 @@ function situationStep(st, step) {
     step.stage = "withdrawKmt";
   }
   if (step.stage === "withdrawKmt") {
-    const options = NE("city").filter((id) => infOf(st, id)[KMT] < capOf(st, id));
+    // #23 `withdrawalKmt`: { n, spaces } replaces the 4 points and the three cities.
+    const W = tune(st, "withdrawalKmt") ? st.options.withdrawalKmt : null;
+    const options = (W && W.spaces ? W.spaces : NE("city")).filter((id) => infOf(st, id)[KMT] < capOf(st, id));
     // Room for 4 is always there in play (nobody can place in these cities on
     // turn 1); short of it, as many as fit.
-    const n = Math.min(4, options.reduce((t, id) => t + capOf(st, id) - infOf(st, id)[KMT], 0));
+    const n = Math.min(W && W.n != null ? W.n : 4, options.reduce((t, id) => t + capOf(st, id) - infOf(st, id)[KMT], 0));
     if (n > 0) {
       if (!step.choices.length) return situationAsk(st, step, KMT, { kind: "points", n, min: n, options, side: KMT });
       const points = step.choices.shift();
@@ -2064,7 +2130,7 @@ export function supplied(st) {
   const open = (id) => controller(st, id) !== CCP;
   const queue = supplySources(st).filter(open), seen = new Set(queue);
   while (queue.length) {
-    for (const a of SPACE[queue.shift()].adj) if (!seen.has(a) && open(a)) { seen.add(a); queue.push(a); }
+    for (const a of adjOf(st, queue.shift())) if (!seen.has(a) && open(a)) { seen.add(a); queue.push(a); }
   }
   return seen;
 }
@@ -2095,6 +2161,7 @@ function placeBarred(st, side) {
 // Exported read-only for the bots (#12): what the evaluation expects a 孤城 to lose.
 export function attritionLoss(st) {
   if (!st.options.supply || st.effects.some((e) => e.kind === "noAttrition")) return 0;
+  if (tune(st, "attritionLosses")) return st.options.attritionLosses[situationNow(st)?.id === "decisive_battle" ? 1 : 0];
   return situationNow(st)?.id === "decisive_battle" ? 2 : 1;
 }
 // At the end of the turn, after the capital check (so a capital that moved
