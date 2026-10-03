@@ -24,10 +24,13 @@ for (const arg of process.argv.slice(2)) {
       marks: r.map((x) => (x.pass ? "過" : "×")).join(""),
       pass: r.filter((x) => x.pass).length,
       stop: r.filter((x) => x.key === "mandate" || x.key === "isolation").every((x) => x.pass) ? "過" : "×",
+      total: r.length, end7: p(Object.entries(s.endTurns).filter(([t]) => Number(t) >= 7).reduce((a, [, k]) => a + k, 0), g),
       g, ccp: p(s.wins[0], g), ali4: p(s.sealsBefore4, g), late: p(l, e + l), late4: p(t4, e + l), zero: (Object.values(s.firstIsolated).reduce((a, d) => a + (d["0"] || 0), 0) / g).toFixed(2), unif: p(s.reasons.unification || 0, s.wins[0]), reasons, m, n,
     });
   }
 }
-console.log("| 變體 / cell | 局數 | 八項(民心、勝率、結束、易幟、開局孤城、孤城數、遷都、支持度) | 通過 | 停損兩項 | 共軍勝 | 整編在第 4 回合前 | 開局孤城(每局) | 只看:第一次孤城在第 5 回合以後 | 易幟 / 共軍勝 | 民心第 1–8 回合末 | 打到該回合末的局數 | 結束方式 |");
+// #23 round three: the items are as many as targets.mjs judges (nine since main 568ec06); the 只看
+// isolation reading gave its column to 「第 7 回合以後結束」 (item 9's number).
+console.log("| 變體 / cell | 局數 | 各項(民心、勝率、結束、易幟、開局孤城、孤城數、遷都、支持度、打到決戰期) | 通過 | 停損兩項 | 共軍勝 | 整編在第 4 回合前 | 開局孤城(每局) | 第 7 回合以後結束 | 易幟 / 共軍勝 | 民心第 1–8 回合末 | 打到該回合末的局數 | 結束方式 |");
 console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
-for (const x of rows) console.log(`| ${x.name} | ${x.g} | ${x.marks} | ${x.pass} / 8 | ${x.stop} | ${x.ccp} | ${x.ali4} | ${x.zero} | ${x.late} | ${x.unif} | ${x.m} | ${x.n} | ${x.reasons} |`);
+for (const x of rows) console.log(`| ${x.name} | ${x.g} | ${x.marks} | ${x.pass} / ${x.total} | ${x.stop} | ${x.ccp} | ${x.ali4} | ${x.zero} | ${x.end7} | ${x.unif} | ${x.m} | ${x.n} | ${x.reasons} |`);
