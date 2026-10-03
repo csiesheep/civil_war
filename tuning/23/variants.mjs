@@ -184,10 +184,46 @@ export const VARIANTS = {
     why: "",
     options: { regionValues: { north: { presence: 2, domination: 4, control: 5 }, east: { presence: 2, domination: 4, control: 5 }, northeast: { presence: 2, domination: 3, control: 4 }, northwest: { presence: 1, domination: 2, control: 2 } } },
   },
+  "L-regionsNE75": {
+    what: "華北、華東中原的分值 4/8/10 → 3/6/8(東北、西北、後方不動)",
+    why: "",
+    options: { regionValues: { north: { presence: 3, domination: 6, control: 8 }, east: { presence: 3, domination: 6, control: 8 } } },
+  },
   "L-kmtfirst": {
     what: "受降的免費放置國軍先放(未決項 13)",
     why: "一般命令第一號讓國軍先受降;共軍是看著國軍的部署去搶",
     options: { setupOrder: "kmt-first" },
+  },
+  // ---- 第二輪(owner 裁決 #23,2026-10-03:孤城那一項改成「開局沒有城成孤城」,並修 P2 的副作用)
+  "L-ccpheld": {
+    what: "受降:共軍的免費放置只能放在開局時共軍已經控制的鄉(冀中、察綏、太行、冀魯豫、陝北)",
+    why: "一般命令第一號只准日軍向國軍投降,蔣 8 月 11 日令共軍「原地駐防待命」;共軍能受降的只有自己的解放區",
+    options: { setupFreeBar: { ccp: villages.filter((id) => !["jizhong", "chasui", "taihang", "jiluyu", "shanbei"].includes(id)) } },
+  },
+  "L-taiyuan1": {
+    what: "太原開局藍 2 → 1",
+    why: "太原的兵是閻錫山自己的晉綏軍,中央軍一直進不去;蔣始終沒能收編他",
+    options: { setupPoints: { kmt: { taiyuan: 1 } } },
+  },
+  "L-lanzhou3": {
+    what: "蘭州開局藍 2 → 3",
+    why: "馬家軍是西北最能打的部隊;蘭州是 1949 年 8 月硬打下來的,馬步芳沒有易幟",
+    options: { setupPoints: { kmt: { lanzhou: 3 } } },
+  },
+  "L-seal4": {
+    what: "整編從第 4 回合(1947 上)起才放標記",
+    why: "1946 年政協與停戰期間軍隊整編只停在紙上;蔣把地方實力派收進剿總體系是 1947 年以後(傅作義 1947 年 12 月任華北剿總)",
+    options: { sealFrom: 4 },
+  },
+  "L-mienorth": {
+    what: "易幟的即時勝利,三家裡要有華北的兩家(綏、晉)",
+    why: "規則書第三節自己的設計:「易幟則要打下華北兩家,再加蘭州或桂系,那是 1949 年的事」",
+    options: { mieNeeds: ["sui", "jin"] },
+  },
+  "L-mie4": {
+    what: "易幟的即時勝利要四家(3 → 4)",
+    why: "",
+    options: { mie: 4 },
   },
   "L-sealall": {
     what: "整編還要控制那一家的全部地盤(和易幟對稱)",
@@ -253,14 +289,59 @@ for (const l of PROPOSAL) minus(`P-no-${l.slice(2)}`, "P", [l]);
 export const PROPOSAL2 = PROPOSAL.filter((l) => l !== "L-sovt4");
 combo("P2", "提案(第二輪)", PROPOSAL2);
 for (const l of PROPOSAL2) minus(`P2-no-${l.slice(2)}`, "P2", [l]);
+// 第二輪的候選
+combo("R1", "P2 + 共軍只在自己控制的鄉受降", ["P2", "L-ccpheld"]);
+combo("R2", "R1 + 易幟要四家", ["R1", "L-mie4"]);
+minus("R3", "R1", ["L-seats1"], ["L-seats1b"]);
+minus("R4", "R2", ["L-seats1"], ["L-seats1b"]);
+minus("R5", "R1", ["L-chasui4"]);
+minus("R6", "R2", ["L-chasui4"]);
+combo("T1", "受降限制 + 回合 + 蘇聯 2 + 後方 + 整編全地盤 + 察綏紅 4 + 只有太原藍 1(本據不收免費放置)",
+  ["L-ccpheld", "L-seatbar", "L-chasui4", "L-taiyuan1", "L-rounds77", "L-soviet2", "L-sealall", "L-turning76", "L-rear012"]);
+minus("T2", "T1", ["L-chasui4"]);
+minus("T3", "T1", ["L-sealall"]);
+combo("T4", "T1 + 蘭州藍 3", ["T1", "L-lanzhou3"]);
+combo("T5", "T1 + 易幟要四家", ["T1", "L-mie4"]);
+combo("T6", "T1 + 分值七五折", ["T1", "L-regions75"]);
+combo("T7", "T1 + 分值對折", ["T1", "L-regions50"]);
+combo("T8", "T4 + 分值七五折", ["T4", "L-regions75"]);
+combo("U1", "受降限制 + 察綏紅 4 + 回合 + 蘇聯 2 + 後方 + 整編從第 4 回合", ["L-ccpheld", "L-chasui4", "L-rounds77", "L-soviet2", "L-turning76", "L-rear012", "L-seal4"]);
+combo("U2", "U1 + 整編要全部地盤", ["U1", "L-sealall"]);
+combo("U3", "U1 + 分值七五折", ["U1", "L-regions75"]);
+combo("V1", "T1 + 易幟要華北兩家", ["T1", "L-mienorth"]);
+combo("V2", "V1 + 分值七五折", ["V1", "L-regions75"]);
+combo("V3", "V1 + 分值對折", ["V1", "L-regions50"]);
+minus("V4", "V1", ["L-taiyuan1"], ["L-seats1"]);
+combo("V5", "V1 + 蘭州藍 3", ["V1", "L-lanzhou3"]);
+combo("V6", "V1 + 整編從第 4 回合", ["V1", "L-seal4"]);
+combo("V7", "V1 + 整編從第 4 回合 + 分值七五折", ["V1", "L-seal4", "L-regions75"]);
+minus("V11", "V6", ["L-sealall"]);
+minus("V12", "V6", ["L-sealall", "L-taiyuan1", "L-seatbar"]);
+minus("V13", "V6", ["L-sealall", "L-taiyuan1", "L-seatbar"], ["L-regionsNE75"]);
+minus("V14", "V6", ["L-sealall"], ["L-regionsNE75"]);
+// 第二輪的提案(= V11)
+export const PROPOSAL3 = ["L-ccpheld", "L-seatbar", "L-chasui4", "L-taiyuan1", "L-rounds77", "L-soviet2", "L-turning76", "L-rear012", "L-mienorth", "L-seal4"];
+combo("P3", "提案(第二輪)", PROPOSAL3);
+for (const l of PROPOSAL3) minus(`P3-no-${l.slice(2)}`, "P3", [l]);
+// P3 拿掉「本據不收免費放置」在兩批種子上逐局相同(不承重),刪掉:P4 是第二輪最後的提案。
+export const PROPOSAL4 = PROPOSAL3.filter((l) => l !== "L-seatbar");
+combo("P4", "提案(第二輪,最後)", PROPOSAL4);
+// 消去表裡差距在雜訊內的兩項(後方 0/1/2、太原藍 1)一起拿掉,看它們是不是合起來才承重
+minus("P5", "P4", ["L-rear012", "L-taiyuan1"]);
 combo("Q", "孤城最晚的對照組", ["P", "L-huaihai3", "L-pinghan", "L-jinzhong3", "L-jinpu", "L-nerail", "L-zhengzhou3"]);
 // ---- 搜尋:`S~i~j~…` 是 LEVERS 第 i、j…根疊起來(tuning/23/search.mjs 用;名字短,檔名才不會太長)
 export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4",
   "L-rounds77", "L-uscap3", "L-seats1", "L-seats1b", "L-sealall", "L-rear012", "L-jinzhong3", "L-jinpu", "L-soviet2", "L-counter2",
   "L-nerail", "L-nerail6", "L-turning76", "L-sovt4", "L-decisive2", "L-zhengzhou3", "O1-seatbar", "O2-trunk", "O3-rounds66", "O5-rear001", "L-kmtfirst"];
+// 第二輪的搜尋:`T~i~j~…` 是 LEVERS2 第 i、j…根(「受降限制」L-ccpheld 一律在內)
+export const LEVERS2 = ["L-chasui4", "L-taiyuan1", "L-seats1", "L-seatbar", "L-rounds77", "O3-rounds66", "L-soviet2", "L-sealall",
+  "L-turning76", "L-rear012", "O5-rear001", "L-seal4", "L-mie4", "L-lanzhou3", "L-jinzhong3", "L-regions75", "L-regions50",
+  "L-counter2", "L-decisive2", "L-sovt4", "L-uscap3", "L-nerail", "L-pinghan", "L-chasui3"];
 export function searchVariant(name) {
-  if (!/^S(~\d+)*$/.test(name)) return null;
-  const parts = name.split("~").slice(1).map((i) => LEVERS[Number(i)]);
+  let parts;
+  if (/^S(~\d+)*$/.test(name)) parts = name.split("~").slice(1).map((i) => LEVERS[Number(i)]);
+  else if (/^T(~\d+)*$/.test(name)) parts = ["L-ccpheld", ...name.split("~").slice(1).map((i) => LEVERS2[Number(i)])];
+  else return null;
   return { what: parts.join(" + "), why: "", parts, options: merge(...parts) };
 }
 // 先把整編壓住,再在上面一根一根試

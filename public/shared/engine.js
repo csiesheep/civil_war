@@ -285,6 +285,10 @@ export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0
 //   attritionLosses    [usual, 決戰]: what a 孤城 loses at a turn's end (`attritionLoss`)
 //   sealNeeds          "all": 整編 also needs every space of the power controlled
 //                      by the Nationalists, as 易幟 needs them all red (`checkMarkers`)
+//   mieNeeds           [state, …]: the 易幟 instant win also needs these powers among
+//                      the ones flipped (`checkMarkers`)
+//   sealFrom           n: no 整編 marker is placed before turn n; from turn n on the
+//                      condition is read as always (`checkMarkers`)
 //   adjacency          { add: [[a, b], …], remove: [[a, b], …] } (`adjOf`)
 //   withdrawalKmt      { n, spaces }: 停戰's 蘇軍撤離, the Nationalists' points
 //                      and where they may go (today 4 among the Northeast's
@@ -777,13 +781,15 @@ export function checkMarkers(st) {
       if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, CCP, s.vp); }
     }
     const sealed = capCtl === KMT && (st.options.sealAt !== "cap" || infOf(st, s.capital)[KMT] >= capOf(st, s.capital))
-      && (st.options.sealNeeds !== "all" || sp.every((x) => controller(st, x) === KMT));
+      && (st.options.sealNeeds !== "all" || sp.every((x) => controller(st, x) === KMT))
+      && !(tune(st, "sealFrom") && st.turn < st.options.sealFrom);
     if (sealed && !st.seals[id]) {
       st.seals[id] = true; log(st, { type: "seal", state: id });
       if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, KMT, 1); }
     }
   }
-  if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, CCP, "unification");
+  if (st.winner == null && Object.keys(st.mie).length >= st.options.mie
+    && (!tune(st, "mieNeeds") || st.options.mieNeeds.every((s) => st.mie[s]))) win(st, CCP, "unification");
   if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, KMT, "alliance");
   if (st.winner == null && st.options.homeFall === "lose") {
     const losers = [CCP, KMT].filter((side) => controller(st, HOME_CAPITAL[side]) === other(side));
@@ -1235,7 +1241,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-02-2"; // #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))
+export const RULES_VERSION = "2026-10-03"; // #23 round two: `sealFrom`, `mieNeeds`; an absent key plays as before ("2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
