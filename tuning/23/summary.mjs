@@ -8,10 +8,12 @@ import { judge } from "../../tests/targets.mjs";
 const p = (k, n) => (n ? (100 * k / n).toFixed(1) + "%" : "–");
 const rows = [];
 for (const arg of process.argv.slice(2)) {
-  const [file, cellArg] = arg.split(":");
+  const [, file, cellArg] = /^(.*\.json)(?::(\w+))?$/.exec(arg); // a Windows path has its own colon
   const st = JSON.parse(readFileSync(file, "utf8"));
   for (const cell of cellArg ? [cellArg] : Object.keys(st.cells)) {
-    const s = st.cells[cell].sum, g = s.games, r = judge(s);
+    // #23 second round: judge reads the variant's own support script from the meta, and returns 只看
+    // items (`info`) that do not count.
+    const s = st.cells[cell].sum, g = s.games, r = judge(s, st.meta || {}).filter((x) => !x.info);
     let e = 0, l = 0, t4 = 0;
     for (const d of Object.values(s.firstIsolated)) for (const [t, k] of Object.entries(d)) { if (Number(t) <= 4) e += k; else l += k; if (Number(t) >= 4) t4 += k; }
     const m = [1, 2, 3, 4, 5, 6, 7, 8].map((t) => { const o = s.mandateByTurn[t]; return o ? `${(o.sum / o.n).toFixed(1)}` : "–"; }).join(" ");
@@ -22,10 +24,10 @@ for (const arg of process.argv.slice(2)) {
       marks: r.map((x) => (x.pass ? "過" : "×")).join(""),
       pass: r.filter((x) => x.pass).length,
       stop: r.filter((x) => x.key === "mandate" || x.key === "isolation").every((x) => x.pass) ? "過" : "×",
-      g, ccp: p(s.wins[0], g), ali4: p(s.sealsBefore4, g), late: p(l, e + l), late4: p(t4, e + l), unif: p(s.reasons.unification || 0, s.wins[0]), reasons, m, n,
+      g, ccp: p(s.wins[0], g), ali4: p(s.sealsBefore4, g), late: p(l, e + l), late4: p(t4, e + l), zero: (Object.values(s.firstIsolated).reduce((a, d) => a + (d["0"] || 0), 0) / g).toFixed(2), unif: p(s.reasons.unification || 0, s.wins[0]), reasons, m, n,
     });
   }
 }
-console.log("| 變體 / cell | 局數 | 八項(民心、勝率、結束、易幟、孤城時間、孤城數、遷都、支持度) | 通過 | 停損兩項 | 共軍勝 | 整編在第 4 回合前 | 第一次孤城在第 5 回合以後(在第 4 回合以後) | 易幟 / 共軍勝 | 民心第 1–8 回合末 | 打到該回合末的局數 | 結束方式 |");
-console.log("|---|---|---|---|---|---|---|---|---|---|---|---|");
-for (const x of rows) console.log(`| ${x.name} | ${x.g} | ${x.marks} | ${x.pass} / 8 | ${x.stop} | ${x.ccp} | ${x.ali4} | ${x.late}(${x.late4}) | ${x.unif} | ${x.m} | ${x.n} | ${x.reasons} |`);
+console.log("| 變體 / cell | 局數 | 八項(民心、勝率、結束、易幟、開局孤城、孤城數、遷都、支持度) | 通過 | 停損兩項 | 共軍勝 | 整編在第 4 回合前 | 開局孤城(每局) | 只看:第一次孤城在第 5 回合以後 | 易幟 / 共軍勝 | 民心第 1–8 回合末 | 打到該回合末的局數 | 結束方式 |");
+console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+for (const x of rows) console.log(`| ${x.name} | ${x.g} | ${x.marks} | ${x.pass} / 8 | ${x.stop} | ${x.ccp} | ${x.ali4} | ${x.zero} | ${x.late} | ${x.unif} | ${x.m} | ${x.n} | ${x.reasons} |`);
