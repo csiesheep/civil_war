@@ -62,19 +62,28 @@ export function judge(sum, meta = {}) {
   const mean = (o) => (o && o.n ? o.sum / o.n : null);
   const judged = (o) => o && o.n >= MIN_N;
 
-  // 1 民心: mean mandate (negative = the Nationalists ahead) below 0 at the end of turns 1 to 3; the first
-  // turn whose mean is at least 0 is turn 4, 5 or 6; every judged turn after it above 0. Turns 1 to 3 and
-  // the crossing turn must be reached by a quarter of the games: a curve that only the longest few games
-  // draw is not 「每回合結束時的民心」 of the game.
+  // 1 民心, read over ALL the games (orchestrator, #23 round four). The first reading averaged the mandate of the
+  // games still running at the end of each turn; round four showed that it rewards ending the Nationalist-led
+  // games early (P6 passed it because 31% of its games ended in a turn-4 整編, which left the survivors leaning
+  // Communist). Now each turn asks, over every game, who is ahead at the end of that turn: a game that has
+  // already ended (at that turn or before) counts for its winner; a game still running counts for the side
+  // the mandate leans to (negative = the Nationalists). `sum.aheadByTurn[t] = { ccp, kmt, tie }`, recorded by
+  // tests/sim.js. Pass: turns 1 to 3 more games Nationalist-led than Communist-led; the first turn with at least
+  // as many Communist-led games is turn 4, 5 or 6; every later turn more Communist-led. The first reading is
+  // still printed, as 只看.
   {
-    const m = TURNS.map((t) => mean(sum.mandateByTurn[t])), wide = (t) => judged(sum.mandateByTurn[t]) && sum.mandateByTurn[t].n >= g / 4;
-    const ok3 = [1, 2, 3].every((t) => wide(t) && m[t - 1] < 0);
-    const cross = TURNS.find((t) => m[t - 1] != null && m[t - 1] >= 0);
-    const crossOk = cross >= 4 && cross <= 6 && wide(cross);
-    const after = cross ? TURNS.filter((t) => t > cross && judged(sum.mandateByTurn[t])).every((t) => m[t - 1] > 0) : false;
-    const curve = TURNS.map((t) => `${t}:${m[t - 1] == null ? "–" : m[t - 1].toFixed(1)}(${sum.mandateByTurn[t] ? sum.mandateByTurn[t].n : 0})`).join(" ");
-    add("mandate", "民心曲線(前三回合偏國軍、第 4 到 6 回合交叉、之後偏共軍)", ok3 && crossOk && after,
-      `${curve};${cross ? `第一次 ≥ 0 在第 ${cross} 回合` + (wide(cross) ? "" : `,但只有 ${sum.mandateByTurn[cross].n} 局打到那裡(不到四分之一)`) : "沒有交叉"}`);
+    const A = sum.aheadByTurn;
+    if (!A) add("mandate", "民心曲線(前三回合偏國軍、第 4 到 6 回合交叉、之後偏共軍;算全部對局)", false, "狀態檔沒有逐回合的領先方(tests/sim.js 要記錄 aheadByTurn)");
+    else {
+      const c = (t) => (A[t] ? A[t].ccp : 0), k = (t) => (A[t] ? A[t].kmt : 0);
+      const ok3 = [1, 2, 3].every((t) => k(t) > c(t)), cross = TURNS.find((t) => c(t) >= k(t));
+      const after = cross ? TURNS.filter((t) => t > cross).every((t) => c(t) > k(t)) : false;
+      add("mandate", "民心曲線(前三回合偏國軍、第 4 到 6 回合交叉、之後偏共軍;算全部對局)", ok3 && cross >= 4 && cross <= 6 && after,
+        `共軍領先 / 國軍領先(已結束的算贏家):${TURNS.map((t) => `${t}:${pct(c(t), g)}/${pct(k(t), g)}`).join(" ")};${cross ? `第一次共軍不落後在第 ${cross} 回合` : "沒有交叉"}`);
+    }
+    const m = TURNS.map((t) => mean(sum.mandateByTurn[t])), cross = TURNS.find((t) => m[t - 1] != null && m[t - 1] >= 0);
+    add("mandate-survivors", "(第一次的讀法)還在進行的對局的民心平均", null,
+      `${TURNS.map((t) => `${t}:${m[t - 1] == null ? "–" : m[t - 1].toFixed(1)}(${sum.mandateByTurn[t] ? sum.mandateByTurn[t].n : 0})`).join(" ")};${cross ? `第一次 ≥ 0 在第 ${cross} 回合` : "沒有交叉"}`, true);
   }
   // 2 共軍勝率
   add("ccpwin", "共軍勝率 35% 到 65%", sum.wins[0] / g >= 0.35 && sum.wins[0] / g <= 0.65, `${pct(sum.wins[0], g)}(${sum.wins[0]} / ${g})`);
@@ -159,7 +168,7 @@ if (SELF) {
     if (!c.sum.games) { console.log(`TARGETS ${name} 沒有打完的局`); continue; }
     const all = judge(c.sum, state.meta || {}), r = all.filter((x) => !x.info), stop = r.filter((x) => x.key === "mandate" || x.key === "isolation");
     console.log(`\n=== ${name}:${c.sum.games} 局${c.errors.length ? `,另有 ${c.errors.length} 局出錯` : ""}${state.meta && state.meta.variant ? `;變體 ${state.meta.variant}` : ""}`);
-    for (const x of all) console.log(`${x.info ? `只看(${x.pass ? "會過" : "不會過"})` : x.pass ? "通過" : "失敗"} · ${x.name} · ${x.said}`);
+    for (const x of all) console.log(`${x.info ? (x.pass == null ? "只看" : `只看(${x.pass ? "會過" : "不會過"})`) : x.pass ? "通過" : "失敗"} · ${x.name} · ${x.said}`);
     console.log(`TARGETS ${name} 通過 ${r.filter((x) => x.pass).length} / ${r.length};停損的兩項(民心曲線、開局沒有孤城)${stop.every((x) => x.pass) ? "通過" : "失敗"}`);
   }
 }
