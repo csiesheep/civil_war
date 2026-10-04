@@ -129,10 +129,15 @@ const MARK_WIN = 60, MARK_HORIZON = 12, MARK_STEP = 0.3;
 const MARK_TEMPO = [1, 0.95, 0.9, 0.8, 0.65, 0.5, 0.38, 0.28, 0.2, 0.14, 0.09, 0.06, 0.04];
 const MARK_DEFENCE = [1, 0.6, 0.5, 0.4, 0.32, 0.25, 0.19, 0.14, 0.1, 0.07, 0.05, 0.03, 0.02];
 const MARK_EITHER = [1, 0.8, 0.7, 0.6, 0.48, 0.37, 0.28, 0.21, 0.15, 0.1, 0.07, 0.05, 0.03];
-function markerRoad(st, side, needs, k) {
+// #23 round four (orchestrator 裁決: the bot may learn the tuning rules, read only when their option is
+// set, so under the default rules nothing here changes): `forced` are the needs of powers the win must
+// include (`mieNeeds`), and `soon` false means the win cannot come this turn (`sealPerTurn`: more
+// markers missing than may go down this turn), so only the long road counts (`E.sealWinSoon`).
+function markerRoad(st, side, needs, k, forced = [], soon = true) {
   if (k <= 0) return MARK_WIN;
-  if (needs.length < k) return 0;
-  const P = needs.slice().sort((a, b) => a - b).slice(0, k).reduce((t, x) => t + x, 0);
+  if (needs.length + forced.length < k) return 0;
+  const P = forced.reduce((t, x) => t + x, 0) + needs.slice().sort((a, b) => a - b).slice(0, Math.max(0, k - forced.length)).reduce((t, x) => t + x, 0);
+  if (!soon) return MARK_STEP * Math.max(0, MARK_HORIZON - P);
   const next = st.phase === "action" && !st.pending ? st.actor : null;
   const share = next === side ? MARK_TEMPO : next === 1 - side ? MARK_DEFENCE : MARK_EITHER;
   return MARK_WIN * (P < share.length ? share[P] : 0) + MARK_STEP * Math.max(0, MARK_HORIZON - P);
@@ -257,20 +262,26 @@ function boardValue(st, side, terms = null) {
   const held = W.mieHeld * mie - W.sealHeld * seals;
   vq += held;
   if (T) T("markers", held);
-  const mieNeed = [], sealNeed = [];
+  const mieNeed = [], sealNeed = [], mieForced = [];
+  const mieMust = st.options.mieNeeds || null; // #23 round four: only when the option is set
   for (const [id, s] of Object.entries(STATES)) {
     if (!st.mie[id]) {
       let need = 0;
       for (const x of E.spacesOfState(id)) { const [q, c] = E.infOf(st, x); need += Math.max(0, c + SPACE[x].stability - q); }
-      mieNeed.push(need);
+      (mieMust && mieMust.includes(id) ? mieForced : mieNeed).push(need);
     }
     if (!st.seals[id]) {
       const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability, cap = E.capOf(st, s.capital);
       // Control, and under sealAt "cap" blue at the cap: red above cap − stability must go first.
-      sealNeed.push(st.options.sealAt === "cap" ? Math.max(0, cap - c) + Math.max(0, q + S - cap) : Math.max(0, q + S - c));
+      let need = st.options.sealAt === "cap" ? Math.max(0, cap - c) + Math.max(0, q + S - cap) : Math.max(0, q + S - c);
+      // #23 round four: under `sealNeeds: "all"` (only then) the power's other spaces must be the Nationalists' too.
+      if (st.options.sealNeeds === "all") for (const x of E.spacesOfState(id)) if (x !== s.capital) { const [qx, cx] = E.infOf(st, x); need += Math.max(0, qx + SPACE[x].stability - cx); }
+      sealNeed.push(need);
     }
   }
-  const roads = markerRoad(st, CCP, mieNeed, st.options.mie - mie) - markerRoad(st, KMT, sealNeed, st.options.seals - seals);
+  const roads = mieMust || st.options.sealPerTurn != null
+    ? markerRoad(st, CCP, mieNeed, st.options.mie - mie, mieForced) - markerRoad(st, KMT, sealNeed, st.options.seals - seals, [], E.sealWinSoon(st))
+    : markerRoad(st, CCP, mieNeed, st.options.mie - mie) - markerRoad(st, KMT, sealNeed, st.options.seals - seals);
   vq += roads;
   if (T) T("markerRoads", roads);
 

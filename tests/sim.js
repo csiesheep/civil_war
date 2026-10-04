@@ -127,6 +127,15 @@ export function summarize(list) {
   return s;
 }
 
+// #23 round four (tests/targets.mjs item 10): each side's wins by end reason and by the turn the game
+// ended, `[{ reasons, turns }, …]` by seat. Kept out of `summarize`, whose shape tests/sim.test.js pins
+// key for key; the chunks add it to the sums they hand back (`runChunk`), so every state file has it.
+export function winsBySide(list) {
+  const w = [{ reasons: {}, turns: {} }, { reasons: {}, turns: {} }];
+  for (const { st } of list) { bump(w[st.winner].reasons, st.reason); bump(w[st.winner].turns, st.turn); }
+  return w;
+}
+
 export function simulate({ games = 100, seed = 1, ccp = "normal", kmt = "normal", options = {} } = {}) {
   const list = [];
   for (let k = 0; k < games; k++) list.push(playGame(seed + k, { ccp, kmt, options }));
@@ -161,7 +170,7 @@ function runChunk({ cell, first, count, ccp, kmt, variant = {} }) {
     try { list.push(playGame(seed, { ccp, kmt, options: { ...variant, ...CELLS[cell] } })); }
     catch (e) { errors.push({ seed, message: String((e && e.message) || e).slice(0, 400) }); }
   }
-  return { cell, first, count, sum: summarize(list), errors, ms: Date.now() - t0 };
+  return { cell, first, count, sum: { ...summarize(list), winsBySide: winsBySide(list) }, errors, ms: Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------- command line

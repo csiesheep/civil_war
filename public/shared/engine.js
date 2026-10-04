@@ -289,7 +289,8 @@ export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0
 //                      the ones flipped (`checkMarkers`)
 //   mandateWin         [Communists, Nationalists]: the mandate that wins at once
 //                      (today 20 each way) (`vp`, `mandateCheck`)
-//   mandateFrom        n: no mandate win before turn n; the mandate keeps
+//   mandateFrom        n, or [n for the Communists, n for the Nationalists] (round
+//                      four): no mandate win before turn n; the mandate keeps
 //                      counting, and one beyond the threshold wins at the
 //                      start of turn n (`startTurn`)
 //   mandateEarly       "clamp": before `mandateFrom` the mandate stays one short
@@ -297,6 +298,10 @@ export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0
 //   mandateCap         [Communists, Nationalists]: under "clamp", how far each
 //                      side's lead may go before `mandateFrom` (default: one
 //                      short of its threshold) (`vp`)
+//   mandateCapUntil    n: `mandateCap` holds only before turn n; from n to
+//                      `mandateFrom` the mandate stays one short of each threshold (`vp`)
+//   sealPerTurn        n: at most n new 整編 markers a turn (`checkMarkers`,
+//                      `st.sealTurn`); `sealWinSoon` tells the bots
 //   sealFrom           n: no 整編 marker is placed before turn n; from turn n on the
 //                      condition is read as always (`checkMarkers`)
 //   adjacency          { add: [[a, b], …], remove: [[a, b], …] } (`adjOf`)
@@ -755,8 +760,11 @@ export function vp(st, side, n) {
     // #23 round three: `mandateWin` [Communists, Nationalists] and `mandateFrom` (see the options' list).
     const [toC, toK] = mandateWinAt(st);
     if (mandateEarly(st) && st.options.mandateEarly === "clamp") {
-      const [capC, capK] = tune(st, "mandateCap") ? st.options.mandateCap : [toC - 1, toK - 1];
-      st.mandate = Math.max(-capK, Math.min(capC, st.mandate));
+      const capNow = tune(st, "mandateCap") && !(tune(st, "mandateCapUntil") && st.turn >= st.options.mandateCapUntil);
+      const [capC, capK] = capNow ? st.options.mandateCap : [toC - 1, toK - 1];
+      // Each side's bound holds only while its own mandate win is closed (one turn for both: both bounds).
+      if (mandateEarlyFor(st, CCP)) st.mandate = Math.min(capC, st.mandate);
+      if (mandateEarlyFor(st, KMT)) st.mandate = Math.max(-capK, st.mandate);
     }
     log(st, { type: "vp", side, n, mandate: st.mandate });
     mandateCheck(st);
@@ -766,14 +774,28 @@ export function vp(st, side, n) {
   if (st.mandate >= MANDATE_TO_WIN) win(st, CCP, "mandate");
   else if (st.mandate <= -MANDATE_TO_WIN) win(st, KMT, "mandate");
 }
+// #23 round four, `sealPerTurn`: how many 整編 markers went down this turn (`st.sealTurn`, kept only
+// under the option). And whether a 整編 win could still come this turn (the bots read it, #23 round four).
+function sealsThisTurn(st) { return st.sealTurn && st.sealTurn.turn === st.turn ? st.sealTurn.n : 0; }
+// Under `sealFrom` the answer stays yes: what is at the cap when turn n begins all goes down at
+// once on its first action, so the threat stands as it did (a first try that answered no left the
+// Communists blind to it: 77% of the Nationalists' wins then fell on turn 4).
+export function sealWinSoon(st) {
+  if (tune(st, "sealPerTurn")) return st.options.seals - Object.keys(st.seals || {}).length <= st.options.sealPerTurn - sealsThisTurn(st);
+  return true;
+}
 export function mandateWinAt(st) { return tune(st, "mandateWin") ? st.options.mandateWin : [MANDATE_TO_WIN, MANDATE_TO_WIN]; }
-function mandateEarly(st) { return tune(st, "mandateFrom") && st.turn < st.options.mandateFrom; }
-// The mandate win, read whenever the mandate moves and once at the start of turn `mandateFrom`.
+// `mandateFrom` is a turn, or [Communists, Nationalists] (round four: each side's own first turn).
+function mandateFromOf(st) { const f = st.options.mandateFrom; return Array.isArray(f) ? f : [f, f]; }
+// Whether `side`'s mandate win is still closed this turn.
+function mandateEarlyFor(st, side) { return tune(st, "mandateFrom") && st.turn < mandateFromOf(st)[side]; }
+function mandateEarly(st) { return mandateEarlyFor(st, CCP) || mandateEarlyFor(st, KMT); }
+// The mandate win, read whenever the mandate moves and once at the start of a `mandateFrom` turn.
 function mandateCheck(st) {
-  if (st.winner != null || mandateEarly(st)) return;
+  if (st.winner != null) return;
   const [toC, toK] = mandateWinAt(st);
-  if (st.mandate >= toC) win(st, CCP, "mandate");
-  else if (st.mandate <= -toK) win(st, KMT, "mandate");
+  if (st.mandate >= toC && !mandateEarlyFor(st, CCP)) win(st, CCP, "mandate");
+  else if (st.mandate <= -toK && !mandateEarlyFor(st, KMT)) win(st, KMT, "mandate");
 }
 // ---------- the two support tracks (rulebook 三, 外國勢力) ----------
 // `st.support` is [蘇聯支持, 美國支持]: indexed by the seat each track backs
@@ -812,9 +834,11 @@ export function checkMarkers(st) {
     }
     const sealed = capCtl === KMT && (st.options.sealAt !== "cap" || infOf(st, s.capital)[KMT] >= capOf(st, s.capital))
       && (st.options.sealNeeds !== "all" || sp.every((x) => controller(st, x) === KMT))
-      && !(tune(st, "sealFrom") && st.turn < st.options.sealFrom);
+      && !(tune(st, "sealFrom") && st.turn < st.options.sealFrom)
+      && !(tune(st, "sealPerTurn") && sealsThisTurn(st) >= st.options.sealPerTurn);
     if (sealed && !st.seals[id]) {
       st.seals[id] = true; log(st, { type: "seal", state: id });
+      if (tune(st, "sealPerTurn")) st.sealTurn = { turn: st.turn, n: sealsThisTurn(st) + 1 };
       if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, KMT, 1); }
     }
   }
@@ -1271,7 +1295,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-03-2"; // #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; an absent key plays as before ("2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))
+export const RULES_VERSION = "2026-10-03-3"; // #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1554,7 +1578,7 @@ function startTurn(st) {
   st.phase = "situation";
   log(st, { type: "turn", turn: st.turn, era: st.era });
   // #23 round three: a mandate beyond the threshold before `mandateFrom` wins at the start of that turn.
-  if (tune(st, "mandateFrom") && st.turn === st.options.mandateFrom) { mandateCheck(st); if (st.winner != null) return; }
+  if (tune(st, "mandateFrom") && mandateFromOf(st).includes(st.turn)) { mandateCheck(st); if (st.winner != null) return; }
   st.plan.splice(1, 0, { do: "situation", stage: "start", choices: [] }, { do: "deal" });
 }
 function dealHands(st) {
