@@ -1,0 +1,36 @@
+variant P9: 提案(第五輪,P8 拿掉不承重的 L-mienorth)
+options {"setupFreeBar":{"ccp":["beiman","siping","liaoxi","jinzhong","luzhong","huaihai","dabieshan"]},"eraRounds":{"takeover":{"rounds":[7,7]},"turning":{"rounds":[8,6]},"decisive":{"rounds":[6,7],"hand":[8,9]}},"sealPerTurn":1,"sealNeeds":"all","mandateEarly":"clamp","mandateCap":[19,3],"mandateFrom":[7,6],"situationCampaign":{"counteroffensive":2,"decisive_battle":0},"attritionLosses":[1,1],"mandateWin":[20,15]}
+seed 1; points are red/blue (共/國); "start" = before the free placement, "turn 1" = after it
+
+space        today start  variant start  today turn 1  variant turn 1
+北滿(beiman)       1/0          1/0            1/0           1/0
+長春(changchun)    0/0          0/0            0/0           0/0
+四平(siping)       0/0          0/0            2/0           0/0
+瀋陽(shenyang)     0/0          0/0            0/0           0/0
+遼西(liaoxi)       0/0          0/0            0/0           0/0
+錦州(jinzhou)      0/0          0/0            0/0           0/0
+天津(tianjin)      0/3          0/3            0/3           0/5
+北平(beiping)      0/3          0/3            0/3           0/3
+冀中(jizhong)      2/0          2/0            2/0           4/0
+察綏(chasui)       2/2          2/2            2/2           3/2
+太行(taihang)      4/0          4/0            4/0           4/0
+太原(taiyuan)      0/2          0/2            0/5           0/3
+晉中(jinzhong)     1/2          1/2            1/2           1/2
+冀魯豫(jiluyu)      3/0          3/0            3/0           3/0
+濟南(jinan)        0/2          0/2            0/3           0/3
+魯中(luzhong)      3/2          3/2            3/2           3/2
+徐州(xuzhou)       0/3          0/3            0/3           0/3
+淮海(huaihai)      2/1          2/1            3/1           2/1
+鄭州(zhengzhou)    0/2          0/2            0/2           0/2
+大別山(dabieshan)   2/2          2/2            2/2           2/2
+陝北(shanbei)      4/0          4/0            4/0           4/0
+西安(xian)         0/4          0/4            0/4           0/4
+蘭州(lanzhou)      0/2          0/2            0/2           0/2
+武漢(wuhan)        0/3          0/3            0/3           0/3
+南京(nanjing)      0/4          0/4            0/4           0/4
+上海(shanghai)     0/3          0/3            0/3           0/3
+廣州(guangzhou)    0/2          0/2            0/2           0/2
+桂林(guilin)       0/2          0/2            0/2           0/2
+昆明(kunming)      0/2          0/2            0/2           0/2
+
+0 spaces start differently from today; support [蘇, 美] today 1/4 variant 1/4
