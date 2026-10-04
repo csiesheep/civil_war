@@ -86,6 +86,9 @@ const SPEC = {
   },
   toWin: { mie: 3, seals: 5 },
   free: { ccp: 3, kmt: 4 },
+  // P10 (#23): 受降 -- the Communists free-place only into the villages they control at the start (red ≥ blue + S):
+  // 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4). Group 4 recomputes it from SPEC_SPACES.
+  freeCcpIn: ["jizhong", "taihang", "jiluyu", "shanbei"],
   deck: {
     total: 72,
     // era: [Nationalist, Communist, neutral, scoring]
@@ -231,7 +234,7 @@ check("開局沒有整編或易幟標記", () => {
 });
 
 check("200 個種子都開得了局,兩邊在第一個決定都有合法行動", () => {
-  const villages = E.SPACES.filter((s) => s.kind === "village").map((s) => s.id);
+  const villages = SPEC.freeCcpIn; // P10 (#23): only the villages the Communists control at the start
   const cities = E.SPACES.filter((s) => s.kind === "city" && s.region !== "northeast").map((s) => s.id);
   const N = 200;
   let hands = null;
@@ -725,7 +728,7 @@ check("開局:美國支持 4、蘇聯支持 1;手牌 共 8 國 9;行動回合 �
 // P10 (#23): the Communists' free placement of 受降 goes only into the villages they control at the start.
 // Control is red ≥ blue + stability (group 11's words); from the rulebook's opening table (SPEC_SPACES) that is
 // 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4) -- not 察綏 2/2, 魯中 3/2, 淮海 2/1, 北滿 1/0.
-const SPEC_CCP_FREE = ["jizhong", "taihang", "jiluyu", "shanbei"];
+const SPEC_CCP_FREE = SPEC.freeCcpIn;
 check("受降:共軍的免費放置只能放進開局時共軍控制的鄉;國軍照舊(東北以外的城)", () => {
   const t = sitTodo(); if (t) return t;
   const fromTable = Object.entries(SPEC_SPACES).filter(([, [kind, , s, b, r]]) => kind === "village" && r >= b + s).map(([id]) => id);
@@ -2801,6 +2804,7 @@ check("整編:國軍控制本據且影響力達到上限;民心 +1 一局一次;
   st.inf.kunming = [0, 5]; E.checkMarkers(st); const full = [st.seals.dian, st.mandate];
   st.inf.kunming = [2, 4]; E.checkMarkers(st); const kept = st.seals.dian;         // nobody controls it: the marker stays
   st.inf.kunming = [5, 2]; E.checkMarkers(st); const gone = st.seals.dian;         // the Communists control the seat
+  st.turn += 1; // P10 (#23): one new marker a turn -- the marker comes back on a later turn
   st.inf.kunming = [0, 5]; E.checkMarkers(st); const again = [st.seals.dian, st.mandate];
   // P10 (#23): one new marker a turn, so the fifth goes down on its own: the other four are already held.
   const five = position({ chasui: { r: 0, b: 4 }, taiyuan: { b: 5 }, jinzhong: { r: 0, b: 2 }, guilin: { b: 5 }, lanzhou: { b: 5 }, kunming: { b: 5 } });
@@ -3003,7 +3007,7 @@ check("situations 關掉:空手走完八回合,一個決定都不問;支持度�
   return all(
     eq(J(seen.map((x) => x[0])), J([1, 2, 3, 4, 5, 6, 7, 8]), "走過的回合"),
     eq(J(seen.map((x) => x[1])), J(SPEC_US), "美國支持,逐回合"), eq(J(seen.map((x) => x[2])), J(SPEC_SU), "蘇聯支持,逐回合"),
-    eq(roundsOf(st, 1), seq([6, 7]), "第 1 回合的行動順序"), eq(roundsOf(st, 7), seq([7, 6]), "第 7 回合的行動順序"),
+    eq(roundsOf(st, 1), seq([7, 7]), "第 1 回合的行動順序"), eq(roundsOf(st, 7), seq([6, 7]), "第 7 回合的行動順序"),
     ok(true, `沒有任何待決定;美國支持 ${SPEC_US.join("")}、蘇聯支持 ${SPEC_SU.join("")};結束:${st.reason}`),
   );
 });
