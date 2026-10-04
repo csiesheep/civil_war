@@ -230,7 +230,16 @@ export const VARIANTS = {
   "L-turning86": { what: "易勢期行動回合 共 8 / 國 6", why: "", options: { eraRounds: { turning: { rounds: [8, 6] } } } },
   "L-mcapK10": { what: "決戰期以前國軍的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 10] } },
   "L-mcap10": { what: "決戰期以前雙方的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [10, 10] } },
+  "L-mfromK4": { what: "國軍的民心勝利從第 4 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 4] } },
+  "L-mfromK5": { what: "國軍的民心勝利從第 5 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 5] } },
+  "L-mfromK6": { what: "國軍的民心勝利從第 6 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 6] } },
+  "L-mcapK8": { what: "決戰期以前國軍的民心領先最多 8", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 8] } },
+  "L-mcapK6": { what: "決戰期以前國軍的民心領先最多 6", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 6] } },
   "L-mcapK12": { what: "決戰期以前國軍的民心領先最多 12", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 12] } },
+  // ---- 第四輪(owner 裁決 #23:修國軍的贏法)
+  "L-seal1pt": { what: "每回合最多放一個整編標記", why: "", options: { sealPerTurn: 1 } },
+  "L-mcapTo4": { what: "國軍的民心上限 10 只管前三回合(第 4–6 回合到門檻減 1)", why: "", options: { mandateCapUntil: 4 } },
+  "L-mcapTo5": { what: "國軍的民心上限 10 只管前四回合", why: "", options: { mandateCapUntil: 5 } },
   "L-mie4": {
     what: "易幟的即時勝利要四家(3 → 4)",
     why: "",
@@ -365,6 +374,17 @@ minus("N14", "N9", ["L-seal4"]);
 export const PROPOSAL6 = ["L-ccpheld", "L-rounds77", "L-soviet2", "L-turning76", "L-mienorth", "L-seal4", "L-mfrom7", "L-mcapK10"];
 combo("P6", "提案(第三輪)", PROPOSAL6);
 for (const l of PROPOSAL6) minus(`P6-no-${l.slice(2)}`, "P6", [l]);
+// 第四輪的候選(bot 已學會整編與易幟的新條件)
+minus("A1", "P6", ["L-seal4"], ["L-seal1pt"]);
+combo("A2", "A1 + 民心上限只管前三回合", ["A1", "L-mcapTo4"]);
+combo("A3", "P6 + 民心上限只管前三回合", ["P6", "L-mcapTo4"]);
+combo("A4", "A1 + 民心上限只管前四回合", ["A1", "L-mcapTo5"]);
+combo("B1", "A1 + 察綏紅 4", ["A1", "L-chasui4"]);
+combo("B2", "A1 + 整編要全部地盤", ["A1", "L-sealall"]);
+combo("B3", "A1 + 察綏紅 4 + 整編要全部地盤", ["A1", "L-chasui4", "L-sealall"]);
+combo("B4", "B3 + 民心上限只管前四回合", ["B3", "L-mcapTo5"]);
+// 第四輪最好的變體(= W~0~2~7~9~10~11~24):停損的民心曲線沒過,不是提案
+combo("Z4", "第四輪最好的變體", ["L-ccpheld", "L-mienorth", "L-rounds77", "L-soviet2", "L-turning76", "L-seal1pt", "L-sealall", "L-mfrom7", "L-mcapK10", "L-mfromK6"]);
 combo("Q", "孤城最晚的對照組", ["P", "L-huaihai3", "L-pinghan", "L-jinzhong3", "L-jinpu", "L-nerail", "L-zhengzhou3"]);
 // ---- 搜尋:`S~i~j~…` 是 LEVERS 第 i、j…根疊起來(tuning/23/search.mjs 用;名字短,檔名才不會太長)
 export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4",
@@ -374,8 +394,16 @@ export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-hu
 export const LEVERS2 = ["L-chasui4", "L-taiyuan1", "L-seats1", "L-seatbar", "L-rounds77", "O3-rounds66", "L-soviet2", "L-sealall",
   "L-turning76", "L-rear012", "O5-rear001", "L-seal4", "L-mie4", "L-lanzhou3", "L-jinzhong3", "L-regions75", "L-regions50",
   "L-counter2", "L-decisive2", "L-sovt4", "L-uscap3", "L-nerail", "L-pinghan", "L-chasui3"];
+// 第四輪的搜尋:`W~i~j~…` 是 LEVERS3 第 i、j…根(受降限制、易幟要含綏晉、民心從第 7 回合起一律在內)
+export const LEVERS3 = ["L-seal1pt", "L-seal4", "L-sealall", "L-chasui4", "L-taiyuan1", "L-seats1", "L-rear012", "L-rounds77",
+  "O3-rounds66", "L-soviet2", "L-turning76", "L-mcapK10", "L-mcapK12", "L-mcapTo4", "L-mcapTo5", "L-lanzhou3", "L-counter2", "L-decisive2", "L-mclamp",
+  "L-mcapK8", "L-mcapK6", "L-turning86", "L-mfromK4", "L-mfromK5", "L-mfromK6"];
 export function searchVariant(name) {
   let parts;
+  if (/^W(~\d+)*$/.test(name)) {
+    parts = ["L-ccpheld", "L-mienorth", "L-mfrom7", ...name.split("~").slice(1).map((i) => LEVERS3[Number(i)])];
+    return { what: parts.join(" + "), why: "", parts, options: merge(...parts) };
+  }
   if (/^S(~\d+)*$/.test(name)) parts = name.split("~").slice(1).map((i) => LEVERS[Number(i)]);
   else if (/^T(~\d+)*$/.test(name)) parts = ["L-ccpheld", ...name.split("~").slice(1).map((i) => LEVERS2[Number(i)])];
   else return null;
