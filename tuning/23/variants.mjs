@@ -105,7 +105,7 @@ export const VARIANTS = {
   },
   "L-counter2": {
     what: "戰略反攻(第 5 回合)共軍奇襲鄉 +1 → +2",
-    why: "",
+    why: "第五輪:1947 年 7–8 月劉鄧挺進大別山、陳謝渡河入豫西、陳粟進豫皖蘇,三路大軍打的是國軍後方的鄉村,戰略反攻的力道在鄉間",
     options: { situationCampaign: { counteroffensive: 2 } },
   },
   "L-nerail": {
@@ -227,15 +227,80 @@ export const VARIANTS = {
   "L-mclamp": { what: "民心勝利以前,民心最多只到門檻減 1(不再往上記)", why: "", options: { mandateEarly: "clamp" } },
   "L-mwin25": { what: "民心勝利的門檻 20 → 25(兩邊)", why: "", options: { mandateWin: [25, 25] } },
   "L-mwinK25": { what: "國軍的民心門檻 20 → 25(共軍仍 20)", why: "", options: { mandateWin: [20, 25] } },
-  "L-turning86": { what: "易勢期行動回合 共 8 / 國 6", why: "", options: { eraRounds: { turning: { rounds: [8, 6] } } } },
+  "L-turning86": {
+    what: "易勢期行動回合 共 8 / 國 6",
+    why: "第五輪:1947 年國軍的兵力大多被城市與鐵路的守備綁住,能機動的兵團越來越少;共軍從 7 月起轉入戰略進攻,主動權在 1947 年中易手(把共軍多出來的行動從決戰期挪到易勢期,見 L-decisive67)",
+    options: { eraRounds: { turning: { rounds: [8, 6] } } },
+  },
   "L-mcapK10": { what: "決戰期以前國軍的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 10] } },
   "L-mcap10": { what: "決戰期以前雙方的民心領先最多 10", why: "", options: { mandateEarly: "clamp", mandateCap: [10, 10] } },
+  // ---- 第五輪(owner 裁決 #23:把轉折往前挪到 1947)
+  "L-counter3": { what: "戰略反攻(第 5 回合)共軍奇襲鄉 +1 → +3", why: "", options: { situationCampaign: { counteroffensive: 3 } } },
+  "L-decisive0": {
+    what: "決戰(第 7 回合)共軍打城 +1 → 0",
+    why: "第五輪:遼瀋、淮海、平津三大戰役在決戰期的牌裡各有一張事件(遼瀋戰役、淮海戰役、平津戰役),時局再給每一次打城 +1 是重複計算;決戰時局仍保留「共軍打城不推民生」",
+    options: { situationCampaign: { decisive_battle: 0 } },
+  },
+  "L-attr11": {
+    what: "決戰的孤城掉點 2 → 1",
+    why: "第五輪:決戰期被圍的城守得比一季久:長春被圍五個月(1948 年 5–10 月),太原守到 1949 年 4 月,大同到 1949 年 5 月",
+    options: { attritionLosses: [1, 1] },
+  },
+  "L-decisive77": { what: "決戰期行動回合 共 7 / 國 6 → 7 / 7", why: "", options: { eraRounds: { decisive: { rounds: [7, 7] } } } },
+  "L-turning85": { what: "易勢期行動回合 共 8 / 國 5", why: "", options: { eraRounds: { turning: { rounds: [8, 5] } } } },
+  "L-nwLow": { what: "西北的分值 2/3/4 → 1/2/2", why: "", options: { regionValues: { northwest: { presence: 1, domination: 2, control: 2 } } } },
+  "L-mfrom66": { what: "兩邊的民心勝利都從第 6 回合起", why: "", options: { mandateFrom: [6, 6] } },
+  "L-mfrom77": { what: "兩邊的民心勝利都從第 7 回合起(Z4 的國軍是第 6 回合)", why: "", options: { mandateFrom: [7, 7] } },
   "L-mfromK4": { what: "國軍的民心勝利從第 4 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 4] } },
   "L-mfromK5": { what: "國軍的民心勝利從第 5 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 5] } },
   "L-mfromK6": { what: "國軍的民心勝利從第 6 回合起、共軍的從第 7 回合起", why: "", options: { mandateFrom: [7, 6] } },
   "L-mcapK8": { what: "決戰期以前國軍的民心領先最多 8", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 8] } },
   "L-mcapK6": { what: "決戰期以前國軍的民心領先最多 6", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 6] } },
   "L-mcapK12": { what: "決戰期以前國軍的民心領先最多 12", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 12] } },
+  "L-mcapK4": { what: "國軍的民心勝利開始以前,國軍的民心領先最多 4", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 4] } },
+  "L-mcapK3": {
+    what: "國軍的民心勝利開始以前(第 6 回合以前),國軍的民心領先最多 3(Z4 是 10)",
+    why: "第五輪:1947 年國統區 2 月黃金風潮、5 月「反飢餓、反內戰」學潮,國軍在戰場上的進展(佔延安、重點進攻山東)換不到人心;國府聲望要到 1948 年春行憲才到頂",
+    options: { mandateEarly: "clamp", mandateCap: [19, 3] },
+  },
+  "L-decisiveH88": { what: "決戰期手牌 共 9 / 國 8 → 8 / 8", why: "", options: { eraRounds: { decisive: { hand: [8, 8] } } } },
+  "L-decisive67": {
+    what: "決戰期行動回合 共 7 / 國 6 → 6 / 7",
+    why: "第五輪:把共軍多一個行動回合從決戰期挪到易勢期(L-turning86)。1948 年下半年國軍仍集中著五個大兵團(東北衛立煌、華北傅作義、徐州劉峙與杜聿明、華中白崇禧、西北胡宗南),三大戰役是國軍主力全數投入的會戰;共軍的優勢是 1947 年起取得的主動權。注意:這把規則書決戰期的不對稱反過來,要 owner 判斷",
+    options: { eraRounds: { decisive: { rounds: [6, 7] } } },
+  },
+  "L-decisiveH89": {
+    what: "決戰期手牌 共 9 / 國 8 → 8 / 9",
+    why: "第五輪:同上,共軍多一張手牌也挪走;1948 年 4 月美國通過援華法案,國軍決戰期的物資與選擇比共軍多。注意:同樣把規則書決戰期的不對稱反過來,要 owner 判斷",
+    options: { eraRounds: { decisive: { hand: [8, 9] } } },
+  },
+  "L-sovt47": {
+    what: "蘇聯支持第 7 回合的 +1 提前到第 4 回合",
+    why: "第五輪:蘇聯對東北共軍的支援集中在 1946–47 年(移交日軍武器與兵工廠、旅大作為後方、1947 年起哈爾濱對蘇貿易);1948 年下半年的決戰期,東北野戰軍已能自給",
+    options: { supportSchedule: [{ turn: 3, side: 1, delta: -1 }, { turn: 4, side: 0, delta: 1 }, { turn: 5, side: 0, delta: 1 }, { turn: 6, side: 1, delta: 1, kmtReform: 2 }, { turn: 8, side: 1, delta: -2 }] },
+  },
+  "L-us8": {
+    what: "美國支持第 8 回合的 −2 拿掉",
+    why: "",
+    options: { supportSchedule: [{ turn: 3, side: 1, delta: -1 }, { turn: 5, side: 0, delta: 1 }, { turn: 6, side: 1, delta: 1, kmtReform: 2 }, { turn: 7, side: 0, delta: 1 }] },
+  },
+  "L-sovt47us8": {
+    what: "蘇聯支持第 7 回合的 +1 提前到第 4 回合,美國支持第 8 回合的 −2 拿掉",
+    why: "",
+    options: { supportSchedule: [{ turn: 3, side: 1, delta: -1 }, { turn: 4, side: 0, delta: 1 }, { turn: 5, side: 0, delta: 1 }, { turn: 6, side: 1, delta: 1, kmtReform: 2 }] },
+  },
+  "L-mwinK15": {
+    what: "國軍的民心勝利門檻 20 → 15(共軍仍 20)",
+    why: "第五輪:共軍要的是推翻國府、不接受劃江而治;國軍只要在人心上明顯佔優,美國與第三勢力的調停就能把戰爭停在談判桌上(1948 年底到 1949 年初的和談呼聲)。兩邊要的勝利不一樣大",
+    options: { mandateWin: [20, 15] },
+  },
+  "L-mwinK12": { what: "國軍的民心勝利門檻 20 → 12(共軍仍 20)", why: "", options: { mandateWin: [20, 12] } },
+  "L-rounds67": { what: "接收期行動回合回到 共 6 / 國 7(拿掉 Z4 的 L-rounds77)", why: "", options: { eraRounds: { takeover: { rounds: [6, 7] } } } },
+  "L-turning87": { what: "易勢期行動回合 共 8 / 國 7", why: "", options: { eraRounds: { turning: { rounds: [8, 7] } } } },
+  "L-sov1": { what: "蘇聯支持起點回到 1(拿掉 Z4 的 L-soviet2)", why: "", options: { supportStart: [1, 4] } },
+  "L-mwinK13": { what: "國軍的民心勝利門檻 20 → 13(共軍仍 20)", why: "", options: { mandateWin: [20, 13] } },
+  "L-mwinK14": { what: "國軍的民心勝利門檻 20 → 14(共軍仍 20)", why: "", options: { mandateWin: [20, 14] } },
+  "L-mcapK2": { what: "國軍的民心勝利開始以前,國軍的民心領先最多 2", why: "", options: { mandateEarly: "clamp", mandateCap: [19, 2] } },
   // ---- 第四輪(owner 裁決 #23:修國軍的贏法)
   "L-seal1pt": { what: "每回合最多放一個整編標記", why: "", options: { sealPerTurn: 1 } },
   "L-mcapTo4": { what: "國軍的民心上限 10 只管前三回合(第 4–6 回合到門檻減 1)", why: "", options: { mandateCapUntil: 4 } },
@@ -266,6 +331,10 @@ const merge = (...names) => {
     if (k === "setupPoints" || k === "setupFreeBar" || k === "eraRounds" || k === "regionValues") {
       out[k] ??= {};
       for (const [s, x] of Object.entries(v)) out[k][s] = Array.isArray(x) ? [...(out[k][s] || []), ...x] : { ...(out[k][s] || {}), ...x };
+    } else if (k === "situationCampaign") {
+      // Round five: merged key by key. Before this a later situationCampaign replaced an earlier one
+      // whole, so G3 (round one) played counter2 only, not decisive2 as well.
+      out[k] = { ...(out[k] || {}), ...v };
     } else if (k === "adjacency") {
       out[k] = { add: [...(out[k]?.add || []), ...(v.add || [])], remove: [...(out[k]?.remove || []), ...(v.remove || [])] };
     } else out[k] = v;
@@ -385,6 +454,42 @@ combo("B3", "A1 + 察綏紅 4 + 整編要全部地盤", ["A1", "L-chasui4", "L-s
 combo("B4", "B3 + 民心上限只管前四回合", ["B3", "L-mcapTo5"]);
 // 第四輪最好的變體(= W~0~2~7~9~10~11~24):停損的民心曲線沒過,不是提案
 combo("Z4", "第四輪最好的變體", ["L-ccpheld", "L-mienorth", "L-rounds77", "L-soviet2", "L-turning76", "L-seal1pt", "L-sealall", "L-mfrom7", "L-mcapK10", "L-mfromK6"]);
+// ---- 第五輪的提案(owner 裁決 #23:把轉折往前挪到 1947):Z4 拿掉「蘇聯支持開局 2」,易勢期 7/6 → 8/6,
+// 國軍前期上限 10 → 3,加上戰略反攻 +2、決戰打城 +0、決戰孤城 −1、決戰期 6/7 與手牌 8/9、國軍門檻 15。
+// 和搜尋名 V~0~2~7~8~17~24~25~28~32 同一組規則(選項的寫法不同:這裡沒有 supportStart,開局就是規則書的 [1, 4])。
+// Z4 的 L-mfrom7(mandateFrom 7)被後面的 L-mfromK6([7, 6])整個蓋掉,在 Z4 裡就不起作用;P8 不再列它,選項逐字相同。
+export const PROPOSAL8 = ["L-ccpheld", "L-mienorth", "L-rounds77", "L-turning86", "L-seal1pt", "L-sealall", "L-mcapK3", "L-mfromK6",
+  "L-counter2", "L-decisive0", "L-attr11", "L-decisive67", "L-decisiveH89", "L-mwinK15"];
+combo("P8", "提案(第五輪)", PROPOSAL8);
+for (const l of PROPOSAL8) minus(`P8-no-${l.slice(2)}`, "P8", [l]);
+// P8 的消去表裡「易幟要含綏與晉」(L-mienorth)兩批都沒有讓任何一項變失敗:拿掉它就是 P9
+export const PROPOSAL9 = PROPOSAL8.filter((l) => l !== "L-mienorth");
+combo("P9", "提案(第五輪,P8 拿掉不承重的 L-mienorth)", PROPOSAL9);
+for (const l of PROPOSAL9) minus(`P9-no-${l.slice(2)}`, "P9", [l]);
+// P9 的消去表裡「決戰的孤城掉點 2 → 1」(L-attr11)兩批都沒有讓任何一項變失敗(第 2 批共軍勝率反而 63.0% → 62.7%):
+// 拿掉它就是 P10,和 P9-no-attr11 同一組選項
+export const PROPOSAL10 = PROPOSAL9.filter((l) => l !== "L-attr11");
+combo("P10", "提案(第五輪,P9 拿掉不承重的 L-attr11)", PROPOSAL10);
+for (const l of PROPOSAL10) minus(`P10-no-${l.slice(2)}`, "P10", [l]);
+// P10 的消去表裡「戰略反攻 +2」(L-counter2)兩批都沒有讓任何一項變失敗(第 6 回合仍然交叉,但只差 1.5 / 3 個百分點):
+// 拿掉它就是 P11,和 P10-no-counter2 同一組選項
+export const PROPOSAL11 = PROPOSAL10.filter((l) => l !== "L-counter2");
+combo("P11", "提案(第五輪,P10 拿掉不承重的 L-counter2)", PROPOSAL11);
+for (const l of PROPOSAL11) minus(`P11-no-${l.slice(2)}`, "P11", [l]);
+// P11 的消去表(種子 1–1000)裡「決戰打城 0」與「決戰手牌 8/9」各自拿掉都沒有讓任何一項變失敗:這幾根(戰略反攻、
+// 決戰打城、決戰手牌)是互相替代的,一根一根消去的順序會決定留下哪一根。直接量兩根都拿掉的 P12,再看剩下的每一根承不承重。
+export const PROPOSAL12 = PROPOSAL11.filter((l) => l !== "L-decisive0" && l !== "L-decisiveH89");
+combo("P12", "提案(第五輪,P11 拿掉 L-decisive0 與 L-decisiveH89)", PROPOSAL12);
+for (const l of PROPOSAL12) minus(`P12-no-${l.slice(2)}`, "P12", [l]);
+// P12 第 2 批共軍勝 65.2%(失敗):兩根至少要留一根。P11 拿掉決戰手牌 8/9(L-decisiveH89)兩批都過 → P13,
+// 和 P11-no-decisiveH89 同一組選項;在 P13 裡再拿掉決戰打城 0 就是 P12(第 2 批失敗),所以它承重。
+export const PROPOSAL13 = PROPOSAL11.filter((l) => l !== "L-decisiveH89");
+combo("P13", "提案(第五輪,P11 拿掉 L-decisiveH89)", PROPOSAL13);
+for (const l of PROPOSAL13) minus(`P13-no-${l.slice(2)}`, "P13", [l]);
+// P13 的消去表裡「國軍的民心門檻 15」(L-mwinK15)兩批都沒有讓任何一項變失敗 → P14,和 P13-no-mwinK15 同一組選項
+export const PROPOSAL14 = PROPOSAL13.filter((l) => l !== "L-mwinK15");
+combo("P14", "提案(第五輪,P13 拿掉不承重的 L-mwinK15)", PROPOSAL14);
+for (const l of PROPOSAL14) minus(`P14-no-${l.slice(2)}`, "P14", [l]);
 combo("Q", "孤城最晚的對照組", ["P", "L-huaihai3", "L-pinghan", "L-jinzhong3", "L-jinpu", "L-nerail", "L-zhengzhou3"]);
 // ---- 搜尋:`S~i~j~…` 是 LEVERS 第 i、j…根疊起來(tuning/23/search.mjs 用;名字短,檔名才不會太長)
 export const LEVERS = ["L-seatbar", "L-ccpbase", "L-chasui3", "L-chasui4", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4",
@@ -398,8 +503,15 @@ export const LEVERS2 = ["L-chasui4", "L-taiyuan1", "L-seats1", "L-seatbar", "L-r
 export const LEVERS3 = ["L-seal1pt", "L-seal4", "L-sealall", "L-chasui4", "L-taiyuan1", "L-seats1", "L-rear012", "L-rounds77",
   "O3-rounds66", "L-soviet2", "L-turning76", "L-mcapK10", "L-mcapK12", "L-mcapTo4", "L-mcapTo5", "L-lanzhou3", "L-counter2", "L-decisive2", "L-mclamp",
   "L-mcapK8", "L-mcapK6", "L-turning86", "L-mfromK4", "L-mfromK5", "L-mfromK6"];
+// 第五輪的搜尋:`V~i~j~…` 是 Z4 加上 LEVERS5 第 i、j…根(後面的覆蓋 Z4 同一個選項)
+export const LEVERS5 = ["L-turning86", "L-turning85", "L-counter2", "L-counter3", "L-sovt4", "L-rear012", "O5-rear001", "L-decisive0",
+  "L-attr11", "L-decisive77", "L-nwLow", "L-mfrom66", "L-mcapK6", "L-chasui4", "L-taiyuan1", "L-mfromK5", "L-mcapK4", "L-mcapK3", "L-mcapK2", "L-decisiveH88", "L-sovt47", "L-regions75", "L-regions50", "L-mfrom77", "L-decisive67", "L-decisiveH89", "L-us8", "L-sovt47us8", "L-mwinK15", "L-mwinK12", "L-mwinK13", "L-mwinK14", "L-sov1", "L-rounds67", "L-turning87"];
 export function searchVariant(name) {
   let parts;
+  if (/^V(~\d+)*$/.test(name)) {
+    parts = [...VARIANTS.Z4.parts, ...name.split("~").slice(1).map((i) => LEVERS5[Number(i)])];
+    return { what: parts.join(" + "), why: "", parts, options: merge(...parts) };
+  }
   if (/^W(~\d+)*$/.test(name)) {
     parts = ["L-ccpheld", "L-mienorth", "L-mfrom7", ...name.split("~").slice(1).map((i) => LEVERS3[Number(i)])];
     return { what: parts.join(" + "), why: "", parts, options: merge(...parts) };

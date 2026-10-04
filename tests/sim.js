@@ -136,6 +136,26 @@ export function winsBySide(list) {
   return w;
 }
 
+// #23 round five (tests/targets.mjs item 1, read over all games): for each turn t = 1..8, who is ahead at
+// the end of turn t -- a game that ended at turn t or before counts for its winner, a game still running
+// for the side its mandate at that turn's end leans to (below 0 the Nationalists, above 0 the Communists,
+// 0 a tie). Added to the chunks' sums by `runChunk`, as `winsBySide` is.
+export function aheadByTurn(list) {
+  const a = {};
+  for (let t = 1; t <= 8; t++) a[t] = { ccp: 0, kmt: 0, tie: 0 };
+  for (const { st, rec } of list) {
+    const at = {};
+    for (const e of rec.turnEnds) at[e.turn] = e.mandate;
+    for (let t = 1; t <= 8; t++) {
+      if (st.turn <= t) a[t][st.winner === CCP ? "ccp" : "kmt"] += 1;
+      else if (at[t] < 0) a[t].kmt += 1;
+      else if (at[t] > 0) a[t].ccp += 1;
+      else a[t].tie += 1;
+    }
+  }
+  return a;
+}
+
 export function simulate({ games = 100, seed = 1, ccp = "normal", kmt = "normal", options = {} } = {}) {
   const list = [];
   for (let k = 0; k < games; k++) list.push(playGame(seed + k, { ccp, kmt, options }));
@@ -170,7 +190,7 @@ function runChunk({ cell, first, count, ccp, kmt, variant = {} }) {
     try { list.push(playGame(seed, { ccp, kmt, options: { ...variant, ...CELLS[cell] } })); }
     catch (e) { errors.push({ seed, message: String((e && e.message) || e).slice(0, 400) }); }
   }
-  return { cell, first, count, sum: { ...summarize(list), winsBySide: winsBySide(list) }, errors, ms: Date.now() - t0 };
+  return { cell, first, count, sum: { ...summarize(list), winsBySide: winsBySide(list), aheadByTurn: aheadByTurn(list) }, errors, ms: Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------- command line
