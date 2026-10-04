@@ -29,6 +29,12 @@
 // 讓 BE 試「民心勝利的門檻」與「最早哪一回合可以民心勝利」。目的是讓多數對局打到決戰期,「共軍後期佔優」才看得到;
 // 保住 P4 已經過的五項. So a ninth item: 多數對局打到決戰期 -- more than half of the games end at turn 7 or later.
 //
+// owner 裁決(#23, 2026-10-03, third pop-up): after round three (P6: 7/9, but the Nationalists win almost only by
+// 整編 on turn 4) the owner chose 「再調一輪,修國軍的贏法」, whose text read: 例如把「第 4 回合前不整編」換成「每回合
+// 最多放一個整編標記」、讓民心上限只管前三回合,目標加一項「國軍不只一種贏法、不集中在一個回合」. So a tenth item,
+// read on the per-side tallies `sum.winsBySide[seat] = { reasons: { <reason>: n }, turns: { <turn>: n } }` that
+// tests/sim.js must record (an older state file without them fails this item and says so).
+//
 // How each sentence is read is the orchestrator's (#23), written next to each check below. Every
 // per-turn number only counts the games that reached the end of that turn, so a late turn is the
 // picture of the few long games: a turn is judged only when at least MIN_N games reached it.
@@ -125,6 +131,18 @@ export function judge(sum, meta = {}) {
     const late = ended(7, 99);
     add("length", "多數對局打到決戰期(第 7 回合以後才結束的過半)", late / g > 0.5,
       `第 7 回合以後結束 ${pct(late, g)};第 5 回合以前結束 ${pct(ended(0, 5), g)};各回合 ${Object.keys(sum.endTurns).sort((a, b) => a - b).map((t) => `${t}:${sum.endTurns[t]}`).join(" ")}`);
+  }
+  // 10 國軍不只一種贏法、不集中在一個回合 (owner 裁決 #23, third pop-up): of the Nationalists' wins (at least 30 to
+  // judge), the most common way is at most two thirds, and the busiest turn holds at most 40%.
+  {
+    const k = sum.winsBySide && sum.winsBySide[1];
+    if (!k) add("kmtways", "國軍不只一種贏法、不集中在一個回合", false, "狀態檔沒有逐方的勝法(tests/sim.js 要記錄 winsBySide)");
+    else {
+      const n = Object.values(k.reasons).reduce((a, b) => a + b, 0), top = (o) => Object.entries(o).sort((a, b) => b[1] - a[1])[0] || ["–", 0];
+      const [rw, rn] = top(k.reasons), [tw, tn] = top(k.turns);
+      add("kmtways", "國軍不只一種贏法、不集中在一個回合(最多的一種 ≤ 2/3、最多的一回合 ≤ 40%)", n >= 30 && rn / n <= 2 / 3 && tn / n <= 0.4,
+        n < 30 ? `國軍只贏 ${n} 局,不能判斷` : `國軍勝 ${n} 局:最多的方式 ${rw} ${pct(rn, n)}、最多的回合第 ${tw} 回合 ${pct(tn, n)};方式 ${Object.entries(k.reasons).map(([r, v]) => `${r} ${v}`).join("、")};回合 ${Object.keys(k.turns).sort((a, b) => a - b).map((t) => `${t}:${k.turns[t]}`).join(" ")}`);
+    }
   }
   return out;
 }
