@@ -12,6 +12,10 @@
 // refuses is a disagreement between what it offers and what it accepts, which
 // is what the fuzz is there to find.
 //
+// Mechanism B (#26, option `mechanismB`): an attack on a city that must name a
+// plan names one at random (`attack` below); its other decisions (固守 / 增援 /
+// 突圍, the −1 / +1, 守 / 撤 and where to 撤) are pending choices like any other.
+//
 // It reads the whole state (the opponent's hand included); playing from a
 // per-seat `view()` is M2's. Its only source of chance is the `rng` it is
 // given (`E.makeRng`'s, with `int(n)`), so a game of random players is fixed
@@ -42,6 +46,14 @@ export function randomPoints(st, side, ops, rng, card) {
   }
 }
 
+// A 奇襲's target, and under mechanism B (#26) the plan an attack on a city
+// must name (`E.siegeNeeded`): 打點 or 打援, at random. Without the option no
+// plan is drawn, so a game of the default rules draws exactly what it drew.
+function attack(st, side, targets, rng) {
+  const target = pickOne(targets, rng);
+  return E.siegeNeeded(st, side, target) ? { target, siege: pickOne(E.SIEGE_PLANS, rng) } : { target };
+}
+
 // Free ops (an ops step that asks, or 馬歇爾調處's pair): one of the `allowed`
 // uses that has a target now, then its target or points. null when none has.
 export function randomOps(st, side, ops, allowed, rng, card) {
@@ -51,7 +63,7 @@ export function randomOps(st, side, ops, allowed, rng, card) {
   if (!uses.length) return null;
   const use = pickOne(uses, rng);
   if (use === "place") return { use, points: randomPoints(st, side, ops, rng, card) };
-  if (use === "campaign") return { use, target: pickOne(o.campaignTargets, rng) };
+  if (use === "campaign") return { use, ...attack(st, side, o.campaignTargets, rng) };
   return { use, target: pickOne(o.lobbyTargets, rng).id };
 }
 
@@ -111,7 +123,7 @@ export function randomAction(st, side, rng) {
         opts.push(() => play("event"));
         if (u.reform) opts.push(() => play("reform"));
         if (u.place) opts.push(ordered("place", () => ({ points: randomPoints(st, side, u.place.ops, rng) })));
-        if (u.campaign) opts.push(ordered("campaign", () => ({ target: pickOne(u.campaign.targets, rng) })));
+        if (u.campaign) opts.push(ordered("campaign", () => attack(st, side, u.campaign.targets, rng)));
         if (u.lobby) opts.push(ordered("lobby", () => ({ target: pickOne(u.lobby.targets, rng).id })));
         // 馬歇爾調處: the pair's ops, on the same targets as any card's (`legal` read them without a card).
         if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) opts.push(() => {
@@ -123,7 +135,7 @@ export function randomAction(st, side, rng) {
       if (L.aid) {
         const a = L.aid, aid = (use, rest) => ({ type: "play", side, card: a.id, use, ...rest });
         if (a.place) opts.push(() => aid("place", { points: randomPoints(st, side, a.ops, rng, a.id) }));
-        if (a.campaign) opts.push(() => aid("campaign", { target: pickOne(a.campaign.targets, rng) }));
+        if (a.campaign) opts.push(() => aid("campaign", attack(st, side, a.campaign.targets, rng)));
         if (a.lobby) opts.push(() => aid("lobby", { target: pickOne(a.lobby.targets, rng).id }));
       }
       return opts.length ? pickOne(opts, rng)() : null;

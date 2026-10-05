@@ -43,6 +43,12 @@ function gauss(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 const hand = (st, s) => st.hands[s] || [];
+// Mechanism B (#26, the option `mechanismB`): the bot does not know it yet (the
+// next issue teaches it). It only keeps its plays legal: an attack on a city
+// that must name a plan is offered once per plan, each scored like any
+// candidate; a hidden plan in its guess is drawn at random (`determinize`); a
+// 撤 is spread where there is room (`withdrawPoints`). Off B, a target is just itself.
+const attacks = (st, side, target) => (E.siegeNeeded(st, side, target) ? E.SIEGE_PLANS.map((siege) => ({ target, siege })) : [{ target }]);
 const inNortheast = (id) => SPACE[id].region === "northeast";
 const isCity = (id) => SPACE[id].kind === "city";
 
@@ -424,6 +430,8 @@ export function determinize(view, side, rng) {
     }
   }
   if (st.headline[opp] === "hidden") st.headline[opp] = pool.shift() ?? null;
+  // #26: the Communists' face-down plan for an attack on a city (`view` hides it until the answer).
+  for (const p of st.plan) if (p.do === "siege" && p.plan == null) p.plan = pickOne(E.SIEGE_PLANS, rng);
   st.draw = pool;
   st.rngState = rng.int(2 ** 31);
   delete st.handCounts; delete st.drawCount; delete st.laterCounts; delete st.homeCapitals;
@@ -661,10 +669,10 @@ function bestOps(st, who, ops, allowed, rng, card) {
     const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
     for (const pts of winningPlacements(st, who, ops, aid)) cands.push({ use: "place", points: pts });
   }
-  if (allowed.includes("campaign")) for (const t of o.campaignTargets) cands.push({ use: "campaign", target: t });
+  if (allowed.includes("campaign")) for (const t of o.campaignTargets) for (const x of attacks(st, who, t)) cands.push({ use: "campaign", ...x });
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
-  if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", target: o.campaignTargets[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
+  if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", ...attacks(st, who, o.campaignTargets[0])[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
   return bestOf(st, who, cands, rng);
 }
 // A card choice of `n` cards: every set of up to two, else greedy one by one.
@@ -676,9 +684,20 @@ function cardSets(p) {
   if (n >= 2 && min <= 2) for (let i = 0; i < o.length; i++) for (let j = i + 1; j < o.length; j++) out.push([o[i], o[j]]);
   return out.length ? out : [o.slice(0, min)];
 }
+// 進剿's 撤 (#26): all `n` red points must go somewhere among the villages; each
+// goes where the most room is left (a point with no room anywhere is lost).
+function withdrawPoints(st, p) {
+  const counts = {}, out = [];
+  const room = (id) => E.capOf(st, id) - E.infOf(st, id)[CCP] - (counts[id] || 0);
+  for (let i = 0; i < p.n; i++) {
+    const id = p.options.reduce((a, b) => (room(b) > room(a) ? b : a));
+    counts[id] = (counts[id] || 0) + 1; out.push(id);
+  }
+  return out;
+}
 export function answer(st, p, who, rng) {
   switch (p.kind) {
-    case "points": return bestPoints(st, p, who, rng);
+    case "points": return p.tag === "withdraw" ? withdrawPoints(st, p) : bestPoints(st, p, who, rng);
     case "card": return bestOf(st, who, cardSets(p), rng);
     // 收手 (realign-own): go on while the next attempt gains on average.
     case "option": if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
@@ -729,7 +748,7 @@ function actionCandidates(st, side, L) {
       if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, points });
       winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", ...order, points: pts }));
     }
-    if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", ...order, target: t });
+    if (u.campaign) for (const t of u.campaign.targets) for (const x of attacks(st, side, t)) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
     if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", ...order, target: t.id });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
@@ -740,7 +759,7 @@ function actionCandidates(st, side, L) {
         if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
         winPlace(pops, (pts) => ({ type: "play", side, card: id, pair, use: "place", points: pts }));
       }
-      if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, pair, use: "campaign", target: t });
+      if (u.campaign) for (const t of u.campaign.targets) for (const x of attacks(st, side, t)) out.push({ type: "play", side, card: id, pair, use: "campaign", ...x });
       if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
     }
   }
@@ -754,7 +773,7 @@ function actionCandidates(st, side, L) {
       if (id === "american_aid") offer(placed(a.ops, id, isCity, "city"));
       winPlace(a.ops, (pts) => play("place", { points: pts }), id);
     }
-    if (a.campaign) for (const t of a.campaign.targets) out.push(play("campaign", { target: t }));
+    if (a.campaign) for (const t of a.campaign.targets) for (const x of attacks(st, side, t)) out.push(play("campaign", x));
     if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
   return dropSelfCollapse(st, side, out);

@@ -48,6 +48,12 @@
 //     (the one reading of the 時局 in effect, `situationNow`; the support
 //     tracks' fixed moves are `SUPPORT_SCHEDULE`, outside it), `rounds` (the
 //     hand sizes and action rounds, `eraLimits`), `garrison` (`garrisoned`).
+// And in M2b:
+//   - #26 mechanism B as the option `mechanismB` (not a default): `SIEGE`; an
+//     attack paid with ops is 圍點打援 on a city for the Communists (`siegeStep`,
+//     the plan hidden by `view`), 進剿 for the Nationalists (`sweepStep`); the
+//     one reading of an attack's X (`attackPower`); 圍城 (`besieged`, read by
+//     `canPlaceAt`, `campaignMod` and `isolatedCities`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -344,6 +350,16 @@ export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0
 //                      and where they may go (today 4 among the Northeast's
 //                      three cities) (`situationStep`)
 const tune = (st, key) => st.options && st.options[key] != null;
+// #26, mechanism B (圍點打援、破襲、進剿; owner's mechanisms note, hand-copied in
+// tests/acceptance.test.js group 13), the option `mechanismB` -- NOT a key of
+// DEFAULT_OPTIONS until the owner adopts it; absent or false plays as before.
+// The numbers, the note's first version: a reinforcement point is worth
+// `reinforceFactor` of the attack, at most `reinforceMax` points come, a breakout
+// loses `breakoutLoss` of the blue (rounded up), the capture and the failed
+// attack's loss are 1 each, and a siege gives the Communists' next attack on the
+// city `siegeBonus`.
+export const SIEGE = { reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 };
+const mechB = (st) => !!(st.options && st.options.mechanismB);
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -556,6 +572,8 @@ export function controlled(st, side) { return SPACES.filter((s) => controller(st
 // "ts" the eligible set is fixed then; under "control" it is null and reach is
 // re-read on `st` as it stands. A state without the option plays as "control".
 export function canPlaceAt(st, side, id, reach = null) {
+  // #26: a besieged city (圍城) takes no Nationalist 扶植 this turn.
+  if (side === KMT && besieged(st, id)) return false;
   if (reach) return reach.has(id);
   if (infOf(st, id)[side] > 0) return true;
   if (st.options.reach === "ts") return adjOf(st, id).some((a) => infOf(st, a)[side] > 0);
@@ -1074,6 +1092,8 @@ export function campaignMod(st, side, target) {
     if (e.spaceKind && e.spaceKind !== kind) continue;
     d += e.delta;
   }
+  // #26: a siege (圍城) gives the Communists' next attack on that city +siegeBonus.
+  if (side === CCP && siegeBonusOn(st, target)) d += SIEGE.siegeBonus;
   return d;
 }
 export function addEffect(st, e) { st.effects.push(e); }
@@ -1084,9 +1104,7 @@ export function removeEffect(st, pred) { st.effects = st.effects.filter((e) => !
 // them); the weariness cost is paid here unless `noTire`.
 export function campaign(st, side, target, ops, { noTire = false, pusher = side } = {}) {
   const opp = other(side);
-  let o = ops + campaignMod(st, side, target);
-  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) { st.perkUsed[side] = true; o += 1; }
-  o = Math.max(0, o);
+  const o = attackPower(st, side, target, ops);
   const removed = remove(st, opp, target, o);
   const placed = place(st, side, target, o - removed);
   log(st, { type: "campaign", side, target, ops: o, removed, placed });
@@ -1095,6 +1113,167 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
   checkMarkers(st);
   truceBroken(st, side);
   return { ops: o, removed, placed };
+}
+// X, an attack's strength: the ops, the 時局's and the cards' modifiers
+// (`campaignMod`, a siege's +1 included), and 建軍 / 行憲 box 3's +1 on the first
+// 奇襲 of the turn; never below 0. Uses up the perk and the siege's +1. The one
+// reading for the old 奇襲 (`campaign`) and for mechanism B's attacks (#26:
+// orchestrator 裁決 3, the modifiers are added to X before the table is read).
+function attackPower(st, side, target, ops) {
+  let o = ops + campaignMod(st, side, target);
+  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) { st.perkUsed[side] = true; o += 1; }
+  if (side === CCP && siegeBonusOn(st, target)) {
+    st.effects = st.effects.map((e) => (e.kind === "siege" && e.space === target ? { ...e, bonus: false } : e));
+  }
+  return Math.max(0, o);
+}
+
+// ---------- mechanism B (#26): 圍點打援、破襲、進剿 ----------
+// Only an attack paid with ops (a card's or an aid card's: `doOps`) goes
+// through it (orchestrator 裁決 #26, 2); a card's event that says 奇襲 calls
+// `campaign` as before. With the option on:
+//   B1 the Communists on a city: 圍點打援 (`siegeStep`). Only a city with a
+//      space next to it the Communists control (`siegeOpen`); the play names a
+//      plan, `siege: "point" | "relief"`, kept secret until the Nationalists
+//      have answered (`view` hides it).
+//   B2 the Communists on a village: 破襲, the old 奇襲 (`campaign`).
+//   B3 the Nationalists anywhere: 進剿 (`sweepStep`), the Communists stand or
+//      withdraw.
+// 民生, 停戰's first attack and the markers follow every attack as they follow
+// `campaign` (`attackEnd`); 美軍駐華, the 民生 locks and 受降 bar targets as before.
+export const SIEGE_PLANS = ["point", "relief"];
+// Whether this attack by `side` on `target` is a 圍點打援 (and so must name a plan).
+export function siegeNeeded(st, side, target) {
+  return mechB(st) && side === CCP && !!SPACE[target] && SPACE[target].kind === "city";
+}
+// The spaces next to `id` the Communists control: where the attack comes from,
+// and where its −1 / +1 goes.
+function ccpAround(st, id) { return adjOf(st, id).filter((a) => controller(st, a) === CCP); }
+// B1's condition: a city may be attacked only from a space the Communists control next to it.
+function siegeOpen(st, side, target) { return !siegeNeeded(st, side, target) || ccpAround(st, target).length > 0; }
+// 圍城: the marker of a 打援 met by 固守, until the turn's 結算 (`until: "turn"`).
+export function besieged(st, id) { return (st.effects || []).some((e) => e.kind === "siege" && e.space === id); }
+function siegeBonusOn(st, id) { return (st.effects || []).some((e) => e.kind === "siege" && e.space === id && e.bonus); }
+// 增援's R: a city the Nationalists control, in supply, next to T or with one
+// village between them that the Communists do not control. None into a 孤城.
+function reinforceSources(st, T) {
+  const ok = supplied(st);
+  return SPACES.filter((s) => s.kind === "city" && s.id !== T && controller(st, s.id) === KMT && ok.has(s.id)
+    && (adjOf(st, T).includes(s.id) || adjOf(st, T).some((v) => SPACE[v].kind === "village" && controller(st, v) !== CCP && adjOf(st, v).includes(s.id))))
+    .map((s) => s.id);
+}
+// The Nationalists' answers to an attack on T, as option ids.
+function siegeResponses(st, T) {
+  const out = ["hold"], D = infOf(st, T)[KMT];
+  if (!isolatedCities(st).includes(T)) {
+    for (const R of reinforceSources(st, T)) {
+      const most = Math.min(SIEGE.reinforceMax, capOf(st, T) - D, infOf(st, R)[KMT]);
+      for (let k = 1; k <= most; k++) out.push(`reinforce:${R}:${k}`);
+    }
+  }
+  for (const R of adjOf(st, T)) if (controller(st, R) !== CCP) out.push(`breakout:${R}`);
+  return out;
+}
+// 進剿's 撤: the villages next to `id` the Nationalists do not control.
+function withdrawTargets(st, id) { return adjOf(st, id).filter((a) => SPACE[a].kind === "village" && controller(st, a) !== KMT); }
+// An attack paid with ops, under the option: the plan step that asks.
+function declareAttack(st, side, target, ops, plan) {
+  const X = attackPower(st, side, target, ops);
+  if (side === CCP) {
+    log(st, { type: "siege", side, target, ops: X });
+    st.plan.splice(1, 0, { do: "siege", side, target, ops: X, plan, stage: "respond", choices: [] });
+  } else {
+    log(st, { type: "sweep", side, target, ops: X });
+    st.plan.splice(1, 0, { do: "sweep", side, target, ops: X, stage: "answer", choices: [] });
+  }
+}
+// What follows every attack, as in `campaign`: 民生 (a 要衝; not the Communists
+// on a city in 決戰 / 和談), the markers, 停戰's first attack.
+function attackEnd(st, side, target) {
+  if (SPACE[target].battleground && !situationUnlocks(st, side, target)) tire(st, 1, side);
+  checkMarkers(st);
+  truceBroken(st, side);
+}
+function siegeStep(st, step) {
+  const T = step.target, X = step.ops;
+  if (step.stage === "respond") {
+    if (!step.choices.length) {
+      return ask(st, { ...step, side: KMT }, { kind: "option", tag: "siege", target: T, ops: X, options: siegeResponses(st, T).map((id) => ({ id })) });
+    }
+    const [kind, R, kk] = String(step.choices.shift()).split(":"), k = Number(kk) || 0;
+    const r = { type: "siegeResult", side: CCP, target: T, ops: X, plan: step.plan, response: kind, ...(R ? { to: R } : {}), ...(k ? { k } : {}) };
+    let pick = null;
+    if (step.plan === "point") {
+      if (kind === "hold") {
+        r.removed = remove(st, KMT, T, X);
+        r.placed = place(st, CCP, T, X - r.removed);
+      } else if (kind === "reinforce") {
+        place(st, KMT, T, remove(st, KMT, R, k));
+        const a = Math.max(0, X - SIEGE.reinforceFactor * k);
+        r.removed = remove(st, KMT, T, a);
+        if (a === 0) pick = "siegeLoss";
+      } else {
+        const d = remove(st, KMT, T, infOf(st, T)[KMT]);
+        r.moved = place(st, KMT, R, d);
+        if (!infOf(st, T)[KMT]) r.placed = place(st, CCP, T, X);
+      }
+    } else if (kind === "hold") {
+      st.effects = st.effects.filter((e) => !(e.kind === "siege" && e.space === T));
+      addEffect(st, { kind: "siege", space: T, bonus: true, until: "turn" });
+      r.besieged = true;
+    } else if (kind === "reinforce") {
+      r.removed = remove(st, KMT, R, Math.min(k, X));
+      pick = "siegeCapture";
+    } else {
+      const d = remove(st, KMT, T, infOf(st, T)[KMT]);
+      r.removed = Math.min(Math.ceil(d * SIEGE.breakoutLoss), X);
+      r.moved = place(st, KMT, R, d - r.removed);
+      if (!infOf(st, T)[KMT]) r.placed = place(st, CCP, T, 1);
+    }
+    log(st, r);
+    step.stage = pick && ccpAround(st, T).length ? pick : "end";
+  }
+  if (step.stage === "siegeLoss" || step.stage === "siegeCapture") {
+    if (!step.choices.length) {
+      return ask(st, { ...step, side: CCP }, { kind: "option", tag: step.stage, target: T, options: ccpAround(st, T).map((id) => ({ id })) });
+    }
+    const id = step.choices.shift();
+    const n = step.stage === "siegeLoss" ? -remove(st, CCP, id, SIEGE.failLoss) : place(st, CCP, id, SIEGE.capture);
+    log(st, { type: step.stage, side: CCP, target: T, space: id, n });
+    step.stage = "end";
+  }
+  attackEnd(st, CCP, T);
+  return true;
+}
+function sweepStep(st, step) {
+  const T = step.target, X = step.ops;
+  if (step.stage === "answer") {
+    if (!step.choices.length) {
+      const options = [{ id: "stand" }, ...(withdrawTargets(st, T).length ? [{ id: "withdraw" }] : [])];
+      return ask(st, { ...step, side: CCP }, { kind: "option", tag: "sweep", target: T, ops: X, options });
+    }
+    if (step.choices.shift() === "withdraw") step.stage = "withdraw";
+    else {
+      const removed = remove(st, CCP, T, X), placed = place(st, KMT, T, X - removed);
+      log(st, { type: "sweepResult", side: KMT, target: T, ops: X, response: "stand", removed, placed });
+      step.stage = "end";
+    }
+  }
+  if (step.stage === "withdraw") {
+    const n = infOf(st, T)[CCP];
+    if (!step.choices.length) {
+      return ask(st, { ...step, side: CCP }, { kind: "points", tag: "withdraw", target: T, n, min: n, options: withdrawTargets(st, T) });
+    }
+    const points = step.choices.shift();
+    remove(st, CCP, T, n);
+    let moved = 0;
+    for (const id of points) moved += place(st, CCP, id, 1);
+    const placed = place(st, KMT, T, X);
+    log(st, { type: "sweepResult", side: KMT, target: T, ops: X, response: "withdraw", points, moved, lost: n - moved, placed });
+    step.stage = "end";
+  }
+  attackEnd(st, KMT, T);
+  return true;
 }
 // 停戰 (turn 2, #2): the first 奇襲 of the turn, whoever makes it and however
 // (an action, or an event's free 奇襲 calling `campaign` itself), moves 民心 2
@@ -1316,7 +1495,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-04"; // #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))
+export const RULES_VERSION = "2026-10-04-2"; // #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1486,6 +1665,8 @@ function exec(st, step) {
     }
     case "finishCard": return finishCard(st, step), true;
     case "realign": return realignStep(st, step);
+    case "siege": return siegeStep(st, step);
+    case "sweep": return sweepStep(st, step);
     case "endAction": return endAction(st), true;
     case "beginAction": return beginAction(st), true;
     case "endTurn": {
@@ -1845,7 +2026,11 @@ function doOps(st, side, card, ops, choice) {
     if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
     if (campaignBanned(st, t, side)) fail("campaign: no 奇襲 there this turn (an event)");
-    campaign(st, side, t, ops);
+    // #26, mechanism B: a city needs a Communist-controlled space next to it and a plan.
+    if (!siegeOpen(st, side, t)) fail("campaign: 圍點打援 -- the Communists control no space next to that city");
+    if (siegeNeeded(st, side, t) && !SIEGE_PLANS.includes(choice.siege)) fail("campaign: an attack on a city must name its plan, siege: point or relief");
+    if (mechB(st) && (side === KMT || siegeNeeded(st, side, t))) declareAttack(st, side, t, ops, choice.siege);
+    else campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
     ops += aidBonus(card, choice);
@@ -1991,7 +2176,7 @@ function play(st, action) {
     if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
     if (forcedCard(st, side)) fail("you must play the named card");
     if (!["place", "campaign", "lobby"].includes(use)) fail("the aid card: place, campaign or lobby only");
-    const ops = opsOf(st, side, c), payload = { use, points: action.points, target: action.target };
+    const ops = opsOf(st, side, c), payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}) };
     validateOps(st, side, c, ops, payload);
     st.aidUsed[side] = true;
     steps.push({ do: "ops", side, card: c, ops, payload }, { do: "endAction" });
@@ -2038,7 +2223,7 @@ function play(st, action) {
     if (card.ops < reformThreshold(st, side)) fail("reform: card below the threshold");
     steps.push({ do: "reform", side }, { do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
   } else if (["place", "campaign", "lobby"].includes(use)) {
-    const payload = { use, points: action.points, target: action.target };
+    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}) };
     const enemy = card.side != null && card.side !== side;
     const paired = c === MARSHALL && action.pair;
     // The player chooses whether an enemy card's ops or its event comes first
@@ -2104,7 +2289,7 @@ export function opsOptions(st, side, card) {
   const airlift = card === "american_aid" ? (id) => airliftOk(st, id) : () => false;
   const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && (!barred(s.id) || airlift(s.id)) && !sovietHeld(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
-  const campaignTargets = SPACES.filter((s) => canCampaign(st, side, s.id)).map((s) => s.id);
+  const campaignTargets = SPACES.filter((s) => canCampaign(st, side, s.id) && siegeOpen(st, side, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
   const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
     .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
@@ -2163,6 +2348,9 @@ export function view(st, side) {
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
   v.handCounts = [st.hands[CCP].length, st.hands[KMT].length];
+  // #26: the Communists' plan for an attack on a city (打點 / 打援) is face down
+  // until the Nationalists have answered: only the Communists' view has it.
+  if (side !== CCP) for (const p of v.plan || []) if (p.do === "siege" && p.stage === "respond") p.plan = null;
   if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
   if (side == null) {
     // A spectator sees the table and neither hand.
@@ -2226,7 +2414,8 @@ export function supplied(st) {
 // 孤城: the cities with Nationalist influence that no source reaches.
 export function isolatedCities(st) {
   const ok = supplied(st);
-  return SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && !ok.has(s.id)).map((s) => s.id);
+  // #26: a besieged city (圍城) counts as one this turn.
+  return SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && (!ok.has(s.id) || besieged(st, s.id))).map((s) => s.id);
 }
 // 孤城的效果 1 (#1): the Nationalists may not 扶植 into a city no source reaches.
 // The test is `supplied`, not `isolatedCities`: a city with no blue and no
