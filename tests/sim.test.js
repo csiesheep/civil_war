@@ -91,7 +91,10 @@ function playFromViews(seed, options, levels = ["normal", "normal"]) {
   while (st.winner == null) {
     if (++n > 4000) throw new Error(`seed ${seed}: did not end`);
     const who = E.mustAct(st), side = who[rng.int(who.length)];
-    st = E.apply(st, B.decide(E.view(st, side), side, levels[side], rng));
+    // #27 / #28: a 圍點打援 decision carries the bot's `game` (its note, not part of the move); like
+    // tests/bots-chunk.js, it is taken off before the move reaches the engine.
+    const { game, ...move } = B.decide(E.view(st, side), side, levels[side], rng);
+    st = E.apply(st, move);
   }
   return st;
 }

@@ -67,8 +67,9 @@ const CELLS = [
   ["H 外援牌與美軍駐華關掉", { aid: false, garrison: false }],
   ["R 行動回合對稱", { rounds: "symmetric" }],
   ["四根都關掉", { supply: false, situations: false, aid: false, garrison: false, rounds: "symmetric" }],
-  // M2b (#26): mechanism B is an option until the owner adopts it; random play must handle its decisions too.
-  ["B 機制 B 開", { mechanismB: true }],
+  // M2b: mechanism B was an option (#26) and is the default since #28 (owner 裁決 2026-10-05); the old 奇襲
+  // stays playable with it off, so the cell now plays B off.
+  ["B 機制 B 關", { mechanismB: false }],
 ];
 test("fuzz: the control cells", async () => {
   const E = await import("../public/shared/engine.js");
