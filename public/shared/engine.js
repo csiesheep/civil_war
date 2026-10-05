@@ -58,6 +58,11 @@
 //     B 採用為預設」): `mechanismB: true` is a key of DEFAULT_OPTIONS, B's rules
 //     and `SIEGE` exactly as #26 / #27 measured them. `{ mechanismB: false }`
 //     still plays the rules before B.
+//   - #31 mechanism D's core as the option `mechanismD` (not a default): gray and
+//     the attitudes (`DPOWERS`, `GRAY_START`, `grayOf`, `attitudeOf`, read by
+//     `controller`, `place`, `canPlaceAt`, `pointsOf`), 政工 (`politics`), the
+//     order of an attack on blue + gray (`hitKmt`, `grayOrder`), D's markers
+//     (`dMarkers`) and the 結算's 孤城 (`supplyAttritionD`).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -366,6 +371,66 @@ const tune = (st, key) => st.options && st.options[key] != null;
 // city `siegeBonus`.
 export const SIEGE = { reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 };
 const mechB = (st) => !!(st.options && st.options.mechanismB);
+// #31, mechanism D's core (實力派的態度; owner's mechanisms note D, hand-copied in
+// tests/acceptance.test.js group 14, with orchestrator 裁決 #31 and owner 裁決 #30:
+// 「先做核心,不含調防安撫」 and 「維持現在的勝利條件」), the option `mechanismD`.
+// NOT a key of DEFAULT_OPTIONS: an absent or false option plays as before D,
+// byte for byte -- the state has no `gray` / `attitude` / `talks` / `grayLast`
+// then, `grayOf` answers 0 everywhere, so every 「藍 + 灰」 below is the blue.
+//   - Gray (灰): a power's own troops, in its own spaces only (`DPOWERS[p].spaces`,
+//     D's table: not board.js's `STATES`, whose 北平 and 武漢 are spaces of a power
+//     only with 調防, which this version has not). `st.gray[id]`. Never added to
+//     (no event adds gray), never moved; removed by an attack (`hitKmt`) or by
+//     整編, or turned red by 易幟.
+//   - The attitude of each power (`st.attitude[p]`, one of `ATTITUDES`) decides
+//     what its gray counts for: `controller`; reach (`canPlaceAt`: loyal gray is
+//     the Nationalists' point); the Nationalists' cap and the targets of an
+//     attack count blue + gray (`pointsOf`) whatever the attitude.
+//   - 整編 and 統戰 are a card's fifth use, `politics` (`doOps`, `politicsOptions`).
+//   - 易幟 and 整編完成 replace the two-colour markers (`dMarkers`, read by
+//     `checkMarkers`); victory is today's (`mie`, `seals` of the options).
+//   - An attack that removes some but not all of blue + gray, both there, asks
+//     the Nationalists which goes first (`grayOrderNeeded`, pending tag "grayOrder").
+//   - 結算: a 孤城 with gray moves its power one step toward the Communists
+//     (`supplyAttritionD`). 起義, 調防 and 安撫 are not in this version (owner 裁決 #30).
+export const DPOWERS = {
+  sui:  { home: "chasui",  spaces: ["chasui"],              attitude: "loyal",   threshold: 3, vp: 3 },
+  jin:  { home: "taiyuan", spaces: ["taiyuan", "jinzhong"], attitude: "neutral", threshold: 4, vp: 2 },
+  gui:  { home: "guilin",  spaces: ["guilin"],              attitude: "neutral", threshold: 3, vp: 3 },
+  ma:   { home: "lanzhou", spaces: ["lanzhou"],             attitude: "loyal",   threshold: 4, vp: 2 },
+  dian: { home: "kunming", spaces: ["kunming"],             attitude: "neutral", threshold: 2, vp: 2 },
+};
+// The opening's gray: today's blue at these six spaces, turned gray (#30).
+export const GRAY_START = { chasui: 2, taiyuan: 2, jinzhong: 2, guilin: 2, lanzhou: 2, kunming: 2 };
+// 效忠 / 觀望 / 通共, in the order a step "toward the Communists" walks.
+export const ATTITUDES = ["loyal", "neutral", "ccp"];
+// 整編完成: 民心 2 toward the Nationalists (the note, rule 10).
+export const D_SEAL_VP = 2;
+const mechD = (st) => !!(st.options && st.options.mechanismD);
+const POWER_OF = {};
+for (const [p, d] of Object.entries(DPOWERS)) for (const id of d.spaces) POWER_OF[id] = p;
+// The power whose space `id` is under D, or null.
+export function powerOf(id) { return POWER_OF[id] || null; }
+export function grayOf(st, id) { return (st.gray && st.gray[id]) || 0; }
+export function attitudeOf(st, power) { return (st.attitude && st.attitude[power]) || null; }
+// For laying out a position (the acceptance rigs, the tutorial): no rule is read.
+export function setGray(st, id, n) {
+  if (!POWER_OF[id]) fail(`setGray: ${id} is not a space of a power`);
+  if (!st.gray) st.gray = {};
+  st.gray[id] = n;
+}
+export function setAttitude(st, power, a) {
+  if (!DPOWERS[power] || !ATTITUDES.includes(a)) fail(`setAttitude: ${power} ${a}`);
+  if (!st.attitude) st.attitude = {};
+  st.attitude[power] = a;
+}
+// A side's points at `id` as the cap and the attacks count them: the Nationalists'
+// blue + gray (any attitude), the Communists' red.
+export function pointsOf(st, side, id) { return infOf(st, id)[side] + (side === KMT ? grayOf(st, id) : 0); }
+// Loyal gray at `id`, which is the Nationalists' point for reach (orchestrator 裁決 #31).
+function loyalGray(st, side, id) {
+  return side === KMT && !!st.gray && st.gray[id] > 0 && st.attitude[POWER_OF[id]] === "loyal";
+}
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -548,8 +613,18 @@ export function adjOf(st, id) {
 function ensure(st, id) { if (!st.inf[id]) st.inf[id] = [0, 0]; return st.inf[id]; }
 export function controller(st, id) {
   const [q, c] = infOf(st, id), S = SPACE[id].stability;
-  if (q >= c + S) return CCP;
-  if (c >= q + S) return KMT;
+  const g = st.gray ? st.gray[id] || 0 : 0;
+  if (!g) {
+    if (q >= c + S) return CCP;
+    if (c >= q + S) return KMT;
+    return null;
+  }
+  // #31, D's rule 2: gray blocks the Communists in every attitude (red ≥ blue +
+  // gray + S); it is the Nationalists' when loyal, nobody's when neutral, and
+  // counted against them when it leans to the Communists.
+  const a = st.attitude[POWER_OF[id]];
+  if (q >= c + g + S) return CCP;
+  if ((a === "loyal" ? c + g : c) >= (a === "ccp" ? q + g : q) + S) return KMT;
   return null;
 }
 export function capOf(st, id) { return SPACE[id].stability + st.options.cap; }
@@ -563,7 +638,8 @@ export function sovietHeld(st, id) { return situationNow(st)?.id === "surrender"
 export function place(st, side, id, n = 1) {
   if (sovietHeld(st, id)) return 0;
   const a = ensure(st, id);
-  const k = Math.max(0, Math.min(n, capOf(st, id) - a[side]));
+  // #31: the Nationalists' cap is blue + gray.
+  const k = Math.max(0, Math.min(n, capOf(st, id) - a[side] - (side === KMT ? grayOf(st, id) : 0)));
   a[side] += k;
   return k;
 }
@@ -581,8 +657,9 @@ export function canPlaceAt(st, side, id, reach = null) {
   // #26: a besieged city (圍城) takes no Nationalist 扶植 this turn.
   if (side === KMT && besieged(st, id)) return false;
   if (reach) return reach.has(id);
-  if (infOf(st, id)[side] > 0) return true;
-  if (st.options.reach === "ts") return adjOf(st, id).some((a) => infOf(st, a)[side] > 0);
+  // #31: loyal gray is the Nationalists' point here and next door.
+  if (infOf(st, id)[side] > 0 || loyalGray(st, side, id)) return true;
+  if (st.options.reach === "ts") return adjOf(st, id).some((a) => infOf(st, a)[side] > 0 || loyalGray(st, side, a));
   return adjOf(st, id).some((a) => controller(st, a) === side);
 }
 export function reachFrom(st, side) {
@@ -634,7 +711,7 @@ export function placeTargets(st, side, ops, points = [], card) {
   for (const s of SPACES) {
     const cost = placeCost(trial, side, s.id);
     const budget = left + (soviet && inNortheast(s.id) ? 1 : 0);
-    if (cost <= budget && reachable(s.id) && infOf(trial, s.id)[side] < capOf(trial, s.id) && open(s.id) && !sovietHeld(trial, s.id)) {
+    if (cost <= budget && reachable(s.id) && pointsOf(trial, side, s.id) < capOf(trial, s.id) && open(s.id) && !sovietHeld(trial, s.id)) {
       lit.add(s.id);
       costs[s.id] = cost;
     }
@@ -678,8 +755,9 @@ export function campaignBanned(st, id, side) {
 // Northeast cities; not 美軍駐華 against the Communists; not locked by 民生; not
 // protected; not barred by a `campaignBan`. A card that says it ignores the
 // locks or 美軍駐華 turns that one test off (`locks: false`, `garrison: false`).
+// #31: a space with gray only is a target for the Communists (blue + gray, `pointsOf`).
 export function canCampaign(st, side, id, { locks = true, garrison = true } = {}) {
-  return infOf(st, id)[other(side)] > 0 && !sovietHeld(st, id) && !(garrison && side === CCP && garrisoned(st, id))
+  return pointsOf(st, other(side), id) > 0 && !sovietHeld(st, id) && !(garrison && side === CCP && garrisoned(st, id))
     && !(locks && campaignLocked(st, id, side)) && !isProtected(st, id) && !campaignBanned(st, id, side);
 }
 // An event's free 奇襲 (orchestrator 裁決 #6, 4): the targets are the ones the
@@ -867,7 +945,9 @@ export function moveSupport(st, side, delta) {
 }
 export function checkMarkers(st) {
   if (st.winner != null) return;
-  for (const [id, s] of Object.entries(STATES)) {
+  // #31: under mechanism D the markers are D's (`dMarkers`); victory below is the same.
+  if (mechD(st)) dMarkers(st);
+  else for (const [id, s] of Object.entries(STATES)) {
     const capCtl = controller(st, s.capital);
     if (st.mie[id] && capCtl === KMT) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
     if (st.seals[id] && capCtl === CCP) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
@@ -1056,7 +1136,7 @@ function aidBonus(card, choice) {
 // Only a 孤城: a city with no blue (out of supply, or held by the Communists)
 // stays barred, as the rulebook's exception names only 孤城.
 function airliftOk(st, id) {
-  return SPACE[id].kind === "city" && infOf(st, id)[KMT] > 0 && !supplied(st).has(id);
+  return SPACE[id].kind === "city" && pointsOf(st, KMT, id) > 0 && !supplied(st).has(id); // #31: blue or gray
 }
 // 美軍駐華 (#4, rulebook 三, 外國勢力 2): while 美國支持 is at 3 or more, the
 // Communists may not 奇襲 天津 or 上海 -- by a card or by 蘇援. Only the 奇襲:
@@ -1108,10 +1188,13 @@ export function removeEffect(st, pred) { st.effects = st.effects.filter((e) => !
 // A campaign with `ops` points against `target` by `side`. Locks and
 // protection are checked by the caller (free campaigns from events may skip
 // them); the weariness cost is paid here unless `noTire`.
-export function campaign(st, side, target, ops, { noTire = false, pusher = side } = {}) {
+// #31: `order` ("blue" | "gray") is the Nationalists' answer when the attack must
+// ask it (`grayOrderNeeded`); the callers that can ask (the `grayHit` step, an
+// event's free 奇襲 in cards.js) pass it.
+export function campaign(st, side, target, ops, { noTire = false, pusher = side, order = null } = {}) {
   const opp = other(side);
   const o = attackPower(st, side, target, ops);
-  const removed = remove(st, opp, target, o);
+  const removed = side === CCP ? hitKmt(st, target, o, order) : remove(st, opp, target, o);
   const placed = place(st, side, target, o - removed);
   log(st, { type: "campaign", side, target, ops: o, removed, placed });
   // 決戰, 和談 (#2): a Communist 奇襲 on a city does not push 民生.
@@ -1126,12 +1209,193 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
 // reading for the old 奇襲 (`campaign`) and for mechanism B's attacks (#26:
 // orchestrator 裁決 3, the modifiers are added to X before the table is read).
 function attackPower(st, side, target, ops) {
-  let o = ops + campaignMod(st, side, target);
-  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) { st.perkUsed[side] = true; o += 1; }
+  const o = attackX(st, side, target, ops);
+  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) st.perkUsed[side] = true;
   if (side === CCP && siegeBonusOn(st, target)) {
     st.effects = st.effects.map((e) => (e.kind === "siege" && e.space === target ? { ...e, bonus: false } : e));
   }
+  return o;
+}
+// The same X without using anything up (#31: whether an attack will have to ask the order).
+function attackX(st, side, target, ops) {
+  let o = ops + campaignMod(st, side, target);
+  if (hasPerk(st, side, "campaign") && !st.perkUsed[side]) o += 1;
   return Math.max(0, o);
+}
+
+// ---------- mechanism D (#31): the Communists' attacks on blue + gray ----------
+// Whether removing `n` of the Nationalists' points at `id` must ask them which
+// goes first: blue and gray both there, and not all of them removed (orchestrator
+// 裁決 #31). Never without the option (there is no gray).
+function orderNeeded(st, id, n) {
+  const g = grayOf(st, id), b = infOf(st, id)[KMT];
+  return g > 0 && b > 0 && n > 0 && n < b + g;
+}
+// For an attack by `side` with `ops` (X read as `campaign` will read it).
+export function grayOrderNeeded(st, side, target, ops) {
+  return mechD(st) && side === CCP && orderNeeded(st, target, attackX(st, side, target, ops));
+}
+export const GRAY_ORDER = [{ id: "blue" }, { id: "gray" }];
+// Remove `n` of the Nationalists' points at `id`, blue + gray, in `order` when it
+// must be asked. Returns how many went. Without gray there: `remove`, as before D.
+function hitKmt(st, id, n, order) {
+  const g = grayOf(st, id);
+  if (!g) return remove(st, KMT, id, n);
+  const b = infOf(st, id)[KMT];
+  let fromBlue, fromGray;
+  if (n <= 0) return 0;
+  if (n >= b + g) { fromBlue = b; fromGray = g; } else if (!b) { fromBlue = 0; fromGray = n; } else {
+    if (order !== "blue" && order !== "gray") fail("attack: blue and gray are both hit, the Nationalists choose which goes first (grayOrder)");
+    if (order === "blue") { fromBlue = Math.min(n, b); fromGray = n - fromBlue; } else { fromGray = Math.min(n, g); fromBlue = n - fromGray; }
+  }
+  remove(st, KMT, id, fromBlue);
+  if (fromGray) loseGray(st, id, fromGray, "attack");
+  return fromBlue + fromGray;
+}
+// Gray leaves `id` by an attack (`why` "attack") or by 整編 ("politics"). The
+// power remembers how its last gray went (`st.grayLast`: 整編完成 needs "politics").
+// Gray of a power leaning to the Communists that is hit sends it back to 觀望.
+function loseGray(st, id, k, why) {
+  const p = POWER_OF[id];
+  st.gray[id] -= k;
+  st.grayLast[p] = why;
+  if (why !== "attack") return;
+  log(st, { type: "grayHit", space: id, power: p, n: k });
+  if (st.attitude[p] === "ccp") setAttitudeTo(st, p, "neutral", "attacked");
+}
+function setAttitudeTo(st, p, to, why) {
+  const from = st.attitude[p];
+  if (from === to) return;
+  st.attitude[p] = to;
+  log(st, { type: "attitude", power: p, from, to, why });
+}
+// One step toward the Communists (效忠 → 觀望 → 通共); none past 通共.
+function leanCcp(st, p, why) {
+  const i = ATTITUDES.indexOf(st.attitude[p]);
+  if (i < ATTITUDES.length - 1) setAttitudeTo(st, p, ATTITUDES[i + 1], why);
+}
+// The `grayHit` plan step: an attack paid with ops that goes the old 奇襲's way
+// (破襲, or any attack without mechanism B) and must ask the order first.
+function grayHitStep(st, step) {
+  if (!step.choices.length) return ask(st, { ...step, side: KMT }, { kind: "option", tag: "grayOrder", target: step.target, options: GRAY_ORDER.map((o) => ({ ...o })) });
+  campaign(st, step.side, step.target, step.ops, { order: step.choices.shift() });
+  return true;
+}
+
+// ---------- mechanism D (#31): 政工 (整編, 統戰), 易幟, 整編完成 ----------
+// 兵臨城下 (rule 7, orchestrator 裁決 #31): a city of the power with blue or gray
+// out of supply (or besieged) -- a 孤城 -- or a space the Communists control
+// next to any space of the power.
+function atGates(st, p) {
+  const sp = DPOWERS[p].spaces, iso = isolatedCities(st);
+  return sp.some((id) => iso.includes(id)) || sp.some((id) => adjOf(st, id).some((a) => controller(st, a) === CCP));
+}
+const marked = (st, p) => !!(st.mie[p] || st.seals[p]);
+// Why `side`'s politics with `ops` on `target` (a space, the Nationalists' 整編)
+// or `power` (the Communists' 統戰) is refused, or null when it is legal.
+function politicsRefusal(st, side, ops, { target, power }) {
+  if (side === KMT) {
+    if (!SPACE[target]) return `整編: unknown space ${target}`;
+    const p = POWER_OF[target];
+    if (!p) return `整編: ${target} is not a space of a power`;
+    if (marked(st, p)) return "整編: the power has its marker already";
+    if (st.attitude[p] === "ccp") return "整編: the power leans to the Communists (通共)";
+    if (!grayOf(st, target)) return `整編: no gray at ${target}`;
+    return null;
+  }
+  const d = DPOWERS[power];
+  if (!d) return `統戰: unknown power ${power}`;
+  if (marked(st, power)) return "統戰: the power has its marker already";
+  if (st.attitude[power] === "ccp") return "統戰: the power leans to the Communists already";
+  if (ops < d.threshold) return `統戰: ${ops} ops, the threshold is ${d.threshold}`;
+  if (st.talks[power] === st.turn) return "統戰: once a turn for each power";
+  if (!atGates(st, power)) return "統戰: the Communists are not at the power's gates (兵臨城下)";
+  return null;
+}
+// What `side` may 政工 with `ops` now: the Nationalists' spaces, the Communists'
+// powers. Empty without the option (legal(), the random player and the ops ask read it).
+export function politicsOptions(st, side, ops) {
+  if (!mechD(st)) return [];
+  if (side === KMT) return Object.keys(POWER_OF).filter((id) => !politicsRefusal(st, side, ops, { target: id }));
+  return Object.keys(DPOWERS).filter((p) => !politicsRefusal(st, side, ops, { power: p }));
+}
+// 整編 (rule 5): min(X, gray) gray at the target turns blue (blue + gray stays
+// under the cap); the power one step toward the Communists. 統戰 (rule 7): the
+// power one step toward the Communists; once a turn. The markers follow.
+function politics(st, side, ops, choice) {
+  const why = politicsRefusal(st, side, ops, choice);
+  if (why) fail(why);
+  if (side === KMT) {
+    const t = choice.target, p = POWER_OF[t], k = Math.min(ops, grayOf(st, t));
+    loseGray(st, t, k, "politics");
+    ensure(st, t)[KMT] += k;
+    log(st, { type: "integrate", side, target: t, power: p, ops, n: k });
+    leanCcp(st, p, "integrate");
+  } else {
+    st.talks[choice.power] = st.turn;
+    log(st, { type: "talks", side, power: choice.power, ops });
+    leanCcp(st, choice.power, "talks");
+  }
+  checkMarkers(st);
+}
+// The markers under D (rules 9 and 10, orchestrator 裁決 #31), read by
+// `checkMarkers` in place of the two-colour ones. Permanent; a power gets one of
+// the two at most. 易幟: the Communists control its home, or it leans to them and
+// its home is out of supply (`supplied`, a village home too): its gray turns red
+// (up to the cap, the rest is gone), the Communists gain its 民心. 整編完成: no gray
+// left, the last of it gone by 整編, the Nationalists control its home: 民心
+// `D_SEAL_VP` their way; at most `sealPerTurn` (1) a turn. Read again while a 易幟
+// changes the board.
+function dMarkers(st) {
+  const limit = st.options.sealPerTurn ?? 1;
+  for (let again = true, guard = 0; again && guard < 6 && st.winner == null; guard++) {
+    again = false;
+    for (const [p, d] of Object.entries(DPOWERS)) {
+      if (marked(st, p)) continue;
+      const ctl = controller(st, d.home);
+      const how = ctl === CCP ? "conquest" : st.attitude[p] === "ccp" && !supplied(st).has(d.home) ? "talks" : null;
+      if (how) {
+        const turned = {};
+        for (const id of d.spaces) {
+          const g = grayOf(st, id);
+          if (!g) continue;
+          st.gray[id] = 0;
+          turned[id] = place(st, CCP, id, g);
+        }
+        st.mie[p] = true; log(st, { type: "mie", state: p, how, turned });
+        if (!st.mieVp[p]) { st.mieVp[p] = true; vp(st, CCP, d.vp); }
+        if (st.winner != null) return;
+        again = true;
+        continue;
+      }
+      const sealed = ctl === KMT && st.grayLast[p] === "politics" && d.spaces.every((id) => !grayOf(st, id))
+        && !(tune(st, "sealFrom") && st.turn < st.options.sealFrom) && sealsThisTurnD(st) < limit;
+      if (sealed) {
+        st.seals[p] = true; log(st, { type: "seal", state: p, how: "integrated" });
+        st.sealTurn = { turn: st.turn, n: sealsThisTurnD(st) + 1 };
+        if (!st.sealVp[p]) { st.sealVp[p] = true; vp(st, KMT, D_SEAL_VP); }
+        if (st.winner != null) return;
+      }
+    }
+  }
+}
+function sealsThisTurnD(st) { return st.sealTurn && st.sealTurn.turn === st.turn ? st.sealTurn.n : 0; }
+// The 結算's 孤城 under D (rule A4): each 孤城 loses blue as before (gray does not);
+// a 孤城 with gray moves its power one step toward the Communists, at most one a
+// power a turn. With `supply: false` there is no 孤城 effect at all (the caller);
+// 空運孤城's `noAttrition` stops the blue loss only (BE's reading, #31).
+function supplyAttritionD(st, n) {
+  const iso = isolatedCities(st), losses = {};
+  if (n > 0) for (const id of iso) { const k = remove(st, KMT, id, n); if (k > 0) losses[id] = k; }
+  if (Object.keys(losses).length) log(st, { type: "attrition", losses });
+  const leaned = new Set();
+  for (const id of iso) {
+    const p = POWER_OF[id];
+    if (!p || !grayOf(st, id) || leaned.has(p) || marked(st, p)) continue;
+    leaned.add(p);
+    leanCcp(st, p, "isolated");
+  }
+  if (Object.keys(losses).length || leaned.size) checkMarkers(st);
 }
 
 // ---------- mechanism B (#26): 圍點打援、破襲、進剿 ----------
@@ -1172,7 +1436,8 @@ function reinforceSources(st, T) {
 }
 // The Nationalists' answers to an attack on T, as option ids.
 function siegeResponses(st, T) {
-  const out = ["hold"], D = infOf(st, T)[KMT];
+  // #31: D is blue + gray (B's table under mechanism D), so the room left is too.
+  const out = ["hold"], D = pointsOf(st, KMT, T);
   if (!isolatedCities(st).includes(T)) {
     for (const R of reinforceSources(st, T)) {
       const most = Math.min(SIEGE.reinforceMax, capOf(st, T) - D, infOf(st, R)[KMT]);
@@ -1209,38 +1474,14 @@ function siegeStep(st, step) {
     if (!step.choices.length) {
       return ask(st, { ...step, side: KMT }, { kind: "option", tag: "siege", target: T, ops: X, options: siegeResponses(st, T).map((id) => ({ id })) });
     }
-    const [kind, R, kk] = String(step.choices.shift()).split(":"), k = Number(kk) || 0;
-    const r = { type: "siegeResult", side: CCP, target: T, ops: X, plan: step.plan, response: kind, ...(R ? { to: R } : {}), ...(k ? { k } : {}) };
-    let pick = null;
-    if (step.plan === "point") {
-      if (kind === "hold") {
-        r.removed = remove(st, KMT, T, X);
-        r.placed = place(st, CCP, T, X - r.removed);
-      } else if (kind === "reinforce") {
-        place(st, KMT, T, remove(st, KMT, R, k));
-        const a = Math.max(0, X - SIEGE.reinforceFactor * k);
-        r.removed = remove(st, KMT, T, a);
-        if (a === 0) pick = "siegeLoss";
-      } else {
-        const d = remove(st, KMT, T, infOf(st, T)[KMT]);
-        r.moved = place(st, KMT, R, d);
-        if (!infOf(st, T)[KMT]) r.placed = place(st, CCP, T, X);
-      }
-    } else if (kind === "hold") {
-      st.effects = st.effects.filter((e) => !(e.kind === "siege" && e.space === T));
-      addEffect(st, { kind: "siege", space: T, bonus: true, until: "turn" });
-      r.besieged = true;
-    } else if (kind === "reinforce") {
-      r.removed = remove(st, KMT, R, Math.min(k, X));
-      pick = "siegeCapture";
-    } else {
-      const d = remove(st, KMT, T, infOf(st, T)[KMT]);
-      r.removed = Math.min(Math.ceil(d * SIEGE.breakoutLoss), X);
-      r.moved = place(st, KMT, R, d - r.removed);
-      if (!infOf(st, T)[KMT]) r.placed = place(st, CCP, T, 1);
-    }
-    log(st, r);
-    step.stage = pick && ccpAround(st, T).length ? pick : "end";
+    const response = String(step.choices.shift());
+    // #31: an answer whose removal hits blue and gray, not all of them, asks the order first.
+    if (mechD(st) && siegeOrderNeeded(st, step, response)) { step.response = response; step.stage = "grayOrder"; }
+    else siegeResolve(st, step, response, null);
+  }
+  if (step.stage === "grayOrder") {
+    if (!step.choices.length) return ask(st, { ...step, side: KMT }, { kind: "option", tag: "grayOrder", target: T, options: GRAY_ORDER.map((o) => ({ ...o })) });
+    siegeResolve(st, step, step.response, step.choices.shift());
   }
   if (step.stage === "siegeLoss" || step.stage === "siegeCapture") {
     if (!step.choices.length) {
@@ -1253,6 +1494,56 @@ function siegeStep(st, step) {
   }
   attackEnd(st, CCP, T);
   return true;
+}
+// The table's cell for `response` (B's, #26). #31: the removals at T hit blue +
+// gray (`hitKmt`, in `order`); 增援 and 突圍 move blue only; 突圍 leaves the gray,
+// and with gray still there the Communists place nothing.
+function siegeResolve(st, step, response, order) {
+  const T = step.target, X = step.ops;
+  const [kind, R, kk] = response.split(":"), k = Number(kk) || 0;
+  const r = { type: "siegeResult", side: CCP, target: T, ops: X, plan: step.plan, response: kind, ...(R ? { to: R } : {}), ...(k ? { k } : {}) };
+  let pick = null;
+  if (step.plan === "point") {
+    if (kind === "hold") {
+      r.removed = hitKmt(st, T, X, order);
+      r.placed = place(st, CCP, T, X - r.removed);
+    } else if (kind === "reinforce") {
+      place(st, KMT, T, remove(st, KMT, R, k));
+      const a = Math.max(0, X - SIEGE.reinforceFactor * k);
+      r.removed = hitKmt(st, T, a, order);
+      if (a === 0) pick = "siegeLoss";
+    } else {
+      const d = remove(st, KMT, T, infOf(st, T)[KMT]);
+      r.moved = place(st, KMT, R, d);
+      if (!pointsOf(st, KMT, T)) r.placed = place(st, CCP, T, X);
+    }
+  } else if (kind === "hold") {
+    st.effects = st.effects.filter((e) => !(e.kind === "siege" && e.space === T));
+    addEffect(st, { kind: "siege", space: T, bonus: true, until: "turn" });
+    r.besieged = true;
+  } else if (kind === "reinforce") {
+    r.removed = remove(st, KMT, R, Math.min(k, X));
+    pick = "siegeCapture";
+  } else {
+    const d = remove(st, KMT, T, infOf(st, T)[KMT]);
+    r.removed = Math.min(Math.ceil(d * SIEGE.breakoutLoss), X);
+    r.moved = place(st, KMT, R, d - r.removed);
+    if (!pointsOf(st, KMT, T)) r.placed = place(st, CCP, T, 1);
+  }
+  log(st, r);
+  step.stage = pick && ccpAround(st, T).length ? pick : "end";
+}
+// Whether the cell for `response` will remove some but not all of T's blue + gray,
+// both there (打點 met by 固守, or by 增援 once the reinforcements are in).
+function siegeOrderNeeded(st, step, response) {
+  if (step.plan !== "point") return false;
+  const T = step.target, X = step.ops, [kind, R, kk] = response.split(":"), k = Number(kk) || 0;
+  if (kind === "hold") return orderNeeded(st, T, X);
+  if (kind !== "reinforce") return false;
+  const b = infOf(st, T)[KMT], g = grayOf(st, T);
+  const inT = Math.min(k, infOf(st, R)[KMT], capOf(st, T) - b - g);
+  const a = Math.max(0, X - SIEGE.reinforceFactor * k);
+  return g > 0 && b + inT > 0 && a > 0 && a < b + inT + g;
 }
 function sweepStep(st, step) {
   const T = step.target, X = step.ops;
@@ -1423,7 +1714,7 @@ export function placePoints(st, side, points, ops, card) {
       if (jump && SPACE[id].kind === "village" && (jumped == null || jumped === id)) jumped = id;
       else fail(`place: ${id} is not reachable`);
     }
-    if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
+    if (pointsOf(st, side, id) >= capOf(st, id)) fail(`place: ${id} is at the cap`);
     if (sovietHeld(st, id)) fail(`place: the Soviets hold ${id} this turn (受降)`);
     if (placeBarred(st, side)(id) && !(airlift && airliftOk(st, id))) fail(`place: ${id} is cut off from supply`);
     place(st, side, id, 1);
@@ -1504,7 +1795,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-05"; // #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))
+export const RULES_VERSION = "2026-10-05-2"; // #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1536,6 +1827,14 @@ function startGame(seed, options) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
     // #23 `setupPoints`: the named spaces start with the variant's number instead.
     if (tune(st, "setupPoints")) for (const [id, n] of Object.entries(st.options.setupPoints[SIDES[side]] || {})) ensure(st, id)[side] = n;
+  }
+  // #31, mechanism D: the opening's blue at the six spaces of `GRAY_START` is gray;
+  // the attitudes are the note's. These keys exist only with the option.
+  if (mechD(st)) {
+    st.gray = {};
+    for (const [id, g] of Object.entries(GRAY_START)) { st.gray[id] = g; const a = ensure(st, id); a[KMT] = Math.max(0, a[KMT] - g); }
+    st.attitude = Object.fromEntries(Object.entries(DPOWERS).map(([p, d]) => [p, d.attitude]));
+    st.talks = {}; st.grayLast = {};
   }
   if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
@@ -1595,7 +1894,7 @@ function exec(st, step) {
         // #24 `held` (受降, the Communists): control is read here, at the moment of asking,
         // before any of this step's points is placed; a space of `also` (察綏) is open regardless.
         const options = step.spaces
-          ? step.spaces.filter((id) => infOf(st, id)[step.side] < capOf(st, id)
+          ? step.spaces.filter((id) => pointsOf(st, step.side, id) < capOf(st, id)
             && (!step.held || controller(st, id) === step.side || (step.also || []).includes(id)))
           : step.regions
           ? SPACES.filter((s) => step.regions.includes(s.region)).map((s) => s.id)
@@ -1635,7 +1934,8 @@ function exec(st, step) {
         const who = need.who ?? step.side;
         if (!(step.asked || []).includes(who)) step.asked = [...(step.asked || []), who];
         step.pre = pre; // the mark waits in the plan only while a choice is pending
-        return ask(st, step, { ...need, tag: "event", card: step.card });
+        // #31: an event's 奇襲 that asks the Nationalists the order says so (tag "grayOrder").
+        return ask(st, step, { ...need, tag: need.tag || "event", card: step.card });
       }
       step.done = true;
       // What the event did, then what follows from it (滅, 相印): the log reads
@@ -1658,6 +1958,11 @@ function exec(st, step) {
           if (o.placeOptions.length) allowed.push("place");
           if (o.campaignTargets.length) allowed.push("campaign");
           if (o.lobbyTargets.length) allowed.push("lobby");
+          // #31: a card's ops may go to 政工 too (not an aid card's; `politicsOptions` is empty without D).
+          if (!isAid(step.card)) {
+            const pol = politicsOptions(st, step.side, step.ops);
+            if (pol.length) { allowed.push("politics"); o.politicsTargets = pol; }
+          }
           if (!allowed.length) { log(st, { type: "opsLost", side: step.side, ops: step.ops }); return true; }
           return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops" });
         }
@@ -1676,6 +1981,7 @@ function exec(st, step) {
     case "realign": return realignStep(st, step);
     case "siege": return siegeStep(st, step);
     case "sweep": return sweepStep(st, step);
+    case "grayHit": return grayHitStep(st, step);
     case "endAction": return endAction(st), true;
     case "beginAction": return beginAction(st), true;
     case "endTurn": {
@@ -1719,9 +2025,11 @@ function eventMark(st) {
     effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
     revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
     support: (st.support || []).join(),
+    // #31: under mechanism D an event's 奇襲 may take gray or move an attitude only.
+    ...(st.gray ? { gray: JSON.stringify(st.gray), attitude: JSON.stringify(st.attitude) } : {}),
   };
 }
-const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "revealed", "forced", "luoyiYields", "winner", "support"];
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "revealed", "forced", "luoyiYields", "winner", "support", "gray", "attitude"];
 const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
 // `effect`: did the event change anything at all. When it did not, `why`:
 // "noTarget" -- a choice it needed had nothing to choose from (no space with
@@ -1865,10 +2173,10 @@ function situationStep(st, step) {
   if (step.stage === "withdrawKmt") {
     // #23 `withdrawalKmt`: { n, spaces } replaces the 4 points and the three cities.
     const W = tune(st, "withdrawalKmt") ? st.options.withdrawalKmt : null;
-    const options = (W && W.spaces ? W.spaces : NE("city")).filter((id) => infOf(st, id)[KMT] < capOf(st, id));
+    const options = (W && W.spaces ? W.spaces : NE("city")).filter((id) => pointsOf(st, KMT, id) < capOf(st, id));
     // Room for 4 is always there in play (nobody can place in these cities on
     // turn 1); short of it, as many as fit.
-    const n = Math.min(W && W.n != null ? W.n : 4, options.reduce((t, id) => t + capOf(st, id) - infOf(st, id)[KMT], 0));
+    const n = Math.min(W && W.n != null ? W.n : 4, options.reduce((t, id) => t + capOf(st, id) - pointsOf(st, KMT, id), 0));
     if (n > 0) {
       if (!step.choices.length) return situationAsk(st, step, KMT, { kind: "points", n, min: n, options, side: KMT });
       const points = step.choices.shift();
@@ -2029,7 +2337,7 @@ function doOps(st, side, card, ops, choice) {
     if (!SPACE[choice.target]) fail(`campaign: unknown space ${choice.target}`);
     ops += aidBonus(card, choice);
     const t = choice.target;
-    if (infOf(st, t)[other(side)] <= 0) fail("campaign: no enemy influence there");
+    if (pointsOf(st, other(side), t) <= 0) fail("campaign: no enemy influence there");
     if (sovietHeld(st, t)) fail("campaign: the Soviets hold it this turn (受降)");
     if (side === CCP && garrisoned(st, t)) fail("campaign: 美軍駐華 -- the Communists may not raid it while 美國支持 is 3 or more");
     if (campaignLocked(st, t, side)) fail("campaign: locked by weariness");
@@ -2039,7 +2347,12 @@ function doOps(st, side, card, ops, choice) {
     if (!siegeOpen(st, side, t)) fail("campaign: 圍點打援 -- the Communists control no space next to that city");
     if (siegeNeeded(st, side, t) && !SIEGE_PLANS.includes(choice.siege)) fail("campaign: an attack on a city must name its plan, siege: point or relief");
     if (mechB(st) && (side === KMT || siegeNeeded(st, side, t))) declareAttack(st, side, t, ops, choice.siege);
+    // #31: blue and gray both hit, not all: the Nationalists choose the order first (the `grayHit` step).
+    else if (grayOrderNeeded(st, side, t, ops)) st.plan.splice(1, 0, { do: "grayHit", side, target: t, ops, choices: [] });
     else campaign(st, side, t, ops);
+  } else if (choice.use === "politics" && mechD(st)) {
+    if (isAid(card)) fail("politics: not with an aid card");
+    politics(st, side, ops, choice);
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
     ops += aidBonus(card, choice);
@@ -2114,7 +2427,7 @@ function validateChoice(st, p, choice) {
         if (p.distinct && counts[id] > 1) fail("points: repeats not allowed");
         if (p.maxPer && counts[id] > p.maxPer) fail(`points: more than ${p.maxPer} in ${id}`);
         if (p.maxOf && counts[id] > (p.maxOf[id] ?? 0)) fail(`points: not that many in ${id}`);
-        if (p.side != null && infOf(st, id)[p.side] + counts[id] > capOf(st, id)) fail(`points: ${id} over the cap`);
+        if (p.side != null && pointsOf(st, p.side, id) + counts[id] > capOf(st, id)) fail(`points: ${id} over the cap`);
       }
       return choice;
     }
@@ -2231,8 +2544,9 @@ function play(st, action) {
     if (reformUsesLeft(st, side) <= 0) fail("reform: no advances left this turn");
     if (card.ops < reformThreshold(st, side)) fail("reform: card below the threshold");
     steps.push({ do: "reform", side }, { do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
-  } else if (["place", "campaign", "lobby"].includes(use)) {
-    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}) };
+  } else if (["place", "campaign", "lobby"].includes(use) || (use === "politics" && mechD(st))) {
+    // #31: 政工 is the ops' fifth use (`doOps`): an enemy card's event goes with it as with the others.
+    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...(use === "politics" ? { power: action.power } : {}) };
     const enemy = card.side != null && card.side !== side;
     const paired = c === MARSHALL && action.pair;
     // The player chooses whether an enemy card's ops or its event comes first
@@ -2296,7 +2610,7 @@ function validateOps(st, side, card, ops, payload) {
 export function opsOptions(st, side, card) {
   const barred = placeBarred(st, side), jump = jumpOpen(st, side);
   const airlift = card === "american_aid" ? (id) => airliftOk(st, id) : () => false;
-  const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && infOf(st, s.id)[side] < capOf(st, s.id) && (!barred(s.id) || airlift(s.id)) && !sovietHeld(st, s.id))
+  const placeOptions = SPACES.filter((s) => (canPlaceAt(st, side, s.id) || (jump && s.kind === "village")) && pointsOf(st, side, s.id) < capOf(st, s.id) && (!barred(s.id) || airlift(s.id)) && !sovietHeld(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
   const campaignTargets = SPACES.filter((s) => canCampaign(st, side, s.id) && siegeOpen(st, side, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
@@ -2330,6 +2644,8 @@ export function legal(st, side) {
       enemy: card.side != null && card.side !== side,
     };
     if (c === MARSHALL) uses.pair = marshallPairs(st) ? h.filter((x) => CARD[x].side === other(side)) : [];
+    // #31: 政工 -- the Nationalists' spaces to 整編, the Communists' powers to 統戰 with this card's ops.
+    if (mechD(st)) { const t = politicsOptions(st, side, ops); uses.politics = t.length ? { ops, targets: t } : null; }
     return { id: c, ops, uses };
   });
   // The aid card (#4): null when it may not be used now (option off, used this
@@ -2424,7 +2740,8 @@ export function supplied(st) {
 export function isolatedCities(st) {
   const ok = supplied(st);
   // #26: a besieged city (圍城) counts as one this turn.
-  return SPACES.filter((s) => s.kind === "city" && infOf(st, s.id)[KMT] > 0 && (!ok.has(s.id) || besieged(st, s.id))).map((s) => s.id);
+  // #31: a city with blue or gray (`pointsOf`).
+  return SPACES.filter((s) => s.kind === "city" && pointsOf(st, KMT, s.id) > 0 && (!ok.has(s.id) || besieged(st, s.id))).map((s) => s.id);
 }
 // 孤城的效果 1 (#1): the Nationalists may not 扶植 into a city no source reaches.
 // The test is `supplied`, not `isolatedCities`: a city with no blue and no
@@ -2457,6 +2774,7 @@ export function attritionLoss(st) {
 // 細則: a loss may cost control, a 整編 marker, or give an 易幟).
 function supplyAttrition(st) {
   const n = attritionLoss(st);
+  if (mechD(st) && st.options.supply) return supplyAttritionD(st, n);
   if (n <= 0) return;
   const losses = {};
   for (const id of isolatedCities(st)) {

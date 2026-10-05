@@ -51,7 +51,8 @@ const card = (id, num, zh, en, era, side, ops, remove, year, text) => (EFFECTS[i
 // ---------- helpers for the events ----------
 const spaces = (pred) => SPACES.filter(pred).map((s) => s.id);
 const inNE = (s) => s.region === "northeast";
-const withRoom = (st, side, list) => list.filter((id) => E.infOf(st, id)[side] < E.capOf(st, id));
+// #31: the Nationalists' room is blue + gray (`E.pointsOf`; the blue alone without mechanism D).
+const withRoom = (st, side, list) => list.filter((id) => E.pointsOf(st, side, id) < E.capOf(st, id));
 // Where an event may put `side`'s points: room under the cap, and not 受降's Northeast cities.
 const placeable = (st, side, list) => withRoom(st, side, list).filter((id) => !E.sovietHeld(st, id));
 // Pick k distinct spaces, k = min(n, how many there are): 「最多 N」, and 「任 N」 short of spaces.
@@ -63,10 +64,14 @@ const pick = (who, options, extra = {}) => pickN(who, 1, options, extra);
 // The free 奇襲 (orchestrator 裁決 #6, 4), for this batch and the next two.
 // `ops` is the printed ops plus the card's own bonus; `list` the card's spaces;
 // `opts` what the card says it ignores (`{ locks: false }`, `{ garrison: false }`).
+// #31, mechanism D: a Communist 奇襲 that removes some but not all of blue + gray,
+// both there, first asks the Nationalists which goes first (`E.grayOrderNeeded`,
+// the pending's tag "grayOrder"); never without the option.
 function freeCampaign(st, side, ch, list, ops, opts) {
   if (!ch.length) return pick(side, E.eventCampaignTargets(st, side, list, opts));
   const [t] = ch[0];
-  if (t) E.campaign(st, side, t, ops, { pusher: st.phasing });
+  if (t && ch.length === 1 && E.grayOrderNeeded(st, side, t, ops)) return { kind: "option", who: K, tag: "grayOrder", target: t, options: E.GRAY_ORDER.map((o) => ({ ...o })) };
+  if (t) E.campaign(st, side, t, ops, { pusher: st.phasing, ...(ch.length > 1 ? { order: ch[1] } : {}) });
   return null;
 }
 const CAPITALS = Object.values(STATES).map((s) => s.capital); // 本據: 察綏、太原、桂林、蘭州、昆明
@@ -76,7 +81,7 @@ const until = (id, side, e) => ({ card: id, side, ...e, until: "turn" }); // 「
 const villages = (pred = () => true) => spaces((s) => s.kind === "village" && pred(s));
 const opp = (side) => 1 - side;
 // How many points `side` could still put among `options`, at most `maxPer` in each.
-const roomIn = (st, side, options, maxPer = Infinity) => options.reduce((r, id) => r + Math.min(maxPer, Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side])), 0);
+const roomIn = (st, side, options, maxPer = Infinity) => options.reduce((r, id) => r + Math.min(maxPer, Math.max(0, E.capOf(st, id) - E.pointsOf(st, side, id))), 0);
 // 胡宗南佔延安 removes 轉戰陝北 (orchestrator 裁決 #7, 1): the lasting effect goes,
 // and the card leaves the game if it is in the discard or the draw pile; in a
 // hand it stays where it is.
