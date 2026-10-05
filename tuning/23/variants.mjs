@@ -14,6 +14,8 @@ const plus = (side, ids, n) => Object.fromEntries(ids.map((id) => [id, Math.min(
 
 export const VARIANTS = {
   base: { what: "今天的規則", why: "", options: {} },
+  // #27: mechanism B (#26) on, measured against the default rules (tuning/27/report.txt).
+  B: { what: "機制 B(圍點打援、破襲、進剿)開著", why: "M2b 第 1 批(#26 引擎、#27 bot 與模擬)", options: { mechanismB: true } },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {
