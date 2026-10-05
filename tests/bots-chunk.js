@@ -22,6 +22,8 @@ const out = {
   aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 },
   // at every turn's end: the sum of 民心 and of the number of 孤城, and how many games got there
   turnEnd: {},
+  // mechanism D (#32): 政工 played, per side (the Nationalists' 整編, the Communists' 統戰)
+  politics: [0, 0],
   // mechanism B: per side, the decisions; how many carried a `game`; how many games failed the equilibrium test
   // (first few kept); what was drawn against what the mixes expected, by plan / by kind of answer; pure mixes.
   siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } },
@@ -64,6 +66,7 @@ for (let seed = first; seed < first + count; seed++) {
       const a = B.decide(view, side, level, rng);
       if (!a) throw new Error(`no decision for side ${side} (turn ${st.turn}, phase ${st.phase}, level ${level})`);
       if (a.type === "play" && AID.includes(a.card)) used.add(`${st.turn}:${side}`);
+      if ((a.type === "play" && a.use === "politics") || (a.type === "choose" && a.choice && typeof a.choice === "object" && a.choice.use === "politics")) out.politics[side]++;
       const plan = planOf(a), answering = st.pending && st.pending.tag === "siege" && side === KMT;
       if (plan || answering) {
         const s = out.siege[side === CCP ? "ccp" : "kmt"]; s.n++;
