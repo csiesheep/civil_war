@@ -291,7 +291,7 @@ export function reformName(side, box) {
 // both from `st.options` (bots.js, `positional`). An options object without
 // them (a game created before #24) plays 整編 as before. The rest of P10 is in
 // the data: `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` /
-// `MANDATE_CAP`, and board.js's `SETUP.ccp.freeHeld`.
+// `MANDATE_CAP`, and board.js's `SETUP.ccp.freeHeld` / `freeAlso`.
 export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true, situations: true, rounds: "asymmetric", garrison: true, sealNeeds: "all", sealPerTurn: 1 };
 // #23, the tuning options: what a variant (tuning/23/variants.mjs) may change,
 // so the harness can measure a rule before the owner adopts it. Until #24 none
@@ -1316,7 +1316,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-04"; // #24: P10 is the rules (owner 裁決 #23, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))
+export const RULES_VERSION = "2026-10-04"; // #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1367,8 +1367,9 @@ function startGame(seed, options) {
     const S = SETUP[SIDES[side]];
     const n = tune(st, "setupFree") ? st.options.setupFree[side] : S.free;
     const bar = (tune(st, "setupFreeBar") && st.options.setupFreeBar[SIDES[side]]) || null;
-    // #24: `held` -- of these, only the spaces this side controls when it is asked (SETUP's `freeHeld`).
-    return { do: "setup", side, n, spaces: bar ? S.freeIn.filter((id) => !bar.includes(id)) : S.freeIn, ...(S.freeHeld ? { held: true } : {}), choices: [] };
+    // #24: `held` -- of these, only the spaces this side controls when it is asked, and those of `also`
+    // whoever controls them (SETUP's `freeHeld` and `freeAlso`).
+    return { do: "setup", side, n, spaces: bar ? S.freeIn.filter((id) => !bar.includes(id)) : S.freeIn, ...(S.freeHeld ? { held: true, also: (S.freeAlso || []).slice() } : {}), choices: [] };
   });
   if (st.options.setupOrder === "kmt-first") free.reverse();
   st.plan = [
@@ -1404,9 +1405,10 @@ function exec(st, step) {
       if (step.n <= 0) return true;
       if (!step.choices.length) {
         // #24 `held` (受降, the Communists): control is read here, at the moment of asking,
-        // before any of this step's points is placed.
+        // before any of this step's points is placed; a space of `also` (察綏) is open regardless.
         const options = step.spaces
-          ? step.spaces.filter((id) => infOf(st, id)[step.side] < capOf(st, id) && (!step.held || controller(st, id) === step.side))
+          ? step.spaces.filter((id) => infOf(st, id)[step.side] < capOf(st, id)
+            && (!step.held || controller(st, id) === step.side || (step.also || []).includes(id)))
           : step.regions
           ? SPACES.filter((s) => step.regions.includes(s.region)).map((s) => s.id)
           : SPACES.filter((s) => infOf(st, s.id)[step.side] > 0).map((s) => s.id);
