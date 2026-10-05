@@ -49,11 +49,15 @@
 //     tracks' fixed moves are `SUPPORT_SCHEDULE`, outside it), `rounds` (the
 //     hand sizes and action rounds, `eraLimits`), `garrison` (`garrisoned`).
 // And in M2b:
-//   - #26 mechanism B as the option `mechanismB` (not a default): `SIEGE`; an
+//   - #26 mechanism B as the option `mechanismB`: `SIEGE`; an
 //     attack paid with ops is 圍點打援 on a city for the Communists (`siegeStep`,
 //     the plan hidden by `view`), 進剿 for the Nationalists (`sweepStep`); the
 //     one reading of an attack's X (`attackPower`); 圍城 (`besieged`, read by
 //     `canPlaceAt`, `campaignMod` and `isolatedCities`).
+//   - #28 MECHANISM B IS THE DEFAULT RULES (owner 裁決 #28, 2026-10-05: 「照現在的
+//     B 採用為預設」): `mechanismB: true` is a key of DEFAULT_OPTIONS, B's rules
+//     and `SIEGE` exactly as #26 / #27 measured them. `{ mechanismB: false }`
+//     still plays the rules before B.
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -298,7 +302,7 @@ export function reformName(side, box) {
 // them (a game created before #24) plays 整編 as before. The rest of P10 is in
 // the data: `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` /
 // `MANDATE_CAP`, and board.js's `SETUP.ccp.freeHeld` / `freeAlso`.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true, situations: true, rounds: "asymmetric", garrison: true, sealNeeds: "all", sealPerTurn: 1 };
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "kmt", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "move", supply: true, homeLockSide: "opponent", aid: true, baseScoring: true, situations: true, rounds: "asymmetric", garrison: true, sealNeeds: "all", sealPerTurn: 1, mechanismB: true };
 // #23, the tuning options: what a variant (tuning/23/variants.mjs) may change,
 // so the harness can measure a rule before the owner adopts it. Until #24 none
 // of them was a key of DEFAULT_OPTIONS and an absent one played as the rules
@@ -351,8 +355,10 @@ export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, homeLock: 4, luoyi: 0
 //                      three cities) (`situationStep`)
 const tune = (st, key) => st.options && st.options[key] != null;
 // #26, mechanism B (圍點打援、破襲、進剿; owner's mechanisms note, hand-copied in
-// tests/acceptance.test.js group 13), the option `mechanismB` -- NOT a key of
-// DEFAULT_OPTIONS until the owner adopts it; absent or false plays as before.
+// tests/acceptance.test.js group 13), the option `mechanismB`. Since #28 (owner
+// 裁決 #28) it is a key of DEFAULT_OPTIONS (true): a new game plays B unless it
+// says `{ mechanismB: false }`, which plays as before B; an options object
+// without the key (a game created before #28) plays as before B too.
 // The numbers, the note's first version: a reinforcement point is worth
 // `reinforceFactor` of the attack, at most `reinforceMax` points come, a breakout
 // loses `breakoutLoss` of the blue (rounded up), the capture and the failed
@@ -1498,7 +1504,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-04-2"; // #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))
+export const RULES_VERSION = "2026-10-05"; // #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });

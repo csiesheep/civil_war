@@ -12,7 +12,7 @@
 // refuses is a disagreement between what it offers and what it accepts, which
 // is what the fuzz is there to find.
 //
-// Mechanism B (#26, option `mechanismB`): an attack on a city that must name a
+// Mechanism B (#26, option `mechanismB`; the default rules since #28): an attack on a city that must name a
 // plan names one at random (`attack` below); its other decisions (固守 / 增援 /
 // 突圍, the −1 / +1, 守 / 撤 and where to 撤) are pending choices like any other.
 //

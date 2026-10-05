@@ -669,6 +669,19 @@ const pendingIs = (st, who, kind, what) => {
 };
 const choose = (st, choice) => E.apply(st, { type: "choose", side: st.pending.who, choice });
 const act = (st, side, card, use, extra = {}) => E.apply(st, { type: "play", side, card, use, ...extra });
+// #28: mechanism B is the default (owner 裁決, 2026-10-05). An attack paid with ops goes B's way to the end,
+// through the one cell that is the old 奇襲: the Communists on a city = 打點 met by 固守 (remove min(X, D), the
+// rest placed red); the Nationalists anywhere = 進剿 met by 守 (remove min(X, 紅), the rest placed blue); the
+// Communists on a village = 破襲 (the old 奇襲 as it was). The checks written for the old 奇襲 use it and keep
+// their numbers; B's own cells are group 13's. A city attacked by the Communists still needs a space they
+// control next to it (B1): the rigs that lacked one got one, said where.
+function raid(st, side, card, target, extra = {}) {
+  const city = E.SPACE[target] && E.SPACE[target].kind === "city";
+  let a = act(st, side, card, "campaign", { target, ...(side === CCP && city && st.options.mechanismB ? { siege: "point" } : {}), ...extra });
+  if (a.pending && a.pending.tag === "siege") a = choose(a, "hold");
+  if (a.pending && a.pending.tag === "sweep") a = choose(a, "stand");
+  return a;
+}
 function enter(turn, { edits = {}, options = {}, hands = [[], []], support = null, reform = null, weariness = null, mandate = null, refill = false } = {}) {
   const st = position(edits, options);
   st.turn = turn - 1; st.round = 0; st.effects = [];
@@ -827,7 +840,8 @@ check("受降:第 1 回合東北三座城雙方都不能放點,扶植與 place()
 check("受降:第 1 回合東北的城不能奇襲;第 2 回合起可以", () => {
   const t = sitTodo(); if (t) return t;
   // Red in 瀋陽 and blue in 錦州 cannot come about in play on turn 1; they are put there to have something to attack.
-  const edits = { shenyang: { r: 1 }, jinzhou: { b: 1 } };
+  // #28: 遼西 red 2 (Communist-controlled) gives 錦州 the neighbour a Communist attack on a city needs (B1).
+  const edits = { shenyang: { r: 1 }, jinzhou: { b: 1 }, liaoxi: { r: 2 } };
   let t1 = position(edits);
   deal(t1, KMT, ["score_east", "kunming_incident"]);
   t1 = toAction(t1);
@@ -906,8 +920,8 @@ check("停戰:本回合第一個奇襲的是國軍,民心往共軍移 2、美國
   const m0 = st.mandate;
   const pre = all(eq(J(st.support), "[1,4]", "奇襲之前的支持度"), eq(rb(st, "jizhong"), "2/0", "冀中 紅/藍"), eq(rb(st, "dabieshan"), "2/2", "大別山 紅/藍"));
   if (pre !== true) return pre;
-  const a = act(st, KMT, "kunming_incident", "campaign", { target: "jizhong" });
-  const b = act(a, KMT, "return_to_nanjing", "campaign", { target: "dabieshan" });
+  const a = raid(st, KMT, "kunming_incident", "jizhong");
+  const b = raid(a, KMT, "return_to_nanjing", "dabieshan");
   return all(
     eq(rb(a, "jizhong"), "0/0", "國軍 2 點奇襲冀中之後 紅/藍"),
     eq(a.mandate - m0, 2, "第一次奇襲後民心的變動(正 = 往共軍)"), eq(J(a.support), "[1,3]", "第一次奇襲後的支持度"),
@@ -923,8 +937,8 @@ check("停戰:第一個奇襲的是共軍,民心往國軍移 2、美國支持不
   const p = pendingIs(st, KMT, "points", "第 2 回合開始"); if (p !== true) return p;
   st = toAction(choose(st, ["shenyang", "shenyang", "jinzhou", "jinzhou"]));
   const m0 = st.mandate;
-  const a = act(st, CCP, "gao_shuxun", "campaign", { target: "chasui" });
-  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const a = raid(st, CCP, "gao_shuxun", "chasui");
+  const b = raid(a, KMT, "kunming_incident", "jizhong");
   // The road an event will take (四平攻克 and the like call campaign() themselves).
   const s = E.clone(st); E.campaign(s, KMT, "jizhong", 2);
   return all(
@@ -942,8 +956,8 @@ check("全面進攻:美國支持 −1;國軍奇襲 +1,共軍不加;沒有停戰�
   const sup = J(st.support);
   st = toAction(st);
   const m0 = st.mandate;
-  const a = act(st, CCP, "gao_shuxun", "campaign", { target: "chasui" });
-  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const a = raid(st, CCP, "gao_shuxun", "chasui");
+  const b = raid(a, KMT, "kunming_incident", "jizhong");
   return all(
     eq(st.turn, 3, "回合"), eq(sup, "[1,3]", "第 3 回合開始後的支持度"),
     eq(rb(st, "chasui"), "2/2", "察綏 紅/藍"), eq(rb(a, "chasui"), "2/0", "共軍 2 點奇襲察綏(不加)之後 紅/藍"),
@@ -960,9 +974,9 @@ check("重點進攻:國軍在西北、華東中原奇襲 +1,在其他區 −1", 
   st = toAction(st);
   const pre = all(eq(st.turn, 4, "回合"), eq(sup, "[1,3]", "第 4 回合開始後的支持度(不動)"), eq(rb(st, "shanbei"), "4/0", "陝北 紅/藍"), eq(rb(st, "luzhong"), "3/2", "魯中 紅/藍"), eq(rb(st, "jizhong"), "2/0", "冀中 紅/藍"));
   if (pre !== true) return pre;
-  const a = act(st, KMT, "kunming_incident", "campaign", { target: "shanbei" });
-  const b = act(a, KMT, "return_to_nanjing", "campaign", { target: "luzhong" });
-  const c = act(b, KMT, "sino_soviet_treaty", "campaign", { target: "jizhong" });
+  const a = raid(st, KMT, "kunming_incident", "shanbei");
+  const b = raid(a, KMT, "return_to_nanjing", "luzhong");
+  const c = raid(b, KMT, "sino_soviet_treaty", "jizhong");
   return all(
     eq(rb(a, "shanbei"), "1/0", "西北:2 點 +1 奇襲陝北之後 紅/藍"),
     eq(rb(b, "luzhong"), "0/2", "華東中原:2 點 +1 奇襲魯中之後 紅/藍"),
@@ -978,9 +992,9 @@ check("戰略反攻:蘇聯支持 +1;共軍對鄉的奇襲 +2,對城不加;國軍
   st = toAction(st);
   const pre = all(eq(st.turn, 5, "回合"), eq(sup, "[2,3]", "第 5 回合開始後的支持度"), eq(rb(st, "dabieshan"), "2/2", "大別山 紅/藍"), eq(rb(st, "zhengzhou"), "0/2", "鄭州 紅/藍"));
   if (pre !== true) return pre;
-  const a = act(st, CCP, "gao_shuxun", "campaign", { target: "dabieshan" });
-  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
-  const c = act(b, CCP, "shangdang_campaign", "campaign", { target: "zhengzhou" });
+  const a = raid(st, CCP, "gao_shuxun", "dabieshan");
+  const b = raid(a, KMT, "kunming_incident", "jizhong");
+  const c = raid(b, CCP, "shangdang_campaign", "zhengzhou");
   return all(
     eq(rb(a, "dabieshan"), "4/0", "共軍 2 點奇襲大別山(鄉,+2:移除 2、放 2)之後 紅/藍"),
     eq(rb(b, "jizhong"), "0/0", "國軍 2 點奇襲冀中(不加)之後 紅/藍"),
@@ -1073,7 +1087,9 @@ check("行憲:事件推進(直接呼叫 reformAdvance)一樣觸發;共軍推進�
 check("決戰:蘇聯支持 +1;共軍對城的奇襲不加值、不推民生、不受封鎖;對鄉照舊(不加、受封鎖)", () => {
   const t = sitTodo(); if (t) return t;
   const hands = [["score_north", "gao_shuxun", "shangdang_campaign", "into_manchuria"], []];
-  const seven = toAction(enter(7, { hands, support: [2, 4], weariness: 2 })), six = toAction(enter(6, { hands, support: [2, 4], weariness: 2 }));
+  // #28: 淮海 red 3 (Communist-controlled) gives 徐州 and 南京 the neighbour a Communist attack on a city needs (B1).
+  const edits = { huaihai: { r: 3 } };
+  const seven = toAction(enter(7, { edits, hands, support: [2, 4], weariness: 2 })), six = toAction(enter(6, { edits, hands, support: [2, 4], weariness: 2 }));
   const t6 = E.opsOptions(six, CCP).campaignTargets, t7 = E.opsOptions(seven, CCP).campaignTargets;
   const pre = all(
     eq(seven.turn, 7, "回合"), eq(seven.weariness, 2, "民生(凋敝:本土、華北、城的要衝都封鎖)"), eq(J(seven.support), "[3,4]", "第 7 回合開始後的支持度"),
@@ -1081,9 +1097,9 @@ check("決戰:蘇聯支持 +1;共軍對城的奇襲不加值、不推民生、�
     eq(rb(seven, "xuzhou"), "0/3", "徐州 紅/藍"), eq(rb(seven, "dabieshan"), "2/2", "大別山 紅/藍"),
   );
   if (pre !== true) return pre;
-  const a = act(seven, CCP, "gao_shuxun", "campaign", { target: "xuzhou" });
+  const a = raid(seven, CCP, "gao_shuxun", "xuzhou");
   if (a.winner != null) return `共軍奇襲徐州之後對局結束了(${a.reason},民生 ${a.weariness}):第 7 回合打城不該推民生`;
-  const b = act(a, CCP, "shangdang_campaign", "campaign", { target: "dabieshan" });
+  const b = raid(a, CCP, "shangdang_campaign", "dabieshan");
   const err = thrown(() => act(b, CCP, "into_manchuria", "campaign", { target: "chasui" }));
   return all(
     eq(["xuzhou", "nanjing", "taiyuan"].every((id) => t7.includes(id)), true, "第 7 回合共軍的奇襲目標要有徐州(要衝)、南京(本土)、太原(華北的城)"),
@@ -1098,7 +1114,7 @@ check("決戰:蘇聯支持 +1;共軍對城的奇襲不加值、不推民生、�
 check("決戰:國軍照舊,奇襲城的要衝推民生、受封鎖", () => {
   const t = sitTodo(); if (t) return t;
   const S = toAction(enter(7, { edits: { jinan: { r: 2 } }, hands: [[], ["score_east", "kunming_incident", "sino_soviet_treaty"]] }));
-  const a = act(S, KMT, "kunming_incident", "campaign", { target: "jinan" });
+  const a = raid(S, KMT, "kunming_incident", "jinan");
   const low = E.clone(S); low.weariness = 2;
   const kt = E.opsOptions(low, KMT).campaignTargets;
   return all(
@@ -1126,9 +1142,10 @@ check("決戰:第 7 回合孤城結算藍 −2(掉到 0 為止);第 6、8 回合
 
 check("和談:美國支持 −2;共軍對城的奇襲不推民生、不受封鎖,但沒有 +1", () => {
   const t = sitTodo(); if (t) return t;
-  const S = toAction(enter(8, { hands: [["score_north", "gao_shuxun", "shangdang_campaign"], []], support: [3, 4], weariness: 2 }));
+  // #28: 淮海 red 3 (Communist-controlled) gives 徐州 and 南京 the neighbour a Communist attack on a city needs (B1).
+  const S = toAction(enter(8, { edits: { huaihai: { r: 3 } }, hands: [["score_north", "gao_shuxun", "shangdang_campaign"], []], support: [3, 4], weariness: 2 }));
   const t8 = E.opsOptions(S, CCP).campaignTargets;
-  const a = act(S, CCP, "gao_shuxun", "campaign", { target: "xuzhou" });
+  const a = raid(S, CCP, "gao_shuxun", "xuzhou");
   return all(
     eq(S.turn, 8, "回合"), eq(J(S.support), "[3,2]", "第 8 回合開始後的支持度"), eq(S.weariness, 2, "民生"),
     eq(t8.includes("xuzhou") && t8.includes("nanjing"), true, "第 8 回合共軍的奇襲目標要有徐州、南京"), eq(t8.includes("chasui"), false, "華北的鄉(察綏)解鎖了"),
@@ -1204,6 +1221,10 @@ section("5 民生封鎖:只鎖對手的本土");
 const lockTodo = () => (E.DEFAULT_OPTIONS.homeLockSide === undefined ? "TODO: DEFAULT_OPTIONS.homeLockSide 還沒有;兩個本土對雙方都鎖(縱橫的規則)" : null);
 // Red put in two cities of 後方 so that the Nationalists have something to attack at home: 武漢 (no 要衝) and 南京 (a 要衝).
 const HOME_EDITS = { wuhan: { r: 1 }, nanjing: { r: 1 } };
+// #28: the lock table is read with mechanism B off. Under B a Communist attack on a city also needs a space they
+// control next to it (B1, group 13), and that condition would mix into the table (蘭州's only neighbour is 西安,
+// which the table needs blue in). The lock under B is checked once on its own (the apply check below).
+const NO_B = { mechanismB: false };
 // What each side may attack at each 民生 level, from the rulebook's sentence. [space, why, 復員 5, 動盪 4, 通膨 3, 凋敝 2]
 const LOCK_TABLE = {
   [CCP]: [
@@ -1228,7 +1249,7 @@ check("各級民生下誰可以奇襲哪裡:動盪以下只鎖對手的本土,�
   const t = lockTodo(); if (t) return t;
   let n = 0;
   for (const [col, w] of [[2, 5], [3, 4], [4, 3], [5, 2]]) {
-    const st = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: w });
+    const st = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: w, options: NO_B });
     if (st.turn !== 6 || st.weariness !== w) return `沒有走到第 6 回合、民生 ${w} 的盤面(turn ${st.turn},民生 ${st.weariness})`;
     for (const side of [CCP, KMT]) {
       const targets = E.opsOptions(st, side).campaignTargets;
@@ -1241,7 +1262,7 @@ check("各級民生下誰可以奇襲哪裡:動盪以下只鎖對手的本土,�
     }
   }
   // 決戰 unlocks cities for the Communists only: the Nationalists are still kept out of 西北 on turn 7.
-  const seven = enter(7, { edits: HOME_EDITS, hands: STOP, weariness: 4 });
+  const seven = enter(7, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: NO_B });
   return all(
     eq(seven.turn, 7, "回合"), eq(E.opsOptions(seven, KMT).campaignTargets.includes("shanbei"), false, "第 7 回合動盪時國軍能奇襲陝北"),
     eq(E.opsOptions(seven, KMT).campaignTargets.includes("wuhan"), true, "第 7 回合動盪時國軍不能奇襲武漢(自己的本土)"),
@@ -1251,8 +1272,14 @@ check("各級民生下誰可以奇襲哪裡:動盪以下只鎖對手的本土,�
 
 check("經過 apply:動盪時共軍奇襲蘭州、國軍奇襲武漢可以;共軍打南京、國軍打陝北被拒絕", () => {
   const t = lockTodo(); if (t) return t;
-  const S = toAction(enter(6, { edits: HOME_EDITS, weariness: 4, hands: [["score_north", "gao_shuxun", "shangdang_campaign"], ["score_east", "kunming_incident", "sino_soviet_treaty"]] }));
-  const pre = all(eq(S.turn, 6, "回合"), eq(S.weariness, 4, "民生"), eq(rb(S, "lanzhou"), "0/2", "蘭州 紅/藍"), eq(rb(S, "wuhan"), "1/3", "武漢 紅/藍"));
+  const HANDS = [["score_north", "gao_shuxun", "shangdang_campaign"], ["score_east", "kunming_incident", "sino_soviet_treaty"]];
+  const S = toAction(enter(6, { edits: HOME_EDITS, weariness: 4, hands: HANDS, options: NO_B }));
+  // Under B (the default) the lock still bars: 淮海 red 3 gives 南京 a Communist neighbour (B1), so what refuses is the lock alone.
+  const SB = toAction(enter(6, { edits: { ...HOME_EDITS, huaihai: { r: 3 } }, weariness: 4, hands: HANDS }));
+  const noB = thrown(() => act(SB, CCP, "gao_shuxun", "campaign", { target: "nanjing", siege: "point" }));
+  const pre = all(eq(S.turn, 6, "回合"), eq(S.weariness, 4, "民生"), eq(rb(S, "lanzhou"), "0/2", "蘭州 紅/藍"), eq(rb(S, "wuhan"), "1/3", "武漢 紅/藍"),
+    eq(SB.options.mechanismB, true, "預設的這一局 B 開著"), eq(E.opsOptions(SB, CCP).campaignTargets.includes("nanjing"), false, "B 開著、動盪時共軍的奇襲目標有南京"),
+    eq(/locked by weariness/.test(noB || ""), true, `B 開著、動盪時共軍打南京被拒絕的理由是民生的鎖(實際:「${noB}」)`));
   if (pre !== true) return pre;
   const no1 = thrown(() => act(S, CCP, "gao_shuxun", "campaign", { target: "nanjing" }));
   let a = null, b = null;
@@ -1271,9 +1298,9 @@ check("經過 apply:動盪時共軍奇襲蘭州、國軍奇襲武漢可以;共�
 
 check("homeLockSide 是一個開關:預設 \"opponent\";\"both\" 是縱橫的鎖法(兩個本土對雙方都鎖)", () => {
   const t = lockTodo(); if (t) return t;
-  const both = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: { homeLockSide: "both" } });
+  const both = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: { homeLockSide: "both", ...NO_B } });
   const c = E.opsOptions(both, CCP).campaignTargets, k = E.opsOptions(both, KMT).campaignTargets;
-  const now = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4 }), noKey = E.clone(now);
+  const now = enter(6, { edits: HOME_EDITS, hands: STOP, weariness: 4, options: NO_B }), noKey = E.clone(now);
   delete noKey.options.homeLockSide;
   return all(
     eq(E.DEFAULT_OPTIONS.homeLockSide, "opponent", "DEFAULT_OPTIONS.homeLockSide"),
@@ -1348,7 +1375,7 @@ check("美援:行動點 = 美國支持;不算手牌;佔一個行動回合;一回
     // 東北的 +1 只給蘇援: with blue 1 in 錦州 and red 1 in 北滿, 美援 (3) puts 3 points in the Northeast, not 4, and hits with 3.
     eq(thrown(() => act(NE3, KMT, "american_aid", "place", { points: ["jinzhou", "jinzhou", "jinzhou", "jinzhou"] })) != null, true, "美援在東北放 4 點(支持度 3)沒有被拒絕:+1 只給蘇援"),
     eq(thrown(() => act(NE3, KMT, "american_aid", "place", { points: ["jinzhou", "jinzhou", "jinzhou"] })), null, "美援在東北放 3 點被拒絕"),
-    eq(rb(act(NE3, KMT, "american_aid", "campaign", { target: "beiman" }), "beiman"), "0/2", "美援 3 點奇襲北滿(東北;移除 1、放 2)之後 紅/藍"),
+    eq(rb(raid(NE3, KMT, "american_aid", "beiman"), "beiman"), "0/2", "美援 3 點奇襲北滿(東北;移除 1、放 2)之後 紅/藍"),
     ok(true, "美援 3 點:徐州 +2、天津 +1;手牌還是 2 張;佔了第 1 個行動回合;這一回合不能再用;在東北也是 3 點"),
   );
 });
@@ -1360,7 +1387,7 @@ check("美援只能扶植、奇襲、遊說;不能當標題牌、不能當事件
   const pre = all(eq(H.phase, "headline", "phase"), eq(aid && aid.id, "american_aid", "legal 給國軍的外援牌"), eq(rb(S, "jizhong"), "2/0", "冀中 紅/藍"), eq(rb(S, "chasui"), "2/2", "察綏 紅/藍"));
   if (pre !== true) return pre;
   let b = null, c = null;
-  const e1 = thrown(() => { b = act(S, KMT, "american_aid", "campaign", { target: "jizhong" }); });
+  const e1 = thrown(() => { b = raid(S, KMT, "american_aid", "jizhong"); });
   if (e1 != null) return `國軍用美援奇襲冀中被拒絕:${e1}`;
   const e2 = thrown(() => { c = act(S, KMT, "american_aid", "lobby", { target: "chasui" }); });
   if (e2 != null) return `國軍用美援遊說察綏被拒絕:${e2}`;
@@ -1398,7 +1425,8 @@ check("支持度是 0 就不能用,即使有 +1;「所有牌行動點 ±1」的�
 
 check("蘇援:行動點 = 蘇聯支持;全部用在東北時 +1(扶植每一點都在東北、奇襲的目標在東北)", () => {
   const t = aidTodo(); if (t) return t;
-  const C = toAction(enter(6, { options: AID_ON, edits: { shenyang: { b: 2 } }, support: [2, 0], hands: [["score_north", "gao_shuxun"], []] }));
+  // #28: 遼西 red 2 (Communist-controlled) gives 瀋陽 the neighbour a Communist attack on a city needs (B1).
+  const C = toAction(enter(6, { options: AID_ON, edits: { shenyang: { b: 2 }, liaoxi: { r: 2 } }, support: [2, 0], hands: [["score_north", "gao_shuxun"], []] }));
   const aid = aidOf(C, CCP);
   const pre = all(eq(C.actor, CCP, "輪到誰"), eq(aid && aid.id, "soviet_aid", "legal 給共軍的外援牌"), eq(aid && aid.ops, 2, "蘇援的行動點"),
     eq(rb(C, "siping"), "0/0", "四平 紅/藍"), eq(rb(C, "beiman"), "1/0", "北滿 紅/藍"), eq(rb(C, "shenyang"), "0/2", "瀋陽 紅/藍"), eq(rb(C, "chasui"), "2/2", "察綏 紅/藍"));
@@ -1408,7 +1436,7 @@ check("蘇援:行動點 = 蘇聯支持;全部用在東北時 +1(扶植每一點�
   if (e1 != null) return `蘇援 2 點、全部放在東北的 3 點被拒絕:${e1}`;
   const e2 = thrown(() => { mixed = act(C, CCP, "soviet_aid", "place", { points: ["siping", "taihang"] }); });
   if (e2 != null) return `蘇援 2 點放四平、太行各 1 被拒絕:${e2}`;
-  const e3 = thrown(() => { hitNe = act(C, CCP, "soviet_aid", "campaign", { target: "shenyang" }); hitOther = act(C, CCP, "soviet_aid", "campaign", { target: "chasui" }); });
+  const e3 = thrown(() => { hitNe = raid(C, CCP, "soviet_aid", "shenyang"); hitOther = raid(C, CCP, "soviet_aid", "chasui"); });
   if (e3 != null) return `蘇援奇襲被拒絕:${e3}`;
   const T2 = E.placeTargets(C, CCP, 2, ["siping", "siping"], "soviet_aid").lit, T3 = E.placeTargets(C, CCP, 2, ["siping", "taihang"], "soviet_aid").lit;
   return all(
@@ -1473,21 +1501,25 @@ check("空運只到孤城(有藍的城):沒有藍的城,不論是沒有補給還
 
 check("美軍駐華:美國支持 ≥ 3 時共軍不能奇襲天津與上海(手牌、蘇援都不行);只擋奇襲;第 7 回合的解鎖不管它", () => {
   const t = aidTodo(); if (t) return t;
-  const hands = [["score_north", "gao_shuxun", "shangdang_campaign"], []], edits = { tianjin: { r: 1 } };
+  // #28: under B a Communist attack on a city needs a space they control next to it (B1): 淮海 red 3 (next to 徐州
+  // and 南京) and 廣州 red 4 blue 0 (next to 上海) give them one; 天津 has 冀中. The refused attacks name a plan, so
+  // what refuses them is 美軍駐華 (the message is read).
+  const hands = [["score_north", "gao_shuxun", "shangdang_campaign"], []], edits = { tianjin: { r: 1 }, huaihai: { r: 3 }, guangzhou: { r: 4, b: 0 } };
   const M = toAction(enter(6, { options: AID_ON, edits, support: [1, 3], hands })), free = toAction(enter(6, { options: AID_ON, edits, support: [1, 2], hands }));
   const tm = E.opsOptions(M, CCP).campaignTargets, tf = E.opsOptions(free, CCP).campaignTargets;
   const pre = all(eq(M.actor, CCP, "輪到誰"), eq(J(M.support), "[1,3]", "支持度"), eq(M.weariness, 5, "民生"), eq(rb(free, "tianjin"), "1/3", "天津 紅/藍"),
     eq(tf.includes("tianjin") && tf.includes("shanghai"), true, "美國支持 2 時共軍可以奇襲天津、上海(對照組)"));
   if (pre !== true) return pre;
   let hit = null;
-  const e = thrown(() => { hit = act(free, CCP, "gao_shuxun", "campaign", { target: "tianjin" }); });
+  const e = thrown(() => { hit = raid(free, CCP, "gao_shuxun", "tianjin"); });
   if (e != null) return `美國支持 2 時共軍奇襲天津被拒絕:${e}`;
-  const seven = toAction(enter(7, { options: AID_ON, support: [2, 4], weariness: 2, hands }));
+  const seven = toAction(enter(7, { options: AID_ON, edits, support: [2, 4], weariness: 2, hands }));
+  const barT = thrown(() => act(M, CCP, "gao_shuxun", "campaign", { target: "tianjin", siege: "point" })), barS = thrown(() => act(M, CCP, "soviet_aid", "campaign", { target: "shanghai", siege: "point" }));
   const t7 = E.opsOptions(seven, CCP).campaignTargets;
   return all(
     eq(tm.includes("tianjin") || tm.includes("shanghai"), false, "美國支持 3 時共軍的奇襲目標有天津或上海"), eq(tm.includes("beiping") && tm.includes("nanjing"), true, "美國支持 3 時北平、南京照常可以奇襲"),
-    eq(thrown(() => act(M, CCP, "gao_shuxun", "campaign", { target: "tianjin" })) != null, true, "美國支持 3 時共軍用手牌奇襲天津沒有被拒絕"),
-    eq(thrown(() => act(M, CCP, "soviet_aid", "campaign", { target: "shanghai" })) != null, true, "美國支持 3 時共軍用蘇援奇襲上海沒有被拒絕"),
+    eq(/美軍駐華/.test(barT || ""), true, `美國支持 3 時共軍用手牌奇襲天津,被美軍駐華拒絕(實際:「${barT}」)`),
+    eq(/美軍駐華/.test(barS || ""), true, `美國支持 3 時共軍用蘇援奇襲上海,被美軍駐華拒絕(實際:「${barS}」)`),
     eq(ids(E.opsOptions(M, CCP).lobbyTargets).includes("tianjin"), true, "美軍駐華連遊說天津也擋了"), eq(E.placeTargets(M, CCP, 2).lit.has("tianjin"), true, "美軍駐華連扶植天津也擋了"),
     eq(E.opsOptions(M, KMT).campaignTargets.includes("tianjin"), true, "國軍不能奇襲天津裡的紅"),
     eq(rb(hit, "tianjin"), "1/1", "美國支持 2 時共軍 2 點奇襲天津之後 紅/藍"),
@@ -1529,7 +1561,9 @@ check("外援牌沒有任何合法用法時不算可用:空手的一方被跳過
   // No red anywhere, blue only in 天津 and 上海. The Communists cannot 扶植 (no influence to reach from),
   // cannot 遊說 (none of their own anywhere), and 美軍駐華 (美國支持 3) bars the only two spaces they could attack.
   const edits = Object.fromEntries(Object.keys(SPEC_SPACES).map((id) => [id, { r: 0, b: id === "tianjin" || id === "shanghai" ? 3 : 0 }]));
-  const st = enter(6, { options: AID_ON, edits, support: [2, 3] }), free = enter(6, { options: AID_ON, edits, support: [2, 2] });
+  // #28: under B, with no red anywhere, the Communists cannot attack a city at all (B1 wants a space they control
+  // next to it), whatever 美軍駐華 says: the control half (美國支持 2, an attack possible) is read with B off.
+  const st = enter(6, { options: AID_ON, edits, support: [2, 3] }), free = enter(6, { options: { ...AID_ON, mechanismB: false }, edits, support: [2, 2] });
   const held = toAction(enter(6, { options: AID_ON, edits, support: [2, 3], hands: [["score_north", "gao_shuxun"], []] }));
   const o = E.opsOptions(st, CCP);
   const pre = all(
@@ -1603,7 +1637,7 @@ check("根據地只在記分時算要衝:奇襲它不推民生,凋敝時也不�
   const S = toAction(enter(6, { hands: [[], KH3] }));
   const low = E.clone(S); low.weariness = 2;
   const kt = E.opsOptions(low, KMT).campaignTargets;
-  const a = act(S, KMT, "kunming_incident", "campaign", { target: "jiluyu" });
+  const a = raid(S, KMT, "kunming_incident", "jiluyu");
   return all(
     eq(S.weariness, 5, "民生"), eq(rb(S, "jiluyu"), "3/0", "冀魯豫(根據地)紅/藍"),
     eq(rb(a, "jiluyu"), "1/0", "國軍 2 點奇襲冀魯豫之後 紅/藍"), eq(a.weariness, 5, "奇襲根據地之後的民生"),
@@ -1771,7 +1805,8 @@ check("接收大員(2):國軍在最多 3 座城各放 1;民心往共軍移 1;美
 
 check("日軍留守 *(1):指定一座有藍的城,本回合不可被奇襲或遊說", () => {
   const t = cardTodo("japanese_garrisons", "kunming_incident"); if (t) return t;
-  const S = holding(KMT, "japanese_garrisons", { edits: { xuzhou: { r: 1 } }, options: { turns: 6 } });
+  // #28: 淮海 red 3 (Communist-controlled) gives 徐州 the neighbour a Communist attack on a city needs (B1).
+  const S = holding(KMT, "japanese_garrisons", { edits: { xuzhou: { r: 1 }, huaihai: { r: 3 } }, options: { turns: 6 } });
   const before = E.opsOptions(S, CCP), a = ev(S, KMT, "japanese_garrisons");
   const p = pendingIs(a, KMT, "points", "日軍留守"); if (p !== true) return p;
   const b = choose(a, ["xuzhou"]), after = E.opsOptions(b, CCP);
@@ -1931,7 +1966,7 @@ check("重慶談判 *(2):打出者民心 +1;民生回復 1", () => {
 check("一月停戰令 *(3):民生回復 2;持續至回合結束:雙方奇襲 −1", () => {
   const t = cardTodo("january_truce"); if (t) return t;
   const S = holding(KMT, "january_truce", { weariness: 2, extra: ["kunming_incident", "takeover_officials"] }), a = ev(S, KMT, "january_truce");
-  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const b = raid(a, KMT, "kunming_incident", "jizhong");
   return all(
     eq(a.weariness, 4, "民生 2 回復 2"), eq(rb(a, "jizhong"), "2/0", "冀中 紅/藍"), eq(rb(b, "jizhong"), "1/0", "國軍 2 點 −1 奇襲冀中之後 紅/藍"),
     eq(E.campaignMod(a, CCP, "chasui"), -1, "共軍奇襲的加減"), eq(E.campaignMod(S, CCP, "chasui"), 0, "打出之前共軍奇襲的加減"),
@@ -1944,8 +1979,8 @@ check("馬歇爾調處(1):與手中另一張對手陣營的牌同時打出,那�
   const extra = ["gao_shuxun", "kunming_incident"]; // 高樹勛起義 is a Communist card of 2 ops
   const S = holding(KMT, "marshall_mission", { support: [1, 3], extra }), Z = holding(KMT, "marshall_mission", { support: [1, 0], extra });
   const uses = (st) => E.legal(st, KMT).cards.find((c) => c.id === "marshall_mission").uses;
-  const a = act(S, KMT, "marshall_mission", "campaign", { target: "jizhong", pair: "gao_shuxun" });
-  const z = act(Z, KMT, "marshall_mission", "campaign", { target: "jizhong" });
+  const a = raid(S, KMT, "marshall_mission", "jizhong", { pair: "gao_shuxun" });
+  const z = raid(Z, KMT, "marshall_mission", "jizhong");
   return all(
     same(uses(S).pair || [], ["gao_shuxun"], "legal 給的可以配的牌"), eq((uses(Z).pair || []).length, 0, "美國支持 0 時可以配的牌數"),
     eq(rb(a, "jizhong"), "0/0", "配高樹勛起義(2 點)奇襲冀中之後 紅/藍"), eq(a.pending, null, "配的那張牌的事件觸發了(有待決定)"),
@@ -1971,7 +2006,8 @@ check("政協決議 *(2):打出者變法軌前進 1;美國支持 +1", () => {
 
 check("蘇軍延期撤兵(2):持續至回合結束:東北的城不可被奇襲(只擋奇襲、只擋城)", () => {
   const t = cardTodo("soviets_delay"); if (t) return t;
-  const S = holding(KMT, "soviets_delay", { edits: { shenyang: { r: 2, b: 1 }, siping: { r: 1, b: 1 } } }), a = ev(S, KMT, "soviets_delay");
+  // #28: 遼西 red 2 (Communist-controlled) gives 瀋陽 the neighbour a Communist attack on a city needs (B1).
+  const S = holding(KMT, "soviets_delay", { edits: { shenyang: { r: 2, b: 1 }, siping: { r: 1, b: 1 }, liaoxi: { r: 2 } } }), a = ev(S, KMT, "soviets_delay");
   const tg = (st, side) => E.opsOptions(st, side).campaignTargets;
   return all(
     eq(tg(S, CCP).includes("shenyang") && tg(S, KMT).includes("shenyang"), true, "打出之前兩邊都可以奇襲瀋陽"),
@@ -2127,7 +2163,7 @@ check("行憲國大 *(2):行憲軌前進 1;國軍控制南京的話民心 +1", (
 check("美械整編師(3):持續至回合結束:國軍奇襲行動點 +1。美國支持 < 2 時無效", () => {
   const t = cardTodo("american_divisions"); if (t) return t;
   const S = holding(KMT, "american_divisions", { support: [1, 2], extra: ["kunming_incident", "takeover_officials"] }), a = ev(S, KMT, "american_divisions");
-  const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const b = raid(a, KMT, "kunming_incident", "jizhong");
   const low = ev(holding(KMT, "american_divisions", { support: [1, 1] }), KMT, "american_divisions");
   return all(
     eq(E.campaignMod(S, KMT, "jizhong"), 0, "打出之前國軍奇襲的加減"), eq(E.campaignMod(a, KMT, "jizhong"), 1, "美國支持 2:國軍奇襲的加減"), eq(E.campaignMod(a, CCP, "chasui"), 0, "共軍奇襲的加減"),
@@ -2141,7 +2177,7 @@ check("美械整編師(3):持續至回合結束:國軍奇襲行動點 +1。美�
 check("轉戰陝北(2):持續:國軍對西北的鄉奇襲行動點 −2。「胡宗南佔延安」觸發時移除", () => {
   const t = cardTodo("northern_shaanxi"); if (t) return t;
   const S = holding(CCP, "northern_shaanxi", { other: ["score_east", "surrender_order", "kunming_incident"] }), a = ev(S, CCP, "northern_shaanxi");
-  const b = act(a, KMT, "surrender_order", "campaign", { target: "shanbei" });
+  const b = raid(a, KMT, "surrender_order", "shanbei");
   const fx = a.effects.find((e) => e.card === "northern_shaanxi");
   return all(
     eq(E.campaignMod(a, KMT, "shanbei"), -2, "國軍打陝北(西北的鄉)的加減"), eq(E.campaignMod(a, KMT, "xian"), 0, "國軍打西安(城)的加減"), eq(E.campaignMod(a, CCP, "shanbei"), 0, "共軍的加減"), eq(E.campaignMod(a, KMT, "jizhong"), 0, "國軍打別區的鄉的加減"),
@@ -2371,7 +2407,7 @@ check("傅作義守華北 *(3):持續:共軍對華北的城奇襲行動點 −1�
   const t = cardTodo("fu_holds_the_north"); if (t) return t;
   const S = holding(CCP, "into_manchuria", { extra: ["gao_shuxun"], other: ["score_east", "fu_holds_the_north", "kunming_incident"] });
   const a = ev(spend(S, CCP, "into_manchuria", "taihang"), KMT, "fu_holds_the_north");
-  const b = act(a, CCP, "gao_shuxun", "campaign", { target: "beiping" });
+  const b = raid(a, CCP, "gao_shuxun", "beiping");
   const fx = a.effects.find((e) => e.card === "fu_holds_the_north");
   return all(
     eq(["beiping", "tianjin", "taiyuan"].map((id) => E.campaignMod(a, CCP, id)).join(), "-1,-1,-1", "共軍打北平、天津、太原的加減"),
@@ -2549,7 +2585,9 @@ check("北平和談 *(3):民生回復 2;持續至回合結束:雙方奇襲 −1"
 check("史達林的建議 *(2):共軍還沒控制任何後方的城的話:本回合共軍不可奇襲後方的城,蘇聯支持 +1", () => {
   const t = cardTodo("stalins_advice"); if (t) return t;
   const rearOf = (st, side) => E.opsOptions(st, side).campaignTargets.filter((id) => SPEC_SPACES[id][1] === "rear");
-  const S = holding(KMT, "stalins_advice", { support: [1, 2], edits: { wuhan: { r: 1 } } }), a = ev(S, KMT, "stalins_advice");
+  // #28: 大別山 blue 0 (red 2, Communist-controlled) gives 武漢, and 淮海 red 3 gives 徐州, the neighbour a Communist attack
+  // on a city needs (B1).
+  const S = holding(KMT, "stalins_advice", { support: [1, 2], edits: { wuhan: { r: 1 }, dabieshan: { b: 0 }, huaihai: { r: 3 } } }), a = ev(S, KMT, "stalins_advice");
   // 武漢 Communist (red 4, no blue): they control a city of 後方, so the card does nothing.
   const H = holding(KMT, "stalins_advice", { support: [1, 2], edits: { wuhan: { r: 4, b: 0 } } }), h = ev(H, KMT, "stalins_advice");
   return all(
@@ -2677,10 +2715,12 @@ check("扶植:放在自己有影響力、或與之相鄰的據點;能放哪裡�
   );
 });
 
-check("奇襲:移除 min(X, 對手的點),剩下的放成自己的,不受相鄰限制、受上限限制;目標要有對手的點;城的要衝推民生", () => {
+// #28: under B the old 奇襲 is the cell 打點 / 固守 (a city) and 進剿 / 守, through `raid`; a Communist attack on a city
+// also needs a space they control next to it (B1, group 13), which 北平 has (冀中).
+check("奇襲:移除 min(X, 對手的點),剩下的放成自己的,不受相鄰限制(共軍打城另有 B1)、受上限限制;目標要有對手的點;城的要衝推民生", () => {
   const S = holding(KMT, "surrender_order", { extra: ["reorganisation_conference", "kunming_incident"] });
-  const a = act(S, KMT, "surrender_order", "campaign", { target: "jizhong" }), b = act(a, KMT, "reorganisation_conference", "campaign", { target: "dabieshan" });
-  const C1 = holding(CCP, "into_manchuria"), c = act(C1, CCP, "into_manchuria", "campaign", { target: "beiping" });
+  const a = raid(S, KMT, "surrender_order", "jizhong"), b = raid(a, KMT, "reorganisation_conference", "dabieshan");
+  const C1 = holding(CCP, "into_manchuria"), c = raid(C1, CCP, "into_manchuria", "beiping");
   return all(
     eq(rb(S, "jizhong"), "2/0", "冀中 紅/藍"), eq(rb(a, "jizhong"), "0/1", "國軍 3 點奇襲冀中(移除 2、放 1)之後 紅/藍"), eq(a.weariness, 5, "打鄉之後的民生"),
     eq(rb(b, "dabieshan"), "0/4", "國軍 4 點奇襲大別山 2/2(移除 2、放 2,上限 4)之後 紅/藍"),
@@ -2961,8 +3001,8 @@ check("situations 關掉:沒有撤離的放置、沒有停戰的罰則、奇襲�
   const kh = [[], ["score_east", "kunming_incident", "return_to_nanjing", "sino_soviet_treaty"]];
   const two = enter(2, { options: SIT_OFF, hands: kh });
   if (two.pending) return `第 2 回合開始還有待決定(${sideZh(two.pending.who)} 的 ${two.pending.kind},tag ${two.pending.tag})`;
-  const s2 = toAction(two), a = act(s2, KMT, "kunming_incident", "campaign", { target: "jizhong" });
-  const s3 = toAction(enter(3, { options: SIT_OFF, hands: kh })), b = act(s3, KMT, "kunming_incident", "campaign", { target: "jizhong" });
+  const s2 = toAction(two), a = raid(s2, KMT, "kunming_incident", "jizhong");
+  const s3 = toAction(enter(3, { options: SIT_OFF, hands: kh })), b = raid(s3, KMT, "kunming_incident", "jizhong");
   const s4 = toAction(enter(4, { options: SIT_OFF, hands: kh }));
   const s5 = toAction(enter(5, { options: SIT_OFF, edits: { huaihai: { r: 0 }, dabieshan: { r: 0 } }, hands: [["score_north", "into_manchuria", "soviet_arms"], []] }));
   return all(
@@ -2983,9 +3023,11 @@ check("situations 關掉:行憲沒有掛鉤、第 7 回合孤城掉 1、共軍�
   const six = toAction(enter(6, { options: SIT_OFF, edits, hands: kh })), five = toAction(enter(5, { options: SIT_OFF, edits, hands: kh }));
   const a5 = act(five, KMT, "kunming_incident", "reform"), a6 = act(six, KMT, "kunming_incident", "reform");
   const ch = [["score_north", "gao_shuxun", "shangdang_campaign", "into_manchuria"], []];
-  const seven = toAction(enter(7, { options: SIT_OFF, hands: ch, support: [2, 4] }));
-  const hit = act(seven, CCP, "gao_shuxun", "campaign", { target: "xuzhou" });
-  const low = toAction(enter(7, { options: SIT_OFF, hands: ch, support: [2, 4], weariness: 2 })), t7 = E.opsOptions(low, CCP).campaignTargets;
+  // #28: 淮海 red 3 (Communist-controlled) gives 徐州 and 南京 the neighbour a Communist attack on a city needs (B1).
+  const near = { huaihai: { r: 3 } };
+  const seven = toAction(enter(7, { options: SIT_OFF, edits: near, hands: ch, support: [2, 4] }));
+  const hit = raid(seven, CCP, "gao_shuxun", "xuzhou");
+  const low = toAction(enter(7, { options: SIT_OFF, edits: near, hands: ch, support: [2, 4], weariness: 2 })), t7 = E.opsOptions(low, CCP).campaignTargets;
   const e7 = enter(7, { edits: JINAN_CUT, options: { ...SIT_OFF, turns: 7 } });
   const eight = enter(8, { options: SIT_OFF, hands: [[], ["score_east", "kunming_incident", "return_to_nanjing", "sino_soviet_treaty"]] });
   return all(
@@ -3041,17 +3083,18 @@ check("rounds: \"symmetric\":兩邊每期的手牌上限與行動回合數相同
 
 check("garrison 關掉:美國支持 ≥ 3 時共軍照樣可以奇襲天津與上海;預設仍然擋", () => {
   const t = swTodo(); if (t) return t;
-  const hands = [["score_north", "gao_shuxun", "shangdang_campaign"], []], edits = { tianjin: { r: 1 } };
+  // #28: 廣州 red 4 blue 0 (Communist-controlled) gives 上海 the neighbour a Communist attack on a city needs (B1); 天津 has 冀中.
+  const hands = [["score_north", "gao_shuxun", "shangdang_campaign"], []], edits = { tianjin: { r: 1 }, guangzhou: { r: 4, b: 0 } };
   const on = toAction(enter(6, { options: AID_ON, edits, support: [1, 3], hands })), off = toAction(enter(6, { options: { ...AID_ON, garrison: false }, edits, support: [1, 3], hands }));
   const ton = E.opsOptions(on, CCP).campaignTargets, toff = E.opsOptions(off, CCP).campaignTargets;
   let hit = null;
-  const e = thrown(() => { hit = act(off, CCP, "gao_shuxun", "campaign", { target: "tianjin" }); });
+  const e = thrown(() => { hit = raid(off, CCP, "gao_shuxun", "tianjin"); });
   if (e != null) return `garrison 關掉、美國支持 3 時共軍奇襲天津被拒絕:${e}`;
   return all(
     eq(J(off.support), "[1,3]", "支持度"), eq(rb(off, "tianjin"), "1/3", "天津 紅/藍"),
     eq(ton.includes("tianjin") || ton.includes("shanghai"), false, "預設(對照組):美國支持 3 時共軍的奇襲目標有天津或上海"),
     eq(toff.includes("tianjin") && toff.includes("shanghai"), true, "garrison 關掉:美國支持 3 時共軍可以奇襲天津、上海"),
-    eq(thrown(() => act(off, CCP, "soviet_aid", "campaign", { target: "shanghai" })), null, "garrison 關掉時共軍用蘇援奇襲上海被拒絕"),
+    eq(thrown(() => raid(off, CCP, "soviet_aid", "shanghai")), null, "garrison 關掉時共軍用蘇援奇襲上海被拒絕"),
     eq(rb(hit, "tianjin"), "1/1", "共軍 2 點奇襲天津之後 紅/藍"),
     ok(true, "預設:美國支持 3 時天津、上海打不到;garrison 關掉:手牌和蘇援都打得到(天津 1/3→1/1)"),
   );
@@ -3082,6 +3125,8 @@ check("garrison 關掉:美國支持 ≥ 3 時共軍照樣可以奇襲天津與�
 //
 // orchestrator 裁決(#26),筆記沒寫或兩色版要定的:
 //   - 先做成選項 `mechanismB: true`(預設關)。模擬量過、owner 採用之後才變成預設(像 #23 → #24 那樣)。
+//     #28:owner 裁決(2026-10-05,對話裡的選擇題,原文)「照現在的 B 採用為預設」。現在 `mechanismB: true` 是
+//     DEFAULT_OPTIONS 的一個 key;`{ mechanismB: false }` 照舊(下面的「關掉」都是它)。
 //   - 只有「用行動點的進攻」(手牌或外援牌當行動點)走 B;牌的事件寫著「奇襲」的照舊(牌文是照舊規則寫的)。
 //   - 時局與牌的進攻修正先加到 X,再查表。民生(打城的要衝推民生)、封鎖、美軍駐華、東北的佔領照舊。
 //   - 「己方據點」= 共軍控制的據點;繳獲與 −1 由共軍選哪一個(只有一個時也照樣問)。
@@ -3098,7 +3143,7 @@ check("garrison 關掉:美國支持 ≥ 3 時共軍照樣可以奇襲天津與�
 //   數字:E.SIEGE = { reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 }。
 section("13 機制 B:圍點打援、破襲、進剿(選項 mechanismB)");
 
-const MB = { mechanismB: true };
+const MB = { mechanismB: true }, B_OFF = { mechanismB: false };
 const bTodo = () => (E.SIEGE === undefined ? "TODO: E.SIEGE 還沒有;mechanismB 這個選項還沒有接進引擎" : null);
 const optIds = (st) => (st.pending && st.pending.options ? st.pending.options.map((o) => (o && typeof o === "object" ? o.id : o)) : []);
 // 濟南(城,S 3,上限 5):藍 3。冀魯豫(紅 3,S 3)是共軍控制、與濟南相鄰;魯中(紅 3 藍 2)沒有人控制;
@@ -3123,15 +3168,15 @@ check("常數:機制 B 的數字(援軍抵 2 倍、最多 3 點、突圍損一�
   const t = bTodo(); if (t) return t;
   return all(
     eq(J(E.SIEGE), J({ reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 }), "E.SIEGE"),
-    eq(E.DEFAULT_OPTIONS.mechanismB, undefined, "mechanismB 不是預設(DEFAULT_OPTIONS 裡不該有它)"),
-    ok(true, `E.SIEGE ${J(E.SIEGE)};預設關`),
+    eq(E.DEFAULT_OPTIONS.mechanismB, true, "DEFAULT_OPTIONS.mechanismB(owner 裁決 #28:B 是預設)"),
+    ok(true, `E.SIEGE ${J(E.SIEGE)};預設開`),
   );
 });
 
 check("破襲:共軍打鄉就是原本的奇襲(沒有回應、和選項關掉時一樣)", () => {
   const t = bTodo(); if (t) return t;
   const go = (options) => { const st = position({}, options); deal(st, CCP, ["score_north", "gao_shuxun"]); deal(st, KMT, ["score_east", "kunming_incident"]); return act(toAction(st), CCP, "gao_shuxun", "campaign", { target: "luzhong" }); };
-  const on = go(MB), off = go({});
+  const on = go(MB), off = go(B_OFF);
   return all(
     eq(on.pending, null, "選項開著時打魯中之後的待決定"), eq(rb(on, "luzhong"), rb(off, "luzhong"), "魯中 紅/藍(開 vs 關)"), eq(rb(on, "luzhong"), "3/0", "魯中 紅/藍"),
     ok(true, `魯中 3/2→${rb(on, "luzhong")},不查表、不問`),
@@ -3140,7 +3185,7 @@ check("破襲:共軍打鄉就是原本的奇襲(沒有回應、和選項關掉�
 
 check("打城的條件:要控制一個相鄰的據點;還要宣告打點或打援", () => {
   const t = bTodo(); if (t) return t;
-  const S = siegeRig(), off = siegeRig({ options: {} });
+  const S = siegeRig(), off = siegeRig({ options: B_OFF });
   const tOn = E.opsOptions(S, CCP).campaignTargets, tOff = E.opsOptions(off, CCP).campaignTargets;
   const noSiege = thrown(() => act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan" }));
   const nanjing = thrown(() => act(S, CCP, "huaihai_campaign", "campaign", { target: "nanjing", siege: "point" }));
@@ -3288,17 +3333,17 @@ check("修正先加到 X:第 3 回合(全面進攻,國軍 +1)國軍 2 點進剿�
 check("事件照舊:淮海戰役的事件(奇襲 4 + 2)打濟南,不查表、和選項關掉時一樣", () => {
   const t = bTodo(); if (t) return t;
   const go = (options) => { const S = siegeRig({ options }); const a = act(S, CCP, "huaihai_campaign", "event"); const p = pendingIs(a, CCP, "points", "淮海戰役的事件"); if (p !== true) throw new Error(p); return choose(a, ["jinan"]); };
-  const on = go(MB), off = go({});
+  const on = go(MB), off = go(B_OFF);
   return all(
     eq(on.pending, null, "選項開著時事件打完之後的待決定"), eq(rb(on, "jinan"), rb(off, "jinan"), "濟南 紅/藍(開 vs 關)"), eq(rb(on, "jinan"), "3/0", "濟南 紅/藍(6 點:移除 3、放 3)"),
     ok(true, `事件照舊:濟南 0/3→${rb(on, "jinan")},沒有回應`),
   );
 });
 
-check("選項關掉時(預設)打城照舊:不用宣告、沒有回應", () => {
+check("選項關掉時(mechanismB: false)打城照舊:不用宣告、沒有回應", () => {
   const t = bTodo(); if (t) return t;
-  const S = siegeRig({ options: {} }), a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan" });
-  return all(eq(a.pending, null, "打濟南之後的待決定"), eq(rb(a, "jinan"), "1/0", "濟南 紅/藍"), ok(true, "預設:濟南 0/3→1/0,和縱橫的奇襲一樣"));
+  const S = siegeRig({ options: B_OFF }), a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan" });
+  return all(eq(a.pending, null, "打濟南之後的待決定"), eq(rb(a, "jinan"), "1/0", "濟南 紅/藍"), ok(true, "mechanismB: false:濟南 0/3→1/0,和縱橫的奇襲一樣"));
 });
 
 // ---------------------------------------------------------------- verdict

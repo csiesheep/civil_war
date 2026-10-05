@@ -43,7 +43,7 @@ function gauss(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 const hand = (st, s) => st.hands[s] || [];
-// Mechanism B (#26, the option `mechanismB`). Inside the bot's own simulations
+// Mechanism B (#26, the option `mechanismB`; the default rules since #28). Inside the bot's own simulations
 // (a candidate played out, the other side's reply of 困難) an attack on a city
 // that must name a plan is offered once per plan, and the Nationalists' answer
 // in the simulation is their best one for that plan: an approximation of the
