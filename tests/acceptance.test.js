@@ -3346,6 +3346,303 @@ check("選項關掉時(mechanismB: false)打城照舊:不用宣告、沒有回�
   return all(eq(a.pending, null, "打濟南之後的待決定"), eq(rb(a, "jinan"), "1/0", "濟南 紅/藍"), ok(true, "mechanismB: false:濟南 0/3→1/0,和縱橫的奇襲一樣"));
 });
 
+// ---------------------------------------------------------------- group 14
+// 機制 D 的核心(M2b 的第二批,#30 / #31)。照 owner 的機制筆記(Projects/civil_war/civil_war - mechanisms.md,
+// 「D. 實力派的態度」)手抄,只收核心:
+//
+//   三種點數:紅(共軍)、藍(國軍中央)、灰(某個地方實力派自己的兵,只待在該勢力自己的據點,不能調走)。
+//   每個勢力一個態度:效忠 / 觀望 / 通共。
+//   2 灰怎麼算:效忠——灰完全算國方(控制、防守、記分);觀望——灰擋共軍(共軍要控制那裡,得比藍加灰多 S),
+//     但不幫國軍(國軍要控制,只算藍);通共——灰兩邊都擋(誰要控制那裡,都得把灰算在對方那邊)。
+//     上限照縱橫:每一方 S + 2,國方是藍加灰合計。
+//   3 灰不會增加,除非事件。灰不離開自己勢力的據點。共軍隨時可以打灰,但打到通共勢力的灰,態度立刻退回觀望。
+//   5 整編(國軍的政工,X 點行動點):在一個勢力的一個據點,把最多 X 點灰換成藍。態度往通共移一格。通共的勢力不能整編。
+//   7 統戰(共軍的政工):行動點 ≥ 該勢力的門檻,而且「兵臨城下」:該勢力有一個據點是孤城,或共軍控制著與該勢力
+//     某個據點相鄰的據點。態度往通共移一格。每個勢力每回合最多被統戰一次。
+//   9 易幟(整個勢力,以下任一成立時立即發生):共軍控制了本據;或態度是通共,而且本據沒有補給(本據是鄉也用 A 的
+//     走法判定:連不回任何補給源就算)。易幟時該勢力所有的灰換成紅,共軍得該勢力的民心。標記是永久的。
+//   10 整編完成:某勢力已經沒有灰,而且國軍控制本據。放整編標記,國軍民心 +2。標記是永久的。灰是被打光的(不是
+//     整編掉的)就不算。
+//   A 的第 4 條:回合結算時,孤城裡有灰的話,該勢力的態度往通共移一格(每個勢力每回合最多一格)。
+//   B 的邊界情況:進攻移除點數時先移藍還是先移灰,由被打的一方決定。突圍時灰不走。
+//
+// owner 裁決(2026-10-05,對話裡的兩題選擇題,原文;#30):
+//   「先做核心,不含調防安撫(建議)」——沒有調防(北平、武漢、長春不是勢力的據點)、沒有安撫,照 #30 的第一版數字。
+//   「維持現在的勝利條件(建議)」——易幟 3 個共軍贏;整編完成 5 個國軍贏;每回合最多放一個整編標記。
+// orchestrator 裁決(#31):
+//   - 先做成選項 `mechanismD: true`,預設關(不在 DEFAULT_OPTIONS 裡);關掉時照今天的兩色規則。量過、owner 採用之後才變預設。
+//   - 勢力的據點:綏 察綏;晉 太原、晉中;桂 桂林;馬 蘭州;滇 昆明(只有本據,晉多一個晉中;筆記的開局)。
+//   - 開局的灰:今天開局在這六個據點的藍換成灰(各 2 點,藍 0)。開局態度、統戰門檻、易幟民心照筆記的表。
+//   - 起義只發生在非本據的孤城;沒有調防就沒有這種據點,這一版沒有起義。
+//   - 政工是一張牌的第五種用法 `politics`,X = 這張牌的行動點(含「所有牌行動點 ±1」的效果);外援牌不能政工。
+//     整編不必相鄰、不必補給。每次整編換 min(X, 那裡的灰) 點。
+//   - 被打時灰算國方的點:用行動點的進攻(B 的三種)與事件的奇襲都可以打只有灰的據點;B 的表裡 D = 藍 + 灰。
+//     一次移除碰到藍也碰到灰、而且不是全部移光的時候,國軍選先移哪一種(下面的介面)。增援、突圍都只動藍。
+//   - 「兵臨城下」的孤城:該勢力有藍或灰的城沒有補給(或有圍城標記)。
+//   - 易幟、整編完成每個動作與事件結算完就檢查(和今天的標記一樣),結算時也檢查。一個勢力只會有兩種標記之一。
+//     易幟時灰換成紅(到上限為止,放不下的消失)。整編完成要「最後一點灰是整編換掉的」。
+//   - 牌文寫「藍」的只動藍,灰不動(沒有任何一張牌寫到灰)。遊說不動灰。
+//   - 扶植的相鄰(reach):效忠的灰算國軍的點(它「完全算國方」);觀望、通共的灰不算。共軍照舊只看紅。
+// 介面(brief 寫死,這裡照它驅動):
+//   E.DPOWERS = { sui: { home, spaces, attitude, threshold, vp }, jin, gui, ma, dian };E.GRAY_START = { 據點: 灰 };
+//   E.grayOf(st, id);E.attitudeOf(st, power) 是 "loyal" | "neutral" | "ccp"(效忠 / 觀望 / 通共);
+//   E.setGray(st, id, n)、E.setAttitude(st, power, a)(擺盤面用);E.controller 照第 2 條算灰。
+//   國軍整編:{ type: "play", use: "politics", target: <據點> };共軍統戰:{ type: "play", use: "politics", power: <勢力> }。
+//   國軍選先移哪一種:pending { who: KMT, kind: "option", tag: "grayOrder" },options 的 id 是 "blue"、"gray"。
+//   標記:st.mie[勢力](易幟)、st.seals[勢力](整編完成);勝負的 reason 照今天("unification"、"alliance")。
+section("14 機制 D 的核心:灰、態度、整編、統戰、易幟、整編完成(選項 mechanismD)");
+
+const MD = { mechanismD: true };
+const D_SPEC = {
+  powers: {
+    sui: { home: "chasui", spaces: ["chasui"], attitude: "loyal", threshold: 3, vp: 3 },
+    jin: { home: "taiyuan", spaces: ["taiyuan", "jinzhong"], attitude: "neutral", threshold: 4, vp: 2 },
+    gui: { home: "guilin", spaces: ["guilin"], attitude: "neutral", threshold: 3, vp: 3 },
+    ma: { home: "lanzhou", spaces: ["lanzhou"], attitude: "loyal", threshold: 4, vp: 2 },
+    dian: { home: "kunming", spaces: ["kunming"], attitude: "neutral", threshold: 2, vp: 2 },
+  },
+  gray: { chasui: 2, taiyuan: 2, jinzhong: 2, guilin: 2, lanzhou: 2, kunming: 2 },
+  integratedMandate: 2,
+};
+const dTodo = () => (E.DPOWERS === undefined ? "TODO: E.DPOWERS 還沒有;mechanismD 這個選項還沒有接進引擎" : null);
+const gb = (st, id) => `${E.infOf(st, id)[CCP]}/${E.infOf(st, id)[KMT]}/${E.grayOf(st, id)}`; // "紅/藍/灰"
+// The rig of group 3 under D: today's opening with the six spaces' blue turned gray (#30), then `edits`
+// ({ r, b, g }) and the attitudes laid over it. Hands empty; a check deals what it needs.
+function dPosition(edits = {}, attitudes = {}, options = MD) {
+  const rb = {};
+  for (const id of Object.keys(D_SPEC.gray)) rb[id] = { b: 0 };
+  for (const [id, e] of Object.entries(edits)) rb[id] = { ...(rb[id] || {}), ...(e.r != null ? { r: e.r } : {}), ...(e.b != null ? { b: e.b } : {}) };
+  const st = position(rb, options);
+  for (const [id, n] of Object.entries(D_SPEC.gray)) E.setGray(st, id, n);
+  for (const [id, e] of Object.entries(edits)) if (e.g != null) E.setGray(st, id, e.g);
+  for (const [id] of Object.entries(edits)) {
+    const cap = SPEC_SPACES[id][2] + 2;
+    if (E.infOf(st, id)[KMT] + E.grayOf(st, id) > cap) throw new Error(`dPosition: ${id} 藍加灰超過上限 ${cap}`);
+  }
+  for (const [p, a] of Object.entries(attitudes)) E.setAttitude(st, p, a);
+  return st;
+}
+// Hands: the Communists hold only a scoring card (headlined) unless `ccp` says, so the Nationalists act at once
+// when the Communists have nothing; each side keeps a spare so the turn does not walk out to its 結算.
+function dRig(edits, attitudes, { ccp = [], kmt = [] } = {}) {
+  const st = dPosition(edits, attitudes);
+  deal(st, CCP, ["score_north", ...ccp]); deal(st, KMT, ["score_east", ...kmt]);
+  const s = toAction(st);
+  s.mandate = 0; // the headlined scoring cards may have moved it: the checks read changes from 0, clear of the caps
+  return s;
+}
+
+check("常數:五個勢力(本據、據點、開局態度、統戰門檻、易幟民心)、開局的灰;mechanismD 不是預設", () => {
+  const t = dTodo(); if (t) return t;
+  return all(
+    eq(J(E.DPOWERS), J(D_SPEC.powers), "E.DPOWERS"), eq(J(E.GRAY_START), J(D_SPEC.gray), "E.GRAY_START"),
+    eq(E.DEFAULT_OPTIONS.mechanismD, undefined, "mechanismD 不是預設(DEFAULT_OPTIONS 裡不該有它)"),
+    ok(true, `五個勢力與 12 點灰照筆記與 #30;預設關`),
+  );
+});
+
+check("開局:六個據點的藍換成灰(各 2,藍 0),紅不動;態度照表;選項關掉時照舊是藍、沒有灰", () => {
+  const t = dTodo(); if (t) return t;
+  const on = E.createGame(11, { aid: false, ...MD }), off = E.createGame(11, { aid: false });
+  const ids = Object.keys(D_SPEC.gray);
+  return all(
+    eq(ids.map((id) => gb(on, id)).join(" "), "2/0/2 0/0/2 1/0/2 0/0/2 0/0/2 0/0/2", "開著時察綏、太原、晉中、桂林、蘭州、昆明的 紅/藍/灰"),
+    eq(Object.keys(D_SPEC.powers).map((p) => E.attitudeOf(on, p)).join(), "loyal,neutral,neutral,loyal,neutral", "開著時五個勢力的態度"),
+    eq(ids.map((id) => gb(off, id)).join(" "), "2/2/0 0/2/0 1/2/0 0/2/0 0/2/0 0/2/0", "關掉時同樣六個據點的 紅/藍/灰"),
+    eq(E.SPACES.reduce((t, s) => t + E.grayOf(off, s.id), 0), 0, "關掉時全盤的灰"),
+    ok(true, "開著:六個據點各灰 2、藍 0;關掉:照舊藍 2"),
+  );
+});
+
+check("控制看態度:效忠的灰算國方;觀望的灰只擋共軍;通共的灰兩邊都擋", () => {
+  const t = dTodo(); if (t) return t;
+  const ctl = (edits, p, a, id) => { const st = dPosition(edits, { [p]: a }); return E.controller(st, id); };
+  const who = (c) => (c === CCP ? "共" : c === KMT ? "國" : "無");
+  const row = (edits, p, id) => ["loyal", "neutral", "ccp"].map((a) => who(ctl(edits, p, a, id))).join("");
+  // 太原 S 3:藍 4 灰 2(國軍:效忠 6 ≥ 3、觀望 4 ≥ 3、通共 4 ≥ 2 + 3 不成立);藍 1 灰 2(效忠 3 ≥ 3,其餘不成立)。
+  // 察綏 S 2:紅 3 灰 2(共軍要 3 ≥ 灰 2 + 2,三種態度都不成立;不算灰的話會成立)。
+  return all(
+    eq(row({ taiyuan: { b: 4, g: 2 } }, "jin", "taiyuan"), "國國無", "太原藍 4 灰 2,效忠 / 觀望 / 通共時的控制者"),
+    eq(row({ taiyuan: { b: 1, g: 2 } }, "jin", "taiyuan"), "國無無", "太原藍 1 灰 2,效忠 / 觀望 / 通共時的控制者"),
+    eq(row({ chasui: { r: 3, g: 2 } }, "sui", "chasui"), "無無無", "察綏紅 3 灰 2,效忠 / 觀望 / 通共時的控制者"),
+    eq(row({ chasui: { r: 4, g: 2 } }, "sui", "chasui"), "共共共", "察綏紅 4 灰 2,效忠 / 觀望 / 通共時的控制者"),
+    ok(true, "太原 4+2:國國無;1+2:國無無;察綏紅 3 對灰 2:無無無,紅 4:共共共"),
+  );
+});
+
+check("上限:國方是藍加灰合計(太原灰 2 藍 2,上限 5,只放得進 1 點藍);紅照舊", () => {
+  const t = dTodo(); if (t) return t;
+  const st = dPosition({ taiyuan: { b: 2, g: 2 } }, { jin: "loyal" });
+  const k = E.clone(st), c = E.clone(st);
+  return all(eq(E.place(k, KMT, "taiyuan", 3), 1, "國軍在太原放 3 點,放進去的"), eq(E.place(c, CCP, "taiyuan", 5), 5, "共軍在太原放 5 點,放進去的"),
+    ok(true, "太原 藍 2 + 灰 2,國軍只放得進 1;紅照常 5"));
+});
+
+check("整編:把 min(X, 灰) 換成藍,態度往通共一格;通共不能整編;沒有灰的據點不能;選項關掉時沒有政工", () => {
+  const t = dTodo(); if (t) return t;
+  const S = dRig({}, {}, { kmt: ["takeover_officials", "japanese_garrisons", "kunming_incident"] });
+  const a = act(S, KMT, "takeover_officials", "politics", { target: "lanzhou" }), one = act(S, KMT, "japanese_garrisons", "politics", { target: "lanzhou" });
+  const ccpJin = dRig({}, { jin: "ccp" }, { kmt: ["takeover_officials", "kunming_incident"] });
+  const off = toAction((() => { const st = position({}, {}); deal(st, CCP, ["score_north"]); deal(st, KMT, ["score_east", "takeover_officials", "kunming_incident"]); return st; })());
+  return all(
+    eq(S.actor, KMT, "輪到誰(共軍只有記分卡)"),
+    eq(gb(a, "lanzhou"), "0/2/0", "2 點整編蘭州之後 紅/藍/灰"), eq(E.attitudeOf(a, "ma"), "neutral", "馬的態度(效忠往通共一格)"),
+    eq(gb(one, "lanzhou"), "0/1/1", "1 點整編蘭州之後 紅/藍/灰"),
+    eq(thrown(() => act(ccpJin, KMT, "takeover_officials", "politics", { target: "taiyuan" })) != null, true, "整編通共的晉(太原)沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "takeover_officials", "politics", { target: "nanjing" })) != null, true, "整編沒有灰的南京沒有被拒絕"),
+    eq(thrown(() => act(off, KMT, "takeover_officials", "politics", { target: "lanzhou" })) != null, true, "選項關掉時政工沒有被拒絕"),
+    ok(true, "蘭州灰 2:2 點整編 → 藍 2、馬效忠→觀望;1 點只換 1;通共的晉、沒有灰的南京、選項關掉都被拒絕"),
+  );
+});
+
+check("統戰:行動點 ≥ 門檻、兵臨城下;態度往通共一格;每個勢力每回合一次", () => {
+  const t = dTodo(); if (t) return t;
+  // 太行(紅 4,共軍控制)與太原相鄰:晉兵臨城下。晉中紅 4(灰 2,觀望:4 ≥ 0 + 2 + 2):共軍控制,與察綏相鄰:綏兵臨城下。
+  const S = dRig({ jinzhong: { r: 4 } }, {}, { ccp: ["huaihai_campaign", "into_manchuria", "menglianggu"], kmt: ["kunming_incident", "takeover_officials"] });
+  const a = act(S, CCP, "huaihai_campaign", "politics", { power: "jin" });
+  const b = act(S, CCP, "into_manchuria", "politics", { power: "sui" });
+  const b2 = act(b, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing"] });
+  return all(
+    eq(S.actor, CCP, "輪到誰"),
+    eq(E.attitudeOf(a, "jin"), "ccp", "4 點統戰晉(門檻 4)之後晉的態度(觀望往通共一格)"),
+    eq(thrown(() => act(S, CCP, "into_manchuria", "politics", { power: "jin" })) != null, true, "3 點統戰晉(門檻 4)沒有被拒絕"),
+    eq(E.attitudeOf(b, "sui"), "neutral", "3 點統戰綏(門檻 3)之後綏的態度(效忠往通共一格)"),
+    eq(thrown(() => act(b2, CCP, "menglianggu", "politics", { power: "sui" })) != null, true, "同一回合第二次統戰綏沒有被拒絕"),
+    eq(thrown(() => act(S, CCP, "huaihai_campaign", "politics", { power: "ma" })) != null, true, "統戰馬(蘭州只鄰西安,沒有兵臨城下)沒有被拒絕"),
+    ok(true, "晉觀望→通共(4 點);3 點不夠;綏效忠→觀望,同一回合再一次被拒絕;馬沒有兵臨城下"),
+  );
+});
+
+check("易幟(打下來的):共軍控制本據 → 灰換成紅、共軍得民心、標記永久", () => {
+  const t = dTodo(); if (t) return t;
+  // 察綏 S 2:紅 2 灰 2(綏效忠)。共軍 4 點破襲:移除灰 2、放紅 2 → 紅 4,共軍控制。
+  const S = dRig({}, {}, { ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+  const m0 = S.mandate, a = act(S, CCP, "huaihai_campaign", "campaign", { target: "chasui" });
+  return all(
+    eq(gb(S, "chasui"), "2/0/2", "察綏 紅/藍/灰"), eq(gb(a, "chasui"), "4/0/0", "4 點破襲察綏之後 紅/藍/灰"),
+    eq(!!(a.mie && a.mie.sui), true, "綏的易幟標記"), eq(a.mandate - m0, 3, "民心的變動(綏 3,往共軍)"),
+    ok(true, "察綏 2/0/2 → 4/0/0,綏易幟,民心 +3"),
+  );
+});
+
+check("易幟(談下來的):統戰讓晉通共,而本據沒有補給 → 立刻易幟,灰換成紅(到上限);觀望時同樣的盤面不易幟", () => {
+  const t = dTodo(); if (t) return t;
+  // 晉中紅 4 灰 2(觀望:4 ≥ 0 + 2 + 2,共軍控制)、太行也是共軍的:太原連不出去。共軍 4 點統戰晉:觀望 → 通共,立刻易幟。
+  const S = dRig({ jinzhong: { r: 4 } }, {}, { ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+  const a = act(S, CCP, "huaihai_campaign", "politics", { power: "jin" });
+  return all(
+    eq(E.controller(S, "jinzhong"), CCP, "晉中的控制者"), eq(E.supplied(S).has("taiyuan"), false, "太原有補給"),
+    eq(E.attitudeOf(S, "jin"), "neutral", "統戰之前晉的態度"), eq(!!(S.mie && S.mie.jin), false, "觀望時晉的易幟標記(本據斷了補給也不該有)"),
+    eq(E.attitudeOf(a, "jin"), "ccp", "統戰之後晉的態度"), eq(!!(a.mie && a.mie.jin), true, "統戰成通共之後晉的易幟標記"), eq(a.mandate - S.mandate, 2, "民心的變動(晉 2,往共軍)"),
+    eq(gb(a, "taiyuan"), "2/0/0", "易幟之後太原 紅/藍/灰"), eq(gb(a, "jinzhong"), "4/0/0", "易幟之後晉中 紅/藍/灰(紅已到上限 4,灰消失)"),
+    ok(true, "晉觀望、太原斷了補給:不易幟;4 點統戰成通共 → 立刻易幟,太原灰 2 → 紅 2,晉中紅滿了灰消失,民心 +2"),
+  );
+});
+
+check("整編完成:沒有灰、國軍控制本據 → 標記、民心往國軍 2;每回合最多一個", () => {
+  const t = dTodo(); if (t) return t;
+  // 蘭州、昆明各藍 1 灰 2(S 3)。國軍 2 點整編 → 藍 3,控制(3 ≥ 0 + 3)。
+  const S = dRig({ lanzhou: { b: 1, g: 2 }, kunming: { b: 1, g: 2 } }, {}, { kmt: ["takeover_officials", "sino_soviet_treaty", "kunming_incident"] });
+  const a = act(S, KMT, "takeover_officials", "politics", { target: "lanzhou" }), b = act(a, KMT, "sino_soviet_treaty", "politics", { target: "kunming" });
+  return all(
+    eq(gb(a, "lanzhou"), "0/3/0", "整編蘭州之後 紅/藍/灰"), eq(!!(a.seals && a.seals.ma), true, "馬的整編標記"), eq(a.mandate - S.mandate, -2, "民心的變動(往國軍 2)"),
+    eq(gb(b, "kunming"), "0/3/0", "整編昆明之後 紅/藍/灰"), eq(E.controller(b, "kunming"), KMT, "昆明的控制者"),
+    eq(!!(b.seals && b.seals.dian), false, "同一回合滇也拿到整編標記(每回合最多一個)"),
+    ok(true, "蘭州 0/1/2 → 0/3/0,馬整編完成,民心 −2;同一回合昆明也合格,但這一回合不放"),
+  );
+});
+
+check("灰被打光的不算整編完成;國軍選先移哪一種(grayOrder)", () => {
+  const t = dTodo(); if (t) return t;
+  // 桂林 S 3:藍 3 灰 2(桂觀望,國軍只算藍:3 ≥ 0 + 3,控制)。廣州紅 4 藍 0(共軍控制)與桂林相鄰(B1)。
+  // 共軍 2 點打點、國軍固守 → 移除 2(藍 3 + 灰 2 沒有全部移光)→ 國軍選。
+  const S = dRig({ guilin: { b: 3, g: 2 }, guangzhou: { r: 4, b: 0 } }, {}, { ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  let a = act(S, CCP, "gao_shuxun", "campaign", { target: "guilin", siege: "point" });
+  if (a.pending && a.pending.tag === "siege") a = choose(a, "hold");
+  const p = pendingIs(a, KMT, "option", "打點固守之後"); if (p !== true) return p;
+  const tagOk = eq(a.pending.tag, "grayOrder", "待決定的 tag"); if (tagOk !== true) return tagOk;
+  const g = choose(a, "gray"), bl = choose(a, "blue");
+  return all(
+    same(optIds(a), ["blue", "gray"], "國軍的選項"),
+    eq(gb(g, "guilin"), "0/3/0", "先移灰之後 桂林 紅/藍/灰"), eq(gb(bl, "guilin"), "0/1/2", "先移藍之後 桂林 紅/藍/灰"),
+    eq(E.controller(g, "guilin"), KMT, "先移灰之後桂林的控制者"), eq(!!(g.seals && g.seals.gui), false, "灰被打光之後桂的整編標記(不該有)"),
+    ok(true, "國軍選:先移灰 → 0/3/0(國軍控制、沒有灰,但不是整編換掉的,不算整編完成);先移藍 → 0/1/2"),
+  );
+});
+
+check("打到通共勢力的灰,態度退回觀望;只打到藍不退", () => {
+  const t = dTodo(); if (t) return t;
+  const S = dRig({ guilin: { b: 2, g: 2 }, guangzhou: { r: 4, b: 0 } }, { gui: "ccp" }, { ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  let a = act(S, CCP, "gao_shuxun", "campaign", { target: "guilin", siege: "point" });
+  if (a.pending && a.pending.tag === "siege") a = choose(a, "hold");
+  const p = pendingIs(a, KMT, "option", "打點固守之後"); if (p !== true) return p;
+  const g = choose(a, "gray"), bl = choose(a, "blue");
+  return all(
+    eq(gb(g, "guilin"), "0/2/0", "先移灰之後 桂林 紅/藍/灰"), eq(E.attitudeOf(g, "gui"), "neutral", "打到通共的灰之後桂的態度"),
+    eq(gb(bl, "guilin"), "0/0/2", "先移藍之後 桂林 紅/藍/灰"), eq(E.attitudeOf(bl, "gui"), "ccp", "只打到藍之後桂的態度"),
+    ok(true, "桂通共:打掉灰 → 退回觀望;只打掉藍 → 仍通共"),
+  );
+});
+
+check("突圍時灰不走;城裡還有灰,共軍不放點", () => {
+  const t = dTodo(); if (t) return t;
+  const S = dRig({ guilin: { b: 2, g: 2 }, guangzhou: { r: 4, b: 0 } }, {}, { ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  let a = act(S, CCP, "gao_shuxun", "campaign", { target: "guilin", siege: "point" });
+  const p = pendingIs(a, KMT, "option", "打桂林之後"); if (p !== true) return p;
+  if (!optIds(a).includes("breakout:wuhan")) return `國軍的回應沒有突圍到武漢(有 ${optIds(a).join("、")})`;
+  a = choose(a, "breakout:wuhan");
+  return all(eq(gb(a, "guilin"), "0/0/2", "突圍之後 桂林 紅/藍/灰"), eq(gb(a, "wuhan"), "0/4/0", "突圍之後 武漢 紅/藍/灰(藍 3 + 2,上限 4)"),
+    ok(true, "桂林的藍 2 突圍到武漢(到上限 4),灰 2 留著,共軍沒有放點"));
+});
+
+check("結算:孤城裡有灰,該勢力往通共一格;灰不掉,藍照樣掉", () => {
+  const t = dTodo(); if (t) return t;
+  // 晉效忠;晉中紅 4 灰 2(效忠:4 ≥ 0 + 2 + 2,共軍控制)、太行共軍的:太原(藍 1 灰 2)是孤城。
+  const S = dPosition({ taiyuan: { b: 1, g: 2 }, jinzhong: { r: 4 } }, { jin: "loyal" });
+  const pre = all(same(E.isolatedCities(S).filter((id) => id === "taiyuan"), ["taiyuan"], "太原是孤城"));
+  if (pre !== true) return pre;
+  const s = atSettle(S);
+  return all(
+    eq(s.turn, 2, "結算之後的回合"), eq(gb(s, "taiyuan"), "0/0/2", "結算之後 太原 紅/藍/灰"), eq(E.attitudeOf(s, "jin"), "neutral", "結算之後晉的態度"),
+    eq(!!(s.mie && s.mie.jin), false, "晉的易幟標記(還沒通共)"),
+    ok(true, "太原孤城:藍 1 → 0、灰 2 不掉;晉效忠 → 觀望"),
+  );
+});
+
+check("扶植的相鄰:效忠的灰算國軍的點,觀望的不算(昆明只鄰桂林)", () => {
+  const t = dTodo(); if (t) return t;
+  const can = (att) => E.canPlaceAt(dPosition({}, att), KMT, "kunming");
+  return all(
+    eq(can({ gui: "loyal", dian: "neutral" }), true, "桂效忠(桂林灰 2)、滇觀望:國軍能不能扶植昆明"),
+    eq(can({ gui: "neutral", dian: "neutral" }), false, "桂、滇都觀望:國軍能不能扶植昆明"),
+    eq(can({ gui: "neutral", dian: "loyal" }), true, "滇效忠(昆明自己的灰 2):國軍能不能扶植昆明"),
+    ok(true, "昆明只鄰桂林、兩處都只有灰:效忠的灰給國軍相鄰,觀望的不給"),
+  );
+});
+
+check("牌文寫「藍」只動藍:和平起義移除孤城太原的藍,灰留著", () => {
+  const t = dTodo(); if (t) return t;
+  const S = dRig({ taiyuan: { b: 1, g: 2 }, jinzhong: { r: 4 } }, { jin: "loyal" }, { ccp: ["peaceful_changeover"], kmt: ["kunming_incident"] });
+  let a = act(S, CCP, "peaceful_changeover", "event");
+  if (a.pending && a.pending.who === CCP) a = choose(a, a.pending.kind === "points" ? ["taiyuan"] : "taiyuan");
+  return all(eq(gb(a, "taiyuan"), "0/0/2", "和平起義之後 太原 紅/藍/灰"), ok(true, "太原 藍 1 → 0,灰 2 留著"));
+});
+
+check("勝利照今天:整編完成 5 個國軍贏;易幟 3 個共軍贏", () => {
+  const t = dTodo(); if (t) return t;
+  const K = dRig({ lanzhou: { b: 1, g: 2 } }, {}, { kmt: ["takeover_officials", "kunming_incident"] });
+  K.seals = { ...(K.seals || {}), sui: true, jin: true, gui: true, dian: true };
+  const k = act(K, KMT, "takeover_officials", "politics", { target: "lanzhou" });
+  const C = dRig({}, {}, { ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+  C.mie = { ...(C.mie || {}), ma: true, dian: true };
+  const c = act(C, CCP, "huaihai_campaign", "campaign", { target: "chasui" });
+  return all(
+    eq(k.winner, KMT, "第 5 個整編完成之後的勝者"), eq(k.reason, "alliance", "結束的方式"),
+    eq(c.winner, CCP, "第 3 個易幟之後的勝者"), eq(c.reason, "unification", "結束的方式"),
+    ok(true, "四個整編標記再整編完成馬 → 國軍贏(alliance);兩個易幟再打下察綏 → 共軍贏(unification)"),
+  );
+});
+
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
   const s = summary();
