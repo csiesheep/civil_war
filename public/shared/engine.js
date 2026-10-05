@@ -622,7 +622,7 @@ export function controller(st, id) {
   // #31, D's rule 2: gray blocks the Communists in every attitude (red ≥ blue +
   // gray + S); it is the Nationalists' when loyal, nobody's when neutral, and
   // counted against them when it leans to the Communists.
-  const a = st.attitude[POWER_OF[id]];
+  const a = st.attitude && st.attitude[POWER_OF[id]];
   if (q >= c + g + S) return CCP;
   if ((a === "loyal" ? c + g : c) >= (a === "ccp" ? q + g : q) + S) return KMT;
   return null;
@@ -1258,7 +1258,7 @@ function hitKmt(st, id, n, order) {
 function loseGray(st, id, k, why) {
   const p = POWER_OF[id];
   st.gray[id] -= k;
-  st.grayLast[p] = why;
+  (st.grayLast ||= {})[p] = why;
   if (why !== "attack") return;
   log(st, { type: "grayHit", space: id, power: p, n: k });
   if (st.attitude[p] === "ccp") setAttitudeTo(st, p, "neutral", "attacked");
@@ -1286,14 +1286,14 @@ function grayHitStep(st, step) {
 // 兵臨城下 (rule 7, orchestrator 裁決 #31): a city of the power with blue or gray
 // out of supply (or besieged) -- a 孤城 -- or a space the Communists control
 // next to any space of the power.
-function atGates(st, p) {
-  const sp = DPOWERS[p].spaces, iso = isolatedCities(st);
+function atGates(st, p, iso = isolatedCities(st)) {
+  const sp = DPOWERS[p].spaces;
   return sp.some((id) => iso.includes(id)) || sp.some((id) => adjOf(st, id).some((a) => controller(st, a) === CCP));
 }
 const marked = (st, p) => !!(st.mie[p] || st.seals[p]);
 // Why `side`'s politics with `ops` on `target` (a space, the Nationalists' 整編)
 // or `power` (the Communists' 統戰) is refused, or null when it is legal.
-function politicsRefusal(st, side, ops, { target, power }) {
+function politicsRefusal(st, side, ops, { target, power }, iso) {
   if (side === KMT) {
     if (!SPACE[target]) return `整編: unknown space ${target}`;
     const p = POWER_OF[target];
@@ -1309,7 +1309,7 @@ function politicsRefusal(st, side, ops, { target, power }) {
   if (st.attitude[power] === "ccp") return "統戰: the power leans to the Communists already";
   if (ops < d.threshold) return `統戰: ${ops} ops, the threshold is ${d.threshold}`;
   if (st.talks[power] === st.turn) return "統戰: once a turn for each power";
-  if (!atGates(st, power)) return "統戰: the Communists are not at the power's gates (兵臨城下)";
+  if (!atGates(st, power, iso)) return "統戰: the Communists are not at the power's gates (兵臨城下)";
   return null;
 }
 // What `side` may 政工 with `ops` now: the Nationalists' spaces, the Communists'
@@ -1317,7 +1317,8 @@ function politicsRefusal(st, side, ops, { target, power }) {
 export function politicsOptions(st, side, ops) {
   if (!mechD(st)) return [];
   if (side === KMT) return Object.keys(POWER_OF).filter((id) => !politicsRefusal(st, side, ops, { target: id }));
-  return Object.keys(DPOWERS).filter((p) => !politicsRefusal(st, side, ops, { power: p }));
+  const iso = isolatedCities(st);
+  return Object.keys(DPOWERS).filter((p) => !politicsRefusal(st, side, ops, { power: p }, iso));
 }
 // 整編 (rule 5): min(X, gray) gray at the target turns blue (blue + gray stays
 // under the cap); the power one step toward the Communists. 統戰 (rule 7): the
@@ -2631,6 +2632,7 @@ export function legal(st, side) {
   if (bogCards.length) return { kind: "action", bog: bogCards, cards: [] };
   const { placeOptions, campaignTargets, lobbyTargets } = opsOptions(st, side);
   const forced = forcedCard(st, side);
+  const polMemo = new Map(); // #31: 政工's targets depend on the card's ops only
   const cards = h.filter((c) => !forced || c === forced).map((c) => {
     const card = CARD[c];
     if (card.scoring) return { id: c, ops: 0, uses: { event: true } };
@@ -2645,7 +2647,11 @@ export function legal(st, side) {
     };
     if (c === MARSHALL) uses.pair = marshallPairs(st) ? h.filter((x) => CARD[x].side === other(side)) : [];
     // #31: 政工 -- the Nationalists' spaces to 整編, the Communists' powers to 統戰 with this card's ops.
-    if (mechD(st)) { const t = politicsOptions(st, side, ops); uses.politics = t.length ? { ops, targets: t } : null; }
+    if (mechD(st)) {
+      if (!polMemo.has(ops)) polMemo.set(ops, politicsOptions(st, side, ops));
+      const t = polMemo.get(ops);
+      uses.politics = t.length ? { ops, targets: t.slice() } : null;
+    }
     return { id: c, ops, uses };
   });
   // The aid card (#4): null when it may not be used now (option off, used this
