@@ -3057,6 +3057,212 @@ check("garrison 關掉:美國支持 ≥ 3 時共軍照樣可以奇襲天津與�
   );
 });
 
+// ---------------------------------------------------------------- group 13
+// 機制 B(M2b 的第一批,#26;owner 2026-10-04 定的順序 B → D → E → C → G)。照 owner 的機制筆記
+// (Projects/civil_war/civil_war - mechanisms.md,「B. 圍點打援、破襲、進剿」)手抄,兩色版(沒有灰):
+//
+//   進攻有三種,看誰打、打哪裡。X = 這次進攻的行動點(加上時局與牌的修正之後)。
+//   B1 共軍打城:圍點打援。條件:目標城 T 有藍,且共軍控制至少一個與 T 相鄰的據點。
+//      1 共軍宣告 T,蓋一張暗牌:打點或打援。
+//      2 國軍公開選一個回應:固守;增援:從一個城 R 調 k 點藍(1 ≤ k ≤ 3)到 T,R 要國軍控制、有補給,並且與 T 相鄰,
+//        或隔著一個不在共軍控制下的鄉;T 是孤城時不能增援;k 不得超過 T 還放得下的點數(上限 − D);突圍:把 T 的藍
+//        全部移到一個相鄰且不在共軍控制下的據點 R(超過上限的消失),沒有這樣的 R 就不能突圍。
+//      3 翻開暗牌,查表(D = T 的藍):
+//                 固守                          增援 k 點                                   突圍
+//        打點   移除 min(X, D);剩下的放成紅    援軍先進城;攻擊力 X − 2k(最低 0),照這個數   藍全部到 R;T 已無藍時共軍放 X 點
+//               (受上限)                       移除;共軍不放點;攻擊力是 0 時共軍在一個相鄰
+//                                              的己方據點 −1
+//        打援   無移除;T 放「圍城」標記到回合   援軍被移除 min(k, X),活下來的退回 R;共軍在    突圍的藍移除一半(無條件進位,最多
+//               結算;本回合共軍對 T 的下一次   一個相鄰的己方據點 +1(繳獲)                   X),其餘到 R;T 已無藍時共軍放 1 點
+//               進攻 +1
+//      (筆記的說明:圍城那一格「這個城這回合視同孤城,結算時掉 1 點,而且不能補」。)
+//   B2 共軍打鄉:破襲。移除 min(X, 藍),剩下的放成紅。不查表,沒有回應。就是縱橫的奇襲。
+//   B3 國軍進攻:進剿。目標有紅。共軍公開選:守(移除 min(X, 紅),剩下的放成藍);撤(把那裡的紅全部移到相鄰、
+//      不在國軍控制下的鄉,可以分到幾個,受上限,放不下的消失;然後國軍把 X 點全部放成藍;沒有可撤的鄉就不能撤)。
+//
+// orchestrator 裁決(#26),筆記沒寫或兩色版要定的:
+//   - 先做成選項 `mechanismB: true`(預設關)。模擬量過、owner 採用之後才變成預設(像 #23 → #24 那樣)。
+//   - 只有「用行動點的進攻」(手牌或外援牌當行動點)走 B;牌的事件寫著「奇襲」的照舊(牌文是照舊規則寫的)。
+//   - 時局與牌的進攻修正先加到 X,再查表。民生(打城的要衝推民生)、封鎖、美軍駐華、東北的佔領照舊。
+//   - 「己方據點」= 共軍控制的據點;繳獲與 −1 由共軍選哪一個(只有一個時也照樣問)。
+//   - 圍城:T 這一回合算孤城(結算掉藍、國軍不能扶植),本回合共軍再打 T 時 +1;回合結算時拿掉。
+//   - 沒有灰,所以「灰不走」「打到通共勢力的灰」那幾條這一批沒有。決戰時突圍要棄牌(F 的完整版)這一批不做。
+// 介面(brief 寫死,這裡照它驅動):
+//   共軍打城:{ type:"play", use:"campaign", target, siege:"point"|"relief" };少了 siege 要被拒絕。
+//   國軍的回應:pending { who: KMT, kind:"option", tag:"siege" },options 的 id:"hold"、"reinforce:<R>:<k>"、"breakout:<R>"。
+//   共軍的 −1 / +1:pending { who: CCP, kind:"option", tag:"siegeLoss" | "siegeCapture" },options 的 id 是據點。
+//   進剿:pending { who: CCP, kind:"option", tag:"sweep" },id "stand"、"withdraw"(能撤才有);撤:pending
+//         { who: CCP, kind:"points", tag:"withdraw", n: 紅的點數, options: 可以撤去的鄉 }。
+//   數字:E.SIEGE = { reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 }。
+section("13 機制 B:圍點打援、破襲、進剿(選項 mechanismB)");
+
+const MB = { mechanismB: true };
+const bTodo = () => (E.SIEGE === undefined ? "TODO: E.SIEGE 還沒有;mechanismB 這個選項還沒有接進引擎" : null);
+const optIds = (st) => (st.pending && st.pending.options ? st.pending.options.map((o) => (o && typeof o === "object" ? o.id : o)) : []);
+// 濟南(城,S 3,上限 5):藍 3。冀魯豫(紅 3,S 3)是共軍控制、與濟南相鄰;魯中(紅 3 藍 2)沒有人控制;
+// 徐州(藍 3)隔著魯中、有補給。共軍拿淮海戰役(4 點)當行動點。國軍留一張昆明事變:輪到它時對局停在那裡,
+// 不會一路走到回合結算(雙方都沒有牌時,引擎會自己跑完這一回合)。
+function siegeRig({ edits = {}, options = MB, kcards = ["kunming_incident"] } = {}) {
+  const st = position({ jinan: { b: 3 }, ...edits }, options);
+  deal(st, CCP, ["score_north", "huaihai_campaign"]); deal(st, KMT, ["score_east", ...kcards]);
+  return toAction(st);
+}
+// Play the attack on 濟南, answer the Nationalists' response, then (if asked) the Communists' −1 / +1 with `pick`.
+function besiege(S, plan, response, pick = "jiluyu") {
+  let a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: plan });
+  const p = pendingIs(a, KMT, "option", `打濟南(${plan})之後`); if (p !== true) throw new Error(p);
+  if (!optIds(a).includes(response)) throw new Error(`國軍的回應裡沒有 ${response}(有 ${optIds(a).join("、")})`);
+  a = choose(a, response);
+  if (a.pending && a.pending.who === CCP && /^siege/.test(a.pending.tag || "")) a = choose(a, pick);
+  return a;
+}
+
+check("常數:機制 B 的數字(援軍抵 2 倍、最多 3 點、突圍損一半、繳獲 1、圍城 +1、白打 −1)", () => {
+  const t = bTodo(); if (t) return t;
+  return all(
+    eq(J(E.SIEGE), J({ reinforceFactor: 2, reinforceMax: 3, breakoutLoss: 0.5, capture: 1, siegeBonus: 1, failLoss: 1 }), "E.SIEGE"),
+    eq(E.DEFAULT_OPTIONS.mechanismB, undefined, "mechanismB 不是預設(DEFAULT_OPTIONS 裡不該有它)"),
+    ok(true, `E.SIEGE ${J(E.SIEGE)};預設關`),
+  );
+});
+
+check("破襲:共軍打鄉就是原本的奇襲(沒有回應、和選項關掉時一樣)", () => {
+  const t = bTodo(); if (t) return t;
+  const go = (options) => { const st = position({}, options); deal(st, CCP, ["score_north", "gao_shuxun"]); deal(st, KMT, ["score_east", "kunming_incident"]); return act(toAction(st), CCP, "gao_shuxun", "campaign", { target: "luzhong" }); };
+  const on = go(MB), off = go({});
+  return all(
+    eq(on.pending, null, "選項開著時打魯中之後的待決定"), eq(rb(on, "luzhong"), rb(off, "luzhong"), "魯中 紅/藍(開 vs 關)"), eq(rb(on, "luzhong"), "3/0", "魯中 紅/藍"),
+    ok(true, `魯中 3/2→${rb(on, "luzhong")},不查表、不問`),
+  );
+});
+
+check("打城的條件:要控制一個相鄰的據點;還要宣告打點或打援", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig(), off = siegeRig({ options: {} });
+  const tOn = E.opsOptions(S, CCP).campaignTargets, tOff = E.opsOptions(off, CCP).campaignTargets;
+  const noSiege = thrown(() => act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan" }));
+  const nanjing = thrown(() => act(S, CCP, "huaihai_campaign", "campaign", { target: "nanjing", siege: "point" }));
+  return all(
+    eq(tOff.includes("nanjing"), true, "選項關掉時共軍可以奇襲南京(對照組)"),
+    eq(tOn.includes("nanjing"), false, "選項開著時共軍可以打南京(相鄰沒有共軍控制的據點)"), eq(nanjing != null, true, "打南京沒有被拒絕"),
+    eq(tOn.includes("jinan"), true, "共軍不能打濟南(冀魯豫是共軍控制、相鄰)"),
+    eq(noSiege != null, true, "打濟南沒有宣告打點或打援,沒有被拒絕"),
+    ok(true, `南京不在目標裡(「${nanjing}」);濟南要宣告(「${noSiege}」)`),
+  );
+});
+
+check("國軍的回應:固守、增援(徐州隔著魯中,k 受上限與徐州的藍限制)、突圍(魯中);孤城不能增援", () => {
+  const t = bTodo(); if (t) return t;
+  const after = (S) => act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "point" });
+  const a = after(siegeRig()), full = after(siegeRig({ edits: { jinan: { b: 4 } } })), thin = after(siegeRig({ edits: { xuzhou: { b: 1 } } }));
+  const cut = after(siegeRig({ edits: JINAN_CUT })); // 魯中紅 5:共軍控制魯中,濟南成了孤城,魯中也不能突圍
+  const p = pendingIs(a, KMT, "option", "打濟南之後"); if (p !== true) return p;
+  return all(
+    same(optIds(a), ["hold", "reinforce:xuzhou:1", "reinforce:xuzhou:2", "breakout:luzhong"], "濟南藍 3:國軍的回應"),
+    same(optIds(full), ["hold", "reinforce:xuzhou:1", "breakout:luzhong"], "濟南藍 4(上限 5,只放得下 1):國軍的回應"),
+    same(optIds(thin), ["hold", "reinforce:xuzhou:1", "breakout:luzhong"], "徐州只有藍 1:國軍的回應"),
+    same(optIds(cut), ["hold"], "濟南是孤城、魯中是共軍控制:國軍的回應"),
+    eq(thrown(() => choose(a, "reinforce:xuzhou:3")) != null, true, "增援 3 點(放不下)沒有被拒絕"),
+    ok(true, "固守、增援 1 或 2、突圍到魯中;濟南堆到 4 只能援 1;徐州只有 1 也只能援 1;孤城只能固守"),
+  );
+});
+
+check("暗牌:國軍回應之前,國軍看到的盤面不因為共軍選打點或打援而不同", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig();
+  const a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "point" }), b = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "relief" });
+  const va = J(E.view(a, KMT)), vb = J(E.view(b, KMT));
+  return all(eq(va === vb, true, "國軍的 view(打點 vs 打援)完全相同"), ok(true, `國軍的 view 長 ${va.length} 字元,兩種暗牌一模一樣`));
+});
+
+check("打點:固守 → 移除 3、放 1 紅;增援 2 → 攻擊力 0、共軍在冀魯豫 −1;突圍到魯中 → 共軍放 4", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig();
+  const hold = besiege(S, "point", "hold"), rein = besiege(S, "point", "reinforce:xuzhou:2"), out = besiege(S, "point", "breakout:luzhong");
+  return all(
+    eq(rb(hold, "jinan"), "1/0", "打點 × 固守:濟南 紅/藍"), eq(hold.weariness, 4, "打點 × 固守:民生(濟南是城的要衝)"),
+    eq(rb(rein, "jinan"), "0/5", "打點 × 增援 2:濟南 紅/藍(援軍進城,攻擊力 4 − 4 = 0)"), eq(rb(rein, "xuzhou"), "0/1", "打點 × 增援 2:徐州 紅/藍"),
+    eq(rb(rein, "jiluyu"), "2/0", "打點 × 增援 2:冀魯豫 紅/藍(白打,−1)"),
+    eq(rb(out, "luzhong"), "3/5", "打點 × 突圍:魯中 紅/藍(藍 2 + 3)"), eq(rb(out, "jinan"), "4/0", "打點 × 突圍:濟南 紅/藍(共軍放 X = 4)"),
+    ok(true, "固守:濟南 0/3→1/0;增援 2:濟南 0/5、徐州 0/1、冀魯豫 3→2;突圍:魯中 3/5、濟南 4/0"),
+  );
+});
+
+check("打援:固守 → 圍城;增援 2 → 援軍被殲 2、共軍在冀魯豫 +1;突圍到魯中 → 損一半(2)、共軍放 1", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig();
+  const hold = besiege(S, "relief", "hold"), rein = besiege(S, "relief", "reinforce:xuzhou:2"), out = besiege(S, "relief", "breakout:luzhong");
+  return all(
+    eq(rb(hold, "jinan"), "0/3", "打援 × 固守:濟南 紅/藍(無移除)"), eq(hold.weariness, 4, "打援 × 固守:民生"),
+    eq(rb(rein, "jinan"), "0/3", "打援 × 增援 2:濟南 紅/藍"), eq(rb(rein, "xuzhou"), "0/1", "打援 × 增援 2:徐州 紅/藍(調出 2、全被殲)"),
+    eq(rb(rein, "jiluyu"), "4/0", "打援 × 增援 2:冀魯豫 紅/藍(繳獲 +1)"),
+    eq(rb(out, "luzhong"), "3/3", "打援 × 突圍:魯中 紅/藍(突圍的 3 點損 2,到 1)"), eq(rb(out, "jinan"), "1/0", "打援 × 突圍:濟南 紅/藍(共軍放 1)"),
+    ok(true, "固守:濟南 0/3 不動;增援 2:徐州 0/1、冀魯豫 3→4;突圍:魯中 3/3、濟南 1/0"),
+  );
+});
+
+check("圍城標記:濟南這一回合算孤城(國軍不能扶植)、共軍再打它 +1;回合結算掉 1 點,下一回合標記沒了", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig(), hold = besiege(S, "relief", "hold"), base = E.campaignMod(S, CCP, "jinan");
+  const empty = E.clone(hold); empty.discard.push(...empty.hands[CCP], ...empty.hands[KMT]); empty.hands = [[], []];
+  const s = settle(empty); // nobody holds a card: the turn walks out to its 結算 and stops at turn 2's first decision
+  return all(
+    eq(E.isolatedCities(S).includes("jinan"), false, "圍城之前濟南是孤城(對照組)"),
+    eq(E.isolatedCities(hold).includes("jinan"), true, "圍城之後濟南算孤城"), eq(E.canPlaceAt(hold, KMT, "jinan"), false, "圍城之後國軍還能在濟南扶植"),
+    eq(E.campaignMod(hold, CCP, "jinan") - base, 1, "圍城之後共軍打濟南的加減(比圍城之前多)"),
+    eq(s.turn, 2, "結算之後的回合"), eq(blueOf(s, "jinan"), 2, "回合結算後濟南的藍(3 − 1)"),
+    eq(E.isolatedCities(s).includes("jinan"), false, "下一回合濟南還算孤城(圍城標記沒有拿掉)"),
+    ok(true, "圍城:算孤城、國軍不能補、共軍再打 +1;結算濟南 3→2,第 2 回合標記沒了"),
+  );
+});
+
+check("進剿:共軍守 → 移除 3、國軍放 1;撤 → 紅撤到冀中與太行(放不下的消失)、國軍放 4;沒有可撤的鄉就只能守", () => {
+  const t = bTodo(); if (t) return t;
+  // The Communists hold only their headline card (their rounds are skipped); the Nationalists keep a spare card.
+  const rig = (edits = {}) => { const st = position(edits, MB); deal(st, CCP, ["score_north"]); deal(st, KMT, ["score_east", "hu_takes_yanan", "kunming_incident"]); return toAction(st); };
+  const S = rig(), a = act(S, KMT, "hu_takes_yanan", "campaign", { target: "jiluyu" });
+  const p = pendingIs(a, CCP, "option", "國軍進剿冀魯豫之後"); if (p !== true) return p;
+  const opts = optIds(a), stand = choose(a, "stand"), w = choose(a, "withdraw");
+  const q = pendingIs(w, CCP, "points", "共軍選撤之後"); if (q !== true) return q;
+  const wo = w.pending.options.slice(), wn = w.pending.n, spread = choose(w, ["jizhong", "jizhong", "taihang"]), over = choose(w, ["jizhong", "jizhong", "jizhong"]);
+  // 察綏(紅 2 藍 2):鄰的晉中改成國軍控制,察綏就沒有可撤的鄉(北平是城)。
+  const C = rig({ jinzhong: { r: 0, b: 4 } }), c = act(C, KMT, "hu_takes_yanan", "campaign", { target: "chasui" });
+  const cOpts = optIds(c), cs = c.pending ? choose(c, "stand") : c;
+  return all(
+    same(opts, ["stand", "withdraw"], "共軍的回應"), eq(rb(stand, "jiluyu"), "0/1", "守:冀魯豫 紅/藍"),
+    eq(wn, 3, "要撤的紅"), same(wo, ["jizhong", "taihang"], "可以撤去的鄉(相鄰、不在國軍控制下)"),
+    eq(`${rb(spread, "jizhong")} ${rb(spread, "taihang")} ${rb(spread, "jiluyu")}`, "4/0 5/0 0/4", "撤到冀中 2、太行 1:冀中、太行、冀魯豫"),
+    eq(rb(over, "jizhong"), "4/0", "撤 3 點全到冀中(上限 4):冀中 紅/藍"), eq(rb(over, "jiluyu"), "0/4", "國軍放 4"),
+    eq(cOpts.includes("withdraw"), false, "察綏沒有可撤的鄉時還能撤"), eq(rb(cs, "chasui"), "0/4", "察綏只能守:紅/藍"),
+    ok(true, "守:冀魯豫 3/0→0/1;撤:冀中 4、太行 5、冀魯豫 0/4;全撤冀中放不下的消失;察綏只能守 0/4"),
+  );
+});
+
+check("修正先加到 X:第 3 回合(全面進攻,國軍 +1)國軍 2 點進剿冀魯豫,共軍守 → 移除 3", () => {
+  const t = bTodo(); if (t) return t;
+  const S = toAction(enter(3, { options: MB, hands: [[], ["score_east", "kunming_incident", "return_to_nanjing"]] }));
+  const a = act(S, KMT, "kunming_incident", "campaign", { target: "jiluyu" });
+  const p = pendingIs(a, CCP, "option", "第 3 回合國軍進剿冀魯豫之後"); if (p !== true) return p;
+  const b = choose(a, "stand");
+  return all(eq(S.turn, 3, "回合"), eq(rb(b, "jiluyu"), "0/0", "共軍守之後冀魯豫 紅/藍(2 + 1 = 3 點)"), ok(true, "冀魯豫 3/0→0/0"));
+});
+
+check("事件照舊:淮海戰役的事件(奇襲 4 + 2)打濟南,不查表、和選項關掉時一樣", () => {
+  const t = bTodo(); if (t) return t;
+  const go = (options) => { const S = siegeRig({ options }); const a = act(S, CCP, "huaihai_campaign", "event"); const p = pendingIs(a, CCP, "points", "淮海戰役的事件"); if (p !== true) throw new Error(p); return choose(a, ["jinan"]); };
+  const on = go(MB), off = go({});
+  return all(
+    eq(on.pending, null, "選項開著時事件打完之後的待決定"), eq(rb(on, "jinan"), rb(off, "jinan"), "濟南 紅/藍(開 vs 關)"), eq(rb(on, "jinan"), "3/0", "濟南 紅/藍(6 點:移除 3、放 3)"),
+    ok(true, `事件照舊:濟南 0/3→${rb(on, "jinan")},沒有回應`),
+  );
+});
+
+check("選項關掉時(預設)打城照舊:不用宣告、沒有回應", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeRig({ options: {} }), a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan" });
+  return all(eq(a.pending, null, "打濟南之後的待決定"), eq(rb(a, "jinan"), "1/0", "濟南 紅/藍"), ok(true, "預設:濟南 0/3→1/0,和縱橫的奇襲一樣"));
+});
+
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
   const s = summary();

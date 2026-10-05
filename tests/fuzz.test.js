@@ -67,6 +67,8 @@ const CELLS = [
   ["H 外援牌與美軍駐華關掉", { aid: false, garrison: false }],
   ["R 行動回合對稱", { rounds: "symmetric" }],
   ["四根都關掉", { supply: false, situations: false, aid: false, garrison: false, rounds: "symmetric" }],
+  // M2b (#26): mechanism B is an option until the owner adopts it; random play must handle its decisions too.
+  ["B 機制 B 開", { mechanismB: true }],
 ];
 test("fuzz: the control cells", async () => {
   const E = await import("../public/shared/engine.js");
