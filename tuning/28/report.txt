@@ -1,0 +1,35 @@
+#28 機制 B 變成預設規則(owner 裁決 #28,2026-10-05:「照現在的 B 採用為預設」)
+
+改了什麼
+  public/shared/engine.js  DEFAULT_OPTIONS 加 mechanismB: true;RULES_VERSION "2026-10-04-2" -> "2026-10-05";
+                           開頭註解(#28 那一條)與 SIEGE 上面的註解寫 B 是預設。B 的規則、SIEGE 的數字沒動。
+  public/shared/bots.js、random.js  只有註解(「the default rules since #28」),行為沒動。
+  tuning/23/variants.mjs   新變體 Boff = { mechanismB: false }(#28 之後 base 和 B 是同一套規則)。
+  tuning/28/same.mjs       比對腳本;tuning/28/runall.sh 跑下面四批。
+
+一、新預設 == #27 量過的 B 開(普通對普通、cell full、各 1000 局、--jobs=28、沒有 --variant)
+  比法(tuning/28/same.mjs):cells.full.sum 的每一個葉子,每一層的鍵排序後比,取兩邊鍵的聯集
+  (一邊有、一邊沒有也算不同);errors 的個數;more 只比兩邊都有的鍵(27 的 B-s* 沒有 firstIsolatedEnd)。
+  ms、done 不比。腳本先對已知的一對證偽過:27/B-s1 vs 27/off-s1 -> DIFFER sum.aheadByTurn.1.ccp: 176 vs 178(exit 1)。
+
+  批                     對照                              結果
+  28/default-s1          27/B-s1.txt.state.json            SAME:sum 270 欄、errors 0、more 53 欄
+  28/default-s20001      27/B-s20001.txt.state.json        SAME:sum 281 欄、errors 0、more 54 欄
+  28/default-s40001      27/B-s40001.txt.state.json        SAME:sum 277 欄、errors 0、more 56 欄
+  (三批的 more 只有 firstIsolatedEnd 是 28 這邊才有,沒有比。)
+
+  共軍勝:s1 602、s20001 580、s40001 607,合計 1789 / 3000 = 59.6%(#27 的 B 開也是 59.6%)。三批都 0 錯誤。
+
+二、{ mechanismB: false } 仍是原本的規則
+  28/Boff-s1(--variant=Boff,seed 1,1000 局)vs 24/default-s1.txt.state.json:SAME,sum 263 欄、errors 0
+  (24 的那一批沒有 more,所以 more 是 0 欄)。共軍勝 631 / 1000。
+
+三、速度
+  bots.test.js 的 B1(單獨跑,機器上沒有別的模擬):普通對普通每局平均 14.2 秒(上限 20)。
+  上面四批在 28 個 worker 下每局每 worker:default 24.7 / 24.8 / 23.6 秒、Boff 13.8 秒;
+  #27 同樣 28 個 worker 是 B 開 15.0、B 關 8.6 秒。兩邊的 B 開 / B 關比例差不多(1.79 vs 1.74),
+  而 sum 一模一樣,所以慢的是這台機器當時的負載(另有 python / llama-server 在跑),不是規則。
+
+四、新的 fuzz 指紋
+  FUZZ-VERDICT 局數 2000 / 結束 2000 / 報錯或卡住 0 / 重播 200 局、不一致 0 / 動作 298709(B 關是 266463)
+  A/B:把 mechanismB: true 從 DEFAULT_OPTIONS 拿掉、同一支 fuzz,動作數回到 266463;還原後 298709。
