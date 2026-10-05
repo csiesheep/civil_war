@@ -44,23 +44,25 @@ function supplyByHand(st) {
 const besieged = (st, id) => (st.effects || []).some((e) => e.kind === "siege" && e.space === id);
 
 const seen = { steps: 0, grayOnlyIsolated: 0, grayIsolated: 0, villageHomeCut: 0, ccpLeaning: 0, ccpLeaningCut: 0, mie: 0, seal: 0, mieTalks: 0, mieConquest: 0 };
-const problems = [];
-const say = (seed, st, msg) => { if (problems.length < 20) problems.push(`種子 ${seed} 回合 ${st.turn}:${msg}`); };
+const problems = [], kinds = {};
+let nProblems = 0;
+// `kind` is counted, uncapped (which power, which reading); the first 20 messages are kept.
+const say = (seed, st, msg, kind = "other") => { nProblems++; kinds[kind] = (kinds[kind] || 0) + 1; if (problems.length < 20) problems.push(`種子 ${seed} 回合 ${st.turn}:${msg}`); };
 for (let seed = first; seed < first + games; seed++) {
   let prev = null;
   const onStep = (st) => {
     seen.steps++;
     const ok = supplyByHand(st), engine = E.supplied(st);
     const a = [...ok].sort().join(), b = [...engine].sort().join();
-    if (a !== b) say(seed, st, `補給不同:手算 ${a} / 引擎 ${b}`);
+    if (a !== b) say(seed, st, `補給不同:手算 ${a} / 引擎 ${b}`, "補給不同");
     const iso = E.SPACES.filter((s) => s.kind === "city" && inf(st, s.id)[KMT] + gray(st, s.id) > 0 && (!ok.has(s.id) || besieged(st, s.id))).map((s) => s.id).sort();
-    if (iso.join() !== E.isolatedCities(st).slice().sort().join()) say(seed, st, `孤城不同:手算 ${iso} / 引擎 ${E.isolatedCities(st).slice().sort()}`);
+    if (iso.join() !== E.isolatedCities(st).slice().sort().join()) say(seed, st, `孤城不同:手算 ${iso} / 引擎 ${E.isolatedCities(st).slice().sort()}`, "孤城不同");
     for (const id of iso) if (gray(st, id)) { seen.grayIsolated++; if (!inf(st, id)[KMT]) seen.grayOnlyIsolated++; }
     if (!ok.has("chasui")) seen.villageHomeCut++;
     if (st.winner == null) for (const [p, d] of Object.entries(SPEC)) {
       if (st.mie[p] || st.seals[p]) continue;
-      if (ctl(st, d.home) === CCP) say(seed, st, `${p} 的本據 ${d.home} 在共軍手上,卻沒有易幟`);
-      if (st.attitude[p] === "ccp") { seen.ccpLeaning++; if (!ok.has(d.home)) { seen.ccpLeaningCut++; say(seed, st, `${p} 通共、本據 ${d.home} 沒有補給,卻沒有易幟`); } }
+      if (ctl(st, d.home) === CCP) say(seed, st, `${p} 的本據 ${d.home} 在共軍手上,卻沒有易幟`, `本據被佔沒有易幟:${p}`);
+      if (st.attitude[p] === "ccp") { seen.ccpLeaning++; if (!ok.has(d.home)) { seen.ccpLeaningCut++; say(seed, st, `${p} 通共、本據 ${d.home} 沒有補給,卻沒有易幟`, `通共斷補給沒有易幟:${p}`); } }
     }
     for (const s of E.SPACES) {
       if (inf(st, s.id)[KMT] + gray(st, s.id) > s.stability + 2) say(seed, st, `${s.id} 藍加灰超過上限`);
@@ -81,5 +83,6 @@ for (let seed = first; seed < first + games; seed++) {
 }
 for (const p of problems) console.log(`失敗 · ${p}`);
 console.log(`看過的盤面 ${JSON.stringify(seen)}`);
-console.log(`SUPPLY-PROBE 局數 ${games} / 問題 ${problems.length}`);
-process.exitCode = problems.length ? 1 : 0;
+if (nProblems) console.log(`問題的種類 ${JSON.stringify(kinds)}`);
+console.log(`SUPPLY-PROBE 局數 ${games} / 問題 ${nProblems}`);
+process.exitCode = nProblems ? 1 : 0;
