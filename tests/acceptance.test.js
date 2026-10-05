@@ -3087,6 +3087,8 @@ check("garrison 關掉:美國支持 ≥ 3 時共軍照樣可以奇襲天津與�
 //   - 「己方據點」= 共軍控制的據點;繳獲與 −1 由共軍選哪一個(只有一個時也照樣問)。
 //   - 圍城:T 這一回合算孤城(結算掉藍、國軍不能扶植),本回合共軍再打 T 時 +1;回合結算時拿掉。
 //   - 沒有灰,所以「灰不走」「打到通共勢力的灰」那幾條這一批沒有。決戰時突圍要棄牌(F 的完整版)這一批不做。
+//   - (驗收之後補,orchestrator 的探針找到的)突圍的 R 不能是受降時蘇軍佔著的東北城(誰都不能在那裡放點);
+//     圍城的城這一回合算孤城,所以也不能當增援的 R。
 // 介面(brief 寫死,這裡照它驅動):
 //   共軍打城:{ type:"play", use:"campaign", target, siege:"point"|"relief" };少了 siege 要被拒絕。
 //   國軍的回應:pending { who: KMT, kind:"option", tag:"siege" },options 的 id:"hold"、"reinforce:<R>:<k>"、"breakout:<R>"。
@@ -3164,6 +3166,43 @@ check("國軍的回應:固守、增援(徐州隔著魯中,k 受濟南的上限�
     same(optIds(cut), ["hold"], "濟南是孤城、魯中是共軍控制:國軍的回應"),
     eq(thrown(() => choose(a, "reinforce:xuzhou:3")) != null, true, "增援 3 點(放不下)沒有被拒絕"),
     ok(true, "固守、增援 1 或 2、突圍到魯中;濟南堆到 4 只能援 1;濟南只有 1 時最多援 3;孤城只能固守"),
+  );
+});
+
+// orchestrator 裁決(#26,驗收之後補):受降時(第 1 回合)東北三城誰都不能放點,所以不能當突圍的 R
+// (突圍過去的藍會全部消失,這一格永遠比固守差,不該是一個選項)。天津旁邊就是錦州;美國支持降到 2,
+// 免得美軍駐華擋掉這次進攻。
+check("突圍不能到受降時蘇軍佔著的東北城(誰都不能在那裡放點)", () => {
+  const t = bTodo(); if (t) return t;
+  const go = (options) => { const S = siegeRig({ edits: { tianjin: { b: 3 } }, options }); S.support[KMT] = 2; return act(S, CCP, "huaihai_campaign", "campaign", { target: "tianjin", siege: "point" }); };
+  const on = go(MB), noSurrender = go({ ...MB, situations: false });
+  return all(
+    eq(optIds(on).includes("breakout:jinzhou"), false, "第 1 回合(受降)國軍可以突圍到錦州"),
+    eq(optIds(noSurrender).includes("breakout:jinzhou"), true, "沒有受降時(對照組)國軍不能突圍到錦州"),
+    ok(true, `受降:${optIds(on).join("、")};沒有時局:${optIds(noSurrender).join("、")}`),
+  );
+});
+
+// orchestrator 裁決(#26,驗收之後補):圍城的城處處算孤城(裁決 4),所以它這一回合也不能當增援的 R
+// (R 要有補給)。共軍從冀中先打北平(打援),國軍固守 → 北平圍城;國軍扶植南京;共軍再打天津(美國支持
+// 降到 2,美軍駐華不擋)。北平與天津相鄰。對照組:共軍第一手改成在冀中扶植,其餘一樣。
+check("圍城的城不能派援軍(它這一回合算孤城)", () => {
+  const t = bTodo(); if (t) return t;
+  const go = (first) => {
+    const st = position({}, MB); st.support[KMT] = 2;
+    deal(st, CCP, ["score_north", "huaihai_campaign", "gao_shuxun"]); deal(st, KMT, ["score_east", "kunming_incident", "takeover_officials"]);
+    let a = first(toAction(st));
+    a = act(a, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing"] });
+    return act(a, CCP, "gao_shuxun", "campaign", { target: "tianjin", siege: "point" });
+  };
+  const sieged = go((S) => choose(act(S, CCP, "huaihai_campaign", "campaign", { target: "beiping", siege: "relief" }), "hold"));
+  const control = go((S) => act(S, CCP, "huaihai_campaign", "place", { points: ["jizhong", "jizhong"] }));
+  const p = pendingIs(sieged, KMT, "option", "北平圍城之後打天津"); if (p !== true) return p;
+  return all(
+    eq(E.besieged(sieged, "beiping"), true, "北平有圍城標記"),
+    eq(optIds(control).some((id) => id.startsWith("reinforce:beiping:")), true, "對照組(北平沒被圍)北平不能援天津"),
+    eq(optIds(sieged).some((id) => id.startsWith("reinforce:beiping:")), false, "北平被圍時還能援天津"),
+    ok(true, `被圍:${optIds(sieged).join("、")};對照:${optIds(control).join("、")}`),
   );
 });
 
