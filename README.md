@@ -6,7 +6,7 @@ A free fan project, unofficial. The card-driven play is inspired by *Twilight St
 
 Will live at https://games.csiesheep.com/civil_war/ (a `noindex` placeholder for now).
 
-## Status: the batch-1 engine, nearly done (M1)
+## Status: the batch-1 engine is done (M1), the bots are delivered (M2); the screen (M3) has not started
 
 The rules engine for the first batch is written. There is no screen yet. What exists:
 
@@ -20,7 +20,7 @@ The rules engine for the first batch is written. There is no screen yet. What ex
 
 Not there yet: the client (M3).
 
-The year on each event card and the facts quoted in the rules are being checked against sources (issue #10); the rulebook says its dates were written from memory and must be checked before the numbers are printed for players.
+The year on each event card and the facts quoted in the rules were checked against sources in issue #10: none of the 58 card years was found wrong, but many rest on a weak second source (and the troop-strength figures on Chinese-Communist-side sources only), so they should be checked again against print sources before the numbers are printed for players.
 
 The rules are in the owner's vault: `Projects/civil_war/civil_war - rulebook.md` (batch 1), `civil_war plan.md` (decisions, milestones), `civil_war - mechanisms.md` (the mechanisms still to come).
 
@@ -68,8 +68,8 @@ From a logged-in `wrangler`. Who deploys and when is in `TEAM.md`. Pushes to `ma
 | | |
 |---|---|
 | M0 | Phase 0: repo, placeholder live, `TEAM.md`, a first guard seen red |
-| M1 | the batch-1 engine: supply, the fixed situation card per turn, foreign support, 72 card events, a test per rule — **in progress, close to done** (whether it is done is the owner's call) |
-| M2 | bots and the bot-vs-bot harness; the first numbers; a stop-or-go decision |
+| M1 | the batch-1 engine: supply, the fixed situation card per turn, foreign support, 72 card events, a test per rule — **done** (owner, #11) |
+| M2 | bots and the bot-vs-bot harness; the first numbers; a stop-or-go decision — **delivered**; the decision was to adjust the rules first (#18), which ended in the rule set P10 (#23), now the default (#24) |
 | M2b… | mechanism batches (siege choice, power attitudes, …), each a loop of engine, bots, numbers |
 | M3 | the solo client |
 | M4 | rooms |
