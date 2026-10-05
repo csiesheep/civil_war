@@ -8,16 +8,17 @@ Will live at https://games.csiesheep.com/civil_war/ (a `noindex` placeholder for
 
 ## Status: the batch-1 engine, nearly done (M1)
 
-The rules engine for the first batch is written. There is no screen and no bot yet. What exists:
+The rules engine for the first batch is written. There is no screen yet. What exists:
 
 - the map (29 spaces: 17 cities, 12 villages) and the 72 cards, **every card with its event**;
 - supply, the eight situation cards (時局) with a hand size and action rounds that differ by era and by side, and the two support tracks (American and Soviet);
 - American Aid and Soviet Aid (these replace Zongheng's Nine Cauldrons), the American garrison, and base-area scoring;
-- the guard, `node --test tests/acceptance.test.js`: 155 checks pass, none is pending; its constants are copied from the rulebook, not read from the engine;
+- the guard, `node --test tests/acceptance.test.js`: 165 checks pass, none is pending; its constants are copied from the rulebook, not read from the engine;
 - a random-play fuzz, `node --test tests/fuzz.test.js`, which passes: it plays 2,000 random legal games; every game ends with no error, every tenth game replays identically from its seed, and all 67 events get resolved;
+- the bots, `public/shared/bots.js` (levels easy, normal, hard; easy is the random player), and the bot-vs-bot harness `tests/sim.js`;
 - the random player, `public/shared/random.js` (`randomAction`, `randomPoints`, `randomOps`, `randomChoice`), which the fuzz uses; `bots.js` re-exports those four from it.
 
-Not there yet: the client (M3) and the real bots (M2). Apart from the random player in `random.js`, `public/shared/bots.js` and `tests/sim.js` are still Zongheng's files and cannot run.
+Not there yet: the client (M3).
 
 The year on each event card and the facts quoted in the rules are being checked against sources (issue #10); the rulebook says its dates were written from memory and must be checked before the numbers are printed for players.
 
@@ -33,14 +34,14 @@ Much of the copied engine still speaks Zongheng: its comments cite Zongheng's is
 |---|---|
 | `mie` | 易幟 (a regional power changes flags; 3 win it for the Communists) |
 | `seals` | 整編 (a power integrated; 5 win it for the Nationalists) |
-| `mandate` | 民心 (Popular Support, ±20) |
+| `mandate` | 民心 (Popular Support; the Communists win at +20, the Nationalists at −15, the Communists from turn 7 and the Nationalists from turn 6; before that turn the lead is held at +19 for the Communists and −3 for the Nationalists: `MANDATE_WIN`, `MANDATE_FROM`, `MANDATE_CAP`) |
 | `weariness` | 民生 (Livelihood) |
 | `reform` | 建軍 / 行憲 |
 | `campaign`, `lobby` | 進攻 (奇襲), 策反 (遊說) |
-| `AID` | 美援 and 蘇援, which replaced Zongheng's `jiuding` (Nine Cauldrons; gone from the engine; the part of `bots.js` outside the random player still reads it) |
+| `AID` | 美援 and 蘇援, which replaced Zongheng's `jiuding` (Nine Cauldrons; gone from the engine) |
 | `STATES` | the five regional powers |
 
-Apart from the random player in `random.js`, `bots.js` and `tests/sim.js` are **not adapted yet** and are not expected to run (M2).
+`bots.js` (M2, #12) and `tests/sim.js` (the bot-vs-bot harness, #15) have been rewritten for this game and run; `tests/bots.test.js` and `tests/sim.test.js` guard them.
 
 
 ## Develop
