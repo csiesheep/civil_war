@@ -512,7 +512,7 @@ function roomFor(p, s, side, id, counts) {
   if (p.distinct) r = Math.min(r, 1);
   if (p.maxPer) r = Math.min(r, p.maxPer);
   if (p.maxOf) r = Math.min(r, p.maxOf[id] ?? 0);
-  if (p.side != null) r = Math.min(r, E.capOf(s, id) - E.infOf(s, id)[side]);
+  if (p.side != null) r = Math.min(r, E.capOf(s, id) - E.pointsOf(s, side, id)); // #31: the Nationalists count gray
   return r - (counts[id] || 0);
 }
 // A points choice: greedy per point on a scratch copy, the room read as the engine reads it.
@@ -581,7 +581,7 @@ export function greedyPlacement(st, side, ops, card, restrict = null) {
     const base = evaluate(s, side);
     let best = null, bestR = -Infinity;
     for (const id of ids) {
-      const a = s.inf[id] || (s.inf[id] = [0, 0]), start = a[side], cap = E.capOf(s, id);
+      const a = s.inf[id] || (s.inf[id] = [0, 0]), start = a[side], cap = E.capOf(s, id) - (side === KMT ? E.grayOf(s, id) : 0); // #31
       const budget = left + (bonus && inNortheast(id) ? 1 : 0);
       let spent = 0, here = -Infinity;
       for (let k = 0; k < 3 && a[side] < cap; k++) {
@@ -683,6 +683,9 @@ function bestOps(st, who, ops, allowed, rng, card, top = null) {
     }
   }
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
+  // Mechanism D (#31): 政工, offered by the ops ask only under D.
+  const pol = allowed.includes("politics") ? E.politicsOptions(st, who, ops) : [];
+  for (const t of pol) cands.push({ use: "politics", ...politicsPayload(who, t) });
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
   if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", ...attacks(st, who, o.campaignTargets[0])[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
   if (!sieges.size) return bestOf(st, who, cands, rng);
@@ -743,6 +746,8 @@ export function answer(st, p, who, rng) {
 export const EASY_SIEGE = { point: 0.8, hold: 0.8 };
 const SIEGE_MARK = Symbol("siege");
 const mechB = (st) => !!(st.options && st.options.mechanismB);
+// 政工's payload (#31): the Nationalists' 整編 names a space, the Communists' 統戰 a power.
+const politicsPayload = (side, id) => (side === KMT ? { target: id } : { power: id });
 
 // The value of the zero-sum game M (M[i][j] what the row player gets; rows
 // maximise, columns minimise) and an equilibrium: { row, col, value }, the two
@@ -915,6 +920,9 @@ function actionCandidates(st, side, L, sieges = null) {
     }
     if (u.campaign) for (const t of u.campaign.targets) for (const x of atk(t)) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
     if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", ...order, target: t.id });
+    // Mechanism D (#31): 政工 on every target the engine offers (`uses.politics` exists only under D),
+    // valued like any other play; the bots know nothing else of D yet (that is the next issue).
+    if (u.politics) for (const t of u.politics.targets) out.push({ type: "play", side, card: id, use: "politics", ...order, ...politicsPayload(side, t) });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
       const pair = u.pair.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));

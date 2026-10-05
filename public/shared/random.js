@@ -16,6 +16,10 @@
 // plan names one at random (`attack` below); its other decisions (固守 / 增援 /
 // 突圍, the −1 / +1, 守 / 撤 and where to 撤) are pending choices like any other.
 //
+// Mechanism D (#31, option `mechanismD`): 政工 is one more use of a card (`legal().cards[].uses.politics`,
+// and "politics" in an ops ask's `allowed`), its target drawn from the engine's `politicsOptions`;
+// the Nationalists' 先移藍 / 先移灰 (tag "grayOrder") is a pending option like any other.
+//
 // It reads the whole state (the opponent's hand included); playing from a
 // per-seat `view()` is M2's. Its only source of chance is the `rng` it is
 // given (`E.makeRng`'s, with `int(n)`), so a game of random players is fixed
@@ -31,7 +35,7 @@ function roomFor(st, p, id, counts) {
   if (p.distinct) r = Math.min(r, 1);
   if (p.maxPer) r = Math.min(r, p.maxPer);
   if (p.maxOf) r = Math.min(r, p.maxOf[id] ?? 0);
-  if (p.side != null) r = Math.min(r, E.capOf(st, id) - E.infOf(st, id)[p.side]);
+  if (p.side != null) r = Math.min(r, E.capOf(st, id) - E.pointsOf(st, p.side, id));
   return r - (counts[id] || 0);
 }
 
@@ -59,13 +63,19 @@ function attack(st, side, targets, rng) {
 export function randomOps(st, side, ops, allowed, rng, card) {
   const o = E.opsOptions(st, side, card);
   const has = { place: o.placeOptions.length > 0, campaign: o.campaignTargets.length > 0, lobby: o.lobbyTargets.length > 0 };
+  // Mechanism D (#31): 政工 is offered only when the ops ask allows it (never without the option).
+  const pol = allowed.includes("politics") ? E.politicsOptions(st, side, ops) : [];
+  if (pol.length) has.politics = true;
   const uses = allowed.filter((u) => has[u]);
   if (!uses.length) return null;
   const use = pickOne(uses, rng);
   if (use === "place") return { use, points: randomPoints(st, side, ops, rng, card) };
   if (use === "campaign") return { use, ...attack(st, side, o.campaignTargets, rng) };
+  if (use === "politics") return { use, ...politicsPayload(side, pickOne(pol, rng)) };
   return { use, target: pickOne(o.lobbyTargets, rng).id };
 }
+// 政工's payload (#31): the Nationalists name a space (整編), the Communists a power (統戰).
+const politicsPayload = (side, id) => (side === E.KMT ? { target: id } : { power: id });
 
 // An answer to the pending decision `p`, whatever its kind.
 export function randomChoice(st, p, rng) {
@@ -125,6 +135,8 @@ export function randomAction(st, side, rng) {
         if (u.place) opts.push(ordered("place", () => ({ points: randomPoints(st, side, u.place.ops, rng) })));
         if (u.campaign) opts.push(ordered("campaign", () => attack(st, side, u.campaign.targets, rng)));
         if (u.lobby) opts.push(ordered("lobby", () => ({ target: pickOne(u.lobby.targets, rng).id })));
+        // 政工 (#31): `uses.politics` exists only under mechanism D.
+        if (u.politics) opts.push(ordered("politics", () => politicsPayload(side, pickOne(u.politics.targets, rng))));
         // 馬歇爾調處: the pair's ops, on the same targets as any card's (`legal` read them without a card).
         if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) opts.push(() => {
           const pair = pickOne(u.pair, rng);

@@ -70,6 +70,8 @@ const CELLS = [
   // M2b: mechanism B was an option (#26) and is the default since #28 (owner 裁決 2026-10-05); the old 奇襲
   // stays playable with it off, so the cell now plays B off.
   ["B 機制 B 關", { mechanismB: false }],
+  // M2b (#31): mechanism D is an option until the owner adopts it; random play must handle its decisions too.
+  ["D 機制 D 開", { mechanismD: true }],
 ];
 test("fuzz: the control cells", async () => {
   const E = await import("../public/shared/engine.js");
