@@ -86,9 +86,11 @@ const SPEC = {
   },
   toWin: { mie: 3, seals: 5 },
   free: { ccp: 3, kmt: 4 },
-  // P10 (#23): 受降 -- the Communists free-place only into the villages they control at the start (red ≥ blue + S):
-  // 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4). Group 4 recomputes it from SPEC_SPACES.
-  freeCcpIn: ["jizhong", "taihang", "jiluyu", "shanbei"],
+  // P10 (#23) as the owner fixed it on #24 (2026-10-04, 「控制的鄉加察綏」): 受降 -- the Communists free-place only into
+  // the villages they control at that moment (red ≥ blue + S), and into 察綏 (晉察冀 held 張家口 from August 1945).
+  // At the start: 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4), plus 察綏 (2/2, nobody's).
+  // Group 4 recomputes it from SPEC_SPACES.
+  freeCcpIn: ["jizhong", "chasui", "taihang", "jiluyu", "shanbei"],
   deck: {
     total: 72,
     // era: [Nationalist, Communist, neutral, scoring]
@@ -725,14 +727,15 @@ check("開局:美國支持 4、蘇聯支持 1;手牌 共 8 國 9;行動回合 �
   );
 });
 
-// P10 (#23): the Communists' free placement of 受降 goes only into the villages they control at the start.
+// P10 (#23, #24): the Communists' free placement of 受降 goes only into the villages they control at the start, and 察綏.
 // Control is red ≥ blue + stability (group 11's words); from the rulebook's opening table (SPEC_SPACES) that is
-// 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4) -- not 察綏 2/2, 魯中 3/2, 淮海 2/1, 北滿 1/0.
+// 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4) -- not 魯中 3/2, 淮海 2/1, 北滿 1/0; and 察綏 (2/2, nobody's), which the
+// owner allowed on #24 (晉察冀 held 張家口 from August 1945).
 const SPEC_CCP_FREE = SPEC.freeCcpIn;
-check("受降:共軍的免費放置只能放進開局時共軍控制的鄉;國軍照舊(東北以外的城)", () => {
+check("受降:共軍的免費放置只能放進開局時共軍控制的鄉與察綏;國軍照舊(東北以外的城)", () => {
   const t = sitTodo(); if (t) return t;
-  const fromTable = Object.entries(SPEC_SPACES).filter(([, [kind, , s, b, r]]) => kind === "village" && r >= b + s).map(([id]) => id);
-  const pre = same(fromTable, SPEC_CCP_FREE, "從開局表算出來的共軍控制的鄉(這支測試自己的對照)"); if (pre !== true) return pre;
+  const fromTable = Object.entries(SPEC_SPACES).filter(([id, [kind, , s, b, r]]) => kind === "village" && (r >= b + s || id === "chasui")).map(([id]) => id);
+  const pre = same(fromTable, SPEC_CCP_FREE, "從開局表算出來的共軍控制的鄉加察綏(這支測試自己的對照)"); if (pre !== true) return pre;
   const lists = [1, 7, 23].map((seed) => { const st = E.createGame(seed); return st.pending && st.pending.who === CCP ? st.pending.options.slice() : null; });
   if (lists.some((l) => l == null)) return "createGame 之後的待決定不是共軍的免費放置";
   const st = E.createGame(7), kmt = E.apply(st, { type: "choose", side: CCP, choice: ["jizhong", "taihang", "shanbei"] });
