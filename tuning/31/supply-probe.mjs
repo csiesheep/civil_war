@@ -59,7 +59,9 @@ for (let seed = first; seed < first + games; seed++) {
     if (iso.join() !== E.isolatedCities(st).slice().sort().join()) say(seed, st, `孤城不同:手算 ${iso} / 引擎 ${E.isolatedCities(st).slice().sort()}`, "孤城不同");
     for (const id of iso) if (gray(st, id)) { seen.grayIsolated++; if (!inf(st, id)[KMT]) seen.grayOnlyIsolated++; }
     if (!ok.has("chasui")) seen.villageHomeCut++;
-    if (st.winner == null) for (const [p, d] of Object.entries(SPEC)) {
+    // The markers are read once an action or an event is over (orchestrator 裁決 #31, as today's): not while
+    // a choice is pending inside one (seed 163, turn 7: 挺進大別山 cuts 太原 off, then waits for its second pick).
+    if (st.winner == null && !st.pending) for (const [p, d] of Object.entries(SPEC)) {
       if (st.mie[p] || st.seals[p]) continue;
       if (ctl(st, d.home) === CCP) say(seed, st, `${p} 的本據 ${d.home} 在共軍手上,卻沒有易幟`, `本據被佔沒有易幟:${p}`);
       if (st.attitude[p] === "ccp") { seen.ccpLeaning++; if (!ok.has(d.home)) { seen.ccpLeaningCut++; say(seed, st, `${p} 通共、本據 ${d.home} 沒有補給,卻沒有易幟`, `通共斷補給沒有易幟:${p}`); } }
