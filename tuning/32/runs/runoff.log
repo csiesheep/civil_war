@@ -1,0 +1,10 @@
+batch off seed 1 exit 0
+SAME games 1000: 270 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 60 leaves
+same off-s1 vs 28/default-s1 exit 0
+batch off seed 20001 exit 0
+SAME games 1000: 281 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 61 leaves
+same off-s20001 vs 28/default-s20001 exit 0
+batch off seed 40001 exit 0
+SAME games 1000: 277 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 62 leaves
+same off-s40001 vs 28/default-s40001 exit 0
+ALL-DONE
