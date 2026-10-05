@@ -1,11 +1,13 @@
 // The bots' guard (M2). Orchestrator's file: a peer may run it and falsify against it, and does not
 // edit it (TEAM.md).
 //
-//   node --test tests/bots.test.js            about 150 bot games (BOTS_SCALE=0.25 for a quick look)
+//   node --test tests/bots.test.js            about 200 bot games (BOTS_SCALE=0.25 for a quick look)
 //
 // What M2 asks of the bot (the owner's plan, 「bot(懂孤城、外援、不對稱回合)」): it plays this game, from
 // a seat's view, and it knows the three things this game added to Zongheng's: supply, the aid cards,
 // and that the two sides do not have the same number of action rounds.
+// M2b (#27) adds B5: with mechanism B on, an attack on a city is a guessing game (圍點打援), and the
+// bot solves it as a zero-sum game and draws from the mix (section B5's comment has the note).
 //
 // Three verdicts per check, as in the first guard. Everything here answers 尚未實作 while
 // public/shared/bots.js still reads Zongheng's Nine Cauldrons (`JIUDING`): until then it is Zongheng's
@@ -20,6 +22,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { R, section, check, eq, ok, nonEmpty, summary } from "./harness.js";
 import * as E from "../public/shared/engine.js";
+import { gameFault } from "./siege-game.js";
 
 const CCP = 0, KMT = 1;
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -34,22 +37,23 @@ const B = TODO ? null : await import("../public/shared/bots.js");
 
 // ---------------------------------------------------------------- the games
 const CHUNK = 10;
-function chunk(first, count, ccp, kmt) {
+function chunk(first, count, ccp, kmt, options = null) {
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const r = spawnSync(process.execPath, [here("./bots-chunk.js"), String(first), String(count), ccp, kmt], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    const r = spawnSync(process.execPath, [here("./bots-chunk.js"), String(first), String(count), ccp, kmt, ...(options ? [JSON.stringify(options)] : [])], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     const line = (r.stdout || "").split("\n").find((l) => l.startsWith("BOTS "));
     if (line) return { ...JSON.parse(line.slice(5)), attempt };
-    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, attempt };
+    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, attempt };
   }
 }
 const cache = new Map();
-// `n` games from seed `first`, 共軍 at level `ccp`, 國軍 at level `kmt`: the chunks added up. Run once per key.
-function play(first, n, ccp, kmt) {
-  const key = `${first}/${n}/${ccp}/${kmt}`;
+// `n` games from seed `first`, 共軍 at level `ccp`, 國軍 at level `kmt` (under `options`, #27): the chunks added up. Run once per key.
+function play(first, n, ccp, kmt, options = null) {
+  const key = `${first}/${n}/${ccp}/${kmt}/${JSON.stringify(options)}`;
   if (cache.has(key)) return cache.get(key);
-  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0 };
+  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0,
+    siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } } };
   for (let f = first; f < first + n; f += CHUNK) {
-    const c = chunk(f, Math.min(CHUNK, first + n - f), ccp, kmt);
+    const c = chunk(f, Math.min(CHUNK, first + n - f), ccp, kmt, options);
     t.games += c.count; t.ended += c.ended; t.actions += c.actions; t.ms += c.ms; t.errors.push(...c.errors);
     for (const k of ["reasons", "turns"]) for (const [id, v] of Object.entries(c[k])) t[k][id] = (t[k][id] || 0) + v;
     for (const s of [CCP, KMT]) { t.wins[s] += c.wins[s]; t.aid.usable[s] += c.aid.usable[s]; t.aid.used[s] += c.aid.used[s]; }
@@ -57,6 +61,14 @@ function play(first, n, ccp, kmt) {
     for (const k of ["asked", "differ", "mutated"]) t.pure[k] += c.pure[k];
     for (const [turn, e] of Object.entries(c.turnEnd)) { const x = (t.turnEnd[turn] ||= { games: 0, mandate: 0, isolated: 0 }); x.games += e.games; x.mandate += e.mandate; x.isolated += e.isolated; }
     if (c.attempt > 1) t.rerun++;
+    if (c.siege) {
+      for (const s of ["ccp", "kmt"]) {
+        const a = t.siege[s], b = c.siege[s];
+        a.n += b.n; a.game += b.game; a.pure += b.pure; a.bad.push(...b.bad);
+        for (const [k, x] of Object.entries(b.by)) { const y = (a.by[k] ||= { drawn: 0, expected: 0, variance: 0 }); y.drawn += x.drawn; y.expected += x.expected; y.variance += x.variance; }
+      }
+      t.siege.sweep.stand += c.siege.sweep.stand; t.siege.sweep.withdraw += c.siege.sweep.withdraw;
+    }
   }
   cache.set(key, t);
   return t;
@@ -287,6 +299,132 @@ check("對局裡不會因為留著記分卡而輸:普通對普通,這樣結束�
   if (TODO) return TODO;
   const t = NN(); const c = clean(t, "普通對普通"); if (c !== true) return c;
   return ok(heldScoring(t) <= 1, `${t.games} 局裡因為手上留著記分卡而結束的:${heldScoring(t)} 局(上限 1)`);
+});
+
+// ================================================================ 5
+section("B5 機制 B:圍點打援是猜拳(選項 mechanismB)");
+// #27。筆記(Projects/civil_war/civil_war - mechanisms.md,B 的「bot」一節,手抄):
+//   - 對每一格算出結果盤面的評估值,得到 2×3(或 2×2)的矩陣,解零和賽局的混合策略,照機率抽。
+//   - 「容易」等級可以固定偏向某一格,讓人學得會;「困難」等級照均衡。
+// orchestrator 裁決(#27):
+//   - 普通與困難都解矩陣、照 mix 抽(普通的評估照舊有雜訊,矩陣就是那些有雜訊的值)。
+//   - 簡單仍是隨機玩家,只有 B 的兩個決定固定偏向:共軍打城八成打點、國軍八成固守
+//     (`B.EASY_SIEGE = { point: 0.8, hold: 0.8 }`);人學得會「它總是硬打、總是死守」。
+//   - 進剿的守 / 撤是公開的,照一般的決定(評估最好的那個),不必解矩陣。
+// 介面(brief 寫死,這裡照它驗):
+//   B.zeroSum(M) → { row, col, value }:M[i][j] 是列方的收益,列方取大、行方取小;row / col 是兩邊的機率。
+//   共軍打城的決定(play 或 ops 的 choice 帶 siege)與國軍對 tag "siege" 的回答,都帶
+//   game: { rows: ["point", "relief"], cols: [國軍的回應 id], values: [[…]], mix, against, value }。
+//   values 是做決定那一方自己的評估;mix 是它自己的機率(共軍在 rows 上、國軍在 cols 上),against 是對手的,
+//   value 是它的賽局值。tests/siege-game.js 檢查它是不是真的均衡,不相信它。
+// B 關掉時 bot 的每一個決定都不變:這一條不在這裡,orchestrator 驗收時用同種子的模擬 A/B 比對。
+const MB = { mechanismB: true };
+const J = (x) => JSON.stringify(x);
+const strip = (a) => { if (!a) return a; const { why, ...rest } = a; return rest; };
+const bTodo = () => TODO || (typeof B.zeroSum !== "function" ? "TODO: bots.js 還沒有 zeroSum(還不會解圍點打援的混合策略)" : null);
+const close = (a, b) => Math.abs(a - b) <= 1e-6;
+const vecNear = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => close(x, b[i]));
+// 和驗收第 13 組同一個局面:濟南藍 3(上限 5)、冀魯豫紅 3(共軍控制)、魯中紅 3 藍 2、徐州藍 3、淮海紅 2 藍 1;
+// 共軍拿淮海戰役(4 點)打濟南。X = 4、D = 3;國軍可以固守、從徐州援 1 或 2、突圍到魯中。
+// edits 蓋在上面;國軍留昆明事變,對局停在它的回答。
+function siegeAsked(plan, edits = {}) {
+  let st = board({ jinan: [0, 3], jiluyu: [3, 0], luzhong: [3, 2], xuzhou: [0, 3], huaihai: [2, 1], ...edits }, MB);
+  deal(st, CCP, ["score_north", "huaihai_campaign"]); deal(st, KMT, ["score_east", "kunming_incident"]);
+  for (const side of [CCP, KMT]) st = E.apply(st, { type: "headline", side, card: st.hands[side].find((c) => E.CARD[c].scoring) });
+  st = E.apply(st, { type: "play", side: CCP, card: "huaihai_campaign", use: "campaign", target: "jinan", siege: plan });
+  if (!st.pending || st.pending.tag !== "siege" || st.pending.who !== KMT) throw new Error(`siegeAsked:期望國軍回答圍點打援,實際 ${J(st.pending && { who: st.pending.who, tag: st.pending.tag })}`);
+  return st;
+}
+const askedIds = (st) => st.pending.options.map((o) => o.id);
+const BN = () => play(6001, games(20), "normal", "normal", MB);
+// Drawn against expected, per kind (plan, or hold / reinforce / breakout): within 4 standard deviations plus 2.
+function drawsFit(by, who) {
+  const kinds = Object.entries(by);
+  if (!kinds.length) return ok(false, `${who}:沒有抽過`);
+  for (const [k, x] of kinds) {
+    const slack = 4 * Math.sqrt(x.variance) + 2;
+    if (Math.abs(x.drawn - x.expected) > slack) return ok(false, `${who} 的 ${k}:抽到 ${x.drawn} 次,mix 加起來期望 ${x.expected.toFixed(1)}(容許 ±${slack.toFixed(1)})`);
+  }
+  return ok(true, `${who}:${kinds.map(([k, x]) => `${k} ${x.drawn}(期望 ${x.expected.toFixed(1)})`).join("、")}`);
+}
+
+check("zeroSum:四個答案確定的賽局(猜硬幣、鞍點、2 × 3 有一行不該用、2 × 1)", () => {
+  const t = bTodo(); if (t) return t;
+  const cases = [
+    ["猜硬幣", [[1, -1], [-1, 1]], [0.5, 0.5], [0.5, 0.5], 0],
+    ["鞍點", [[3, 1], [4, 2]], [0, 1], [0, 1], 2],
+    ["2 × 3", [[3, -2, 0], [-1, 2, 5]], [0.375, 0.625], [0.5, 0.5, 0], 0.5],
+    ["2 × 1", [[2], [5]], [0, 1], [1], 5],
+  ];
+  for (const [name, M, row, col, value] of cases) {
+    const s = B.zeroSum(M);
+    if (!s || !vecNear(s.row, row) || !vecNear(s.col, col) || !close(s.value, value)) return ok(false, `${name} ${J(M)}:期望 row ${J(row)}、col ${J(col)}、value ${value},實際 ${J(s)}`);
+  }
+  return ok(true, "猜硬幣各半、鞍點取第 2 列第 2 行、2 × 3 是 3/8 對 1/2(第 3 行不用)、2 × 1 取第 2 列");
+});
+
+check("國軍回答圍點打援:看不出暗牌(打點或打援,同一個 rng 給同一個回答);帶著的賽局是真的均衡", () => {
+  const t = bTodo(); if (t) return t;
+  const P = siegeAsked("point"), Q = siegeAsked("relief"), ids = askedIds(P);
+  const c = all(eq(J(ids), J(["hold", "reinforce:xuzhou:1", "reinforce:xuzhou:2", "breakout:luzhong"]), "國軍可以選的回答(局面對不對)")); if (c !== true) return c;
+  const seen = {};
+  for (const level of ["normal", "hard"]) for (let i = 0; i < 10; i++) {
+    const a = B.decide(E.view(P, KMT), KMT, level, E.makeRng(500 + i)), b = B.decide(E.view(Q, KMT), KMT, level, E.makeRng(500 + i));
+    if (J(strip(a)) !== J(strip(b))) return ok(false, `${level} rng ${500 + i}:打點時回答 ${J(strip(a))},打援時回答 ${J(strip(b))}`);
+    const f = gameFault(a.game, KMT, ids); if (f) return ok(false, `${level} rng ${500 + i}:賽局不對:${f}`);
+    if (!ids.includes(a.choice) || !(a.game.mix[a.choice] > 0)) return ok(false, `${level}:回答 ${a.choice} 不在選項裡,或它的機率是 0(mix ${J(a.game.mix)})`);
+    seen[a.choice] = (seen[a.choice] || 0) + 1;
+  }
+  return ok(true, `普通、困難各問 10 次:兩種暗牌的回答都一樣;回答 ${J(seen)}`);
+});
+
+check("只剩固守時(濟南是孤城、魯中是共軍的):國軍的賽局只有一行,mix 是固守 1", () => {
+  const t = bTodo(); if (t) return t;
+  const S = siegeAsked("point", { luzhong: [5, 0] });
+  const c = eq(J(askedIds(S)), J(["hold"]), "國軍可以選的回答"); if (c !== true) return c;
+  const a = B.decide(E.view(S, KMT), KMT, "hard", E.makeRng(7));
+  const f = gameFault(a.game, KMT, ["hold"]); if (f) return ok(false, `賽局不對:${f}`);
+  return all(eq(a.choice, "hold", "回答"), eq(J(a.game.mix), J({ hold: 1 }), "國軍的 mix"), ok(true, `回答固守,共軍那一邊 ${J(a.game.against)}`));
+});
+
+check("普通對普通(B 開著):每一局都結束;每個打城與回答都帶著均衡的賽局,抽出來的和 mix 對得上", () => {
+  const t = bTodo(); if (t) return t;
+  const r = BN();
+  const c = all(clean(r, "普通對普通(B)"), nonEmpty(r.siege.ccp.n, "共軍打城的次數"), nonEmpty(r.siege.kmt.n, "國軍回答的次數")); if (c !== true) return c;
+  return all(
+    eq(r.siege.ccp.game, r.siege.ccp.n, "共軍打城帶著賽局的次數"), eq(r.siege.kmt.game, r.siege.kmt.n, "國軍回答帶著賽局的次數"),
+    eq(r.siege.ccp.bad.length, 0, `共軍的賽局不是均衡的次數(第一個:${J(r.siege.ccp.bad[0] || null)})`),
+    eq(r.siege.kmt.bad.length, 0, `國軍的賽局不是均衡的次數(第一個:${J(r.siege.kmt.bad[0] || null)})`),
+    drawsFit(r.siege.ccp.by, "共軍"), drawsFit(r.siege.kmt.by, "國軍"),
+    ok(true, `${r.games} 局:共軍打城 ${r.siege.ccp.n} 次(純策略 ${r.siege.ccp.pure})、國軍回答 ${r.siege.kmt.n} 次(純策略 ${r.siege.kmt.pure});進剿 守 ${r.siege.sweep.stand}、撤 ${r.siege.sweep.withdraw};共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]}`),
+  );
+});
+
+check("B 開著也跑得動:普通對普通每局平均不超過 20 秒", () => {
+  const t = bTodo(); if (t) return t;
+  const r = BN(); const c = nonEmpty(r.ended, "結束的局數"); if (c !== true) return c;
+  const s = r.ms / r.games / 1000;
+  return ok(s <= 20, `普通對普通(B)每局平均 ${s.toFixed(1)} 秒(上限 20)`);
+});
+
+check("困難對困難(B 開著)打得完,賽局也是均衡的", () => {
+  const t = bTodo(); if (t) return t;
+  const r = play(8001, games(4), "hard", "hard", MB);
+  return all(clean(r, "困難對困難(B)"), eq(r.siege.ccp.bad.length + r.siege.kmt.bad.length, 0, `賽局不是均衡的次數(第一個:${J(r.siege.ccp.bad[0] || r.siege.kmt.bad[0] || null)})`),
+    eq(r.siege.ccp.game + r.siege.kmt.game, r.siege.ccp.n + r.siege.kmt.n, "帶著賽局的次數"),
+    ok(true, `${r.games} 局:共軍打城 ${r.siege.ccp.n} 次、國軍回答 ${r.siege.kmt.n} 次;每局平均 ${(r.ms / r.games / 1000).toFixed(1)} 秒`));
+});
+
+check("簡單(B 開著)有固定的偏好:共軍打城至少七成打點、國軍至少七成固守(裁決是八成)", () => {
+  const t = bTodo(); if (t) return t;
+  const r = play(9001, games(20), "easy", "easy", MB);
+  const c = clean(r, "簡單對簡單(B)"); if (c !== true) return c;
+  if (!(r.siege.ccp.n >= 20 && r.siege.kmt.n >= 20)) return `打城 ${r.siege.ccp.n} 次、回答 ${r.siege.kmt.n} 次:各要至少 20 次才看得出比例`;
+  const point = (r.siege.ccp.by.point || {}).drawn || 0, hold = (r.siege.kmt.by.hold || {}).drawn || 0;
+  return all(ok(point >= 0.7 * r.siege.ccp.n, `共軍打點 ${point} / ${r.siege.ccp.n}(${pct(point, r.siege.ccp.n)},至少七成)`),
+    ok(hold >= 0.7 * r.siege.kmt.n, `國軍固守 ${hold} / ${r.siege.kmt.n}(${pct(hold, r.siege.kmt.n)},至少七成)`),
+    eq(B.EASY_SIEGE && J(B.EASY_SIEGE), J({ point: 0.8, hold: 0.8 }), "B.EASY_SIEGE"),
+    ok(true, `打點 ${pct(point, r.siege.ccp.n)}、固守 ${pct(hold, r.siege.kmt.n)}`));
 });
 
 // ---------------------------------------------------------------- verdict
