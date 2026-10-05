@@ -43,11 +43,15 @@ function gauss(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 const hand = (st, s) => st.hands[s] || [];
-// Mechanism B (#26, the option `mechanismB`): the bot does not know it yet (the
-// next issue teaches it). It only keeps its plays legal: an attack on a city
-// that must name a plan is offered once per plan, each scored like any
-// candidate; a hidden plan in its guess is drawn at random (`determinize`); a
-// 撤 is spread where there is room (`withdrawPoints`). Off B, a target is just itself.
+// Mechanism B (#26, the option `mechanismB`). Inside the bot's own simulations
+// (a candidate played out, the other side's reply of 困難) an attack on a city
+// that must name a plan is offered once per plan, and the Nationalists' answer
+// in the simulation is their best one for that plan: an approximation of the
+// guessing game that errs against the attacker. A hidden plan in the guess is
+// drawn at random (`determinize`); a 撤 is spread where there is room
+// (`withdrawPoints`). The decisions themselves -- the Communists' attack on a
+// city, the Nationalists' answer -- are a zero-sum game (#27, `siegeGame` below).
+// Off B, a target is just itself.
 const attacks = (st, side, target) => (E.siegeNeeded(st, side, target) ? E.SIEGE_PLANS.map((siege) => ({ target, siege })) : [{ target }]);
 const inNortheast = (id) => SPACE[id].region === "northeast";
 const isCity = (id) => SPACE[id].kind === "city";
@@ -661,19 +665,39 @@ export function winningPlacements(st, side, ops, card, restrict = null) {
 function winsNow(st, action) { return E.apply(st, action).winner === action.side; }
 
 // Free ops (an enemy card's ops after its event): the best of every use allowed.
-function bestOps(st, who, ops, allowed, rng, card) {
+// `top` (#27) is passed by the decision itself, never inside a simulation: an
+// attack on a city is then one candidate, valued by its 圍點打援 game, and when it
+// is the best its plan is drawn from the game's mix; `top.game` gets the game.
+function bestOps(st, who, ops, allowed, rng, card, top = null) {
   const aid = card && E.isAid(card) ? card : undefined;
   const o = E.opsOptions(st, who, aid);
-  const cands = [];
+  const cands = [], sieges = new Set();
   if (allowed.includes("place")) {
     const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
     for (const pts of winningPlacements(st, who, ops, aid)) cands.push({ use: "place", points: pts });
   }
-  if (allowed.includes("campaign")) for (const t of o.campaignTargets) for (const x of attacks(st, who, t)) cands.push({ use: "campaign", ...x });
+  if (allowed.includes("campaign")) {
+    for (const t of o.campaignTargets) {
+      if (top && E.siegeNeeded(st, who, t)) { const x = { use: "campaign", target: t, siege: E.SIEGE_PLANS[0] }; sieges.add(x); cands.push(x); }
+      else for (const x of attacks(st, who, t)) cands.push({ use: "campaign", ...x });
+    }
+  }
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
   if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", ...attacks(st, who, o.campaignTargets[0])[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
-  return bestOf(st, who, cands, rng);
+  if (!sieges.size) return bestOf(st, who, cands, rng);
+  // bestOf's loop, with an attack on a city valued by its game (an answer to a pending: no noise).
+  let best = null, bestV = -Infinity, bestG = null;
+  for (const ch of cands) {
+    const a = { type: "choose", side: who, choice: ch };
+    let v, g = null;
+    if (sieges.has(ch)) { g = siegeGame(st, who, a, rng, 0); v = g.game.value; }
+    else v = meanEval(st, a, who, rng, rollsFor(st, a));
+    if (v > bestV) { bestV = v; best = ch; bestG = g; }
+  }
+  if (!bestG) return best;
+  top.game = bestG.game;
+  return { ...best, siege: drawFrom(bestG.game.mix, rng) };
 }
 // A card choice of `n` cards: every set of up to two, else greedy one by one.
 function cardSets(p) {
@@ -707,6 +731,143 @@ export function answer(st, p, who, rng) {
   }
 }
 
+// ---------- 圍點打援 as a zero-sum game (#27) ----------
+// The owner's note (mechanisms, B, 「bot」): value every cell -- the Communists'
+// plan (打點 / 打援) against each answer of the Nationalists (固守 / 增援 / 突圍)
+// -- by the board it leaves, solve the zero-sum game, draw from the mix; 「容易」
+// leans to one cell so a player can learn it, 「困難」 plays the equilibrium.
+// Orchestrator 裁決 #27: normal and hard both solve (normal's values carry its
+// noise); easy is the random player with the lean below; 進剿's 守 / 撤 is an
+// ordinary choice. A cell is valued by the side deciding, with its own
+// evaluation; the Communists' −1 / +1 inside a cell is their best one.
+export const EASY_SIEGE = { point: 0.8, hold: 0.8 };
+const SIEGE_MARK = Symbol("siege");
+const mechB = (st) => !!(st.options && st.options.mechanismB);
+
+// The value of the zero-sum game M (M[i][j] what the row player gets; rows
+// maximise, columns minimise) and an equilibrium: { row, col, value }, the two
+// strategies as arrays of probabilities. Exact for games with at most two rows
+// or two columns (the only ones 圍點打援 makes: 2 plans × the answers).
+export function zeroSum(M) {
+  const r = M.length, c = r ? M[0].length : 0;
+  if (!r || !c || M.some((row) => row.length !== c)) throw new Error(`zeroSum: not a matrix ${JSON.stringify(M)}`);
+  if (r === 1) {
+    let j = 0;
+    for (let k = 1; k < c; k++) if (M[0][k] < M[0][j]) j = k;
+    return { row: [1], col: M[0].map((_, k) => (k === j ? 1 : 0)), value: M[0][j] };
+  }
+  if (r === 2) return twoRows(M);
+  if (c <= 2) { // the column player's game: −Mᵀ, its rows maximising
+    const s = zeroSum(M[0].map((_, j) => M.map((row) => -row[j])));
+    return { row: s.col, col: s.row, value: -s.value };
+  }
+  throw new Error(`zeroSum: ${r} × ${c} (only 1 or 2 rows or columns)`);
+}
+// Two rows: the row player's p on row 0 gets f(p) = min_j (p·a_j + (1 − p)·b_j),
+// the lower envelope of the columns' lines, concave; its maximum lies at p = 0,
+// p = 1 or where two lines cross, and every such p is tried (a tie keeps the
+// first). The columns' answer is read at that p from the lines that reach the
+// value there (`active`): at p = 0 the one sloping down most, at p = 1 the one
+// sloping up most, inside a flat one if any, else one rising and one falling
+// line mixed so that both rows get the value.
+function twoRows(M) {
+  const [a, b] = M, m = a.length;
+  const big = Math.max(1, ...a.map(Math.abs), ...b.map(Math.abs)), eps = 1e-9 * big;
+  const line = (j, p) => p * a[j] + (1 - p) * b[j], slope = (j) => a[j] - b[j];
+  const f = (p) => { let v = Infinity; for (let j = 0; j < m; j++) v = Math.min(v, line(j, p)); return v; };
+  const ps = [0, 1];
+  for (let j = 0; j < m; j++) for (let k = j + 1; k < m; k++) {
+    const d = slope(j) - slope(k);
+    if (d === 0) continue;
+    const p = (b[k] - b[j]) / d;
+    if (p > 0 && p < 1) ps.push(p);
+  }
+  let p = ps[0], v = f(p);
+  for (const x of ps.slice(1)) { const fx = f(x); if (fx > v + eps) { p = x; v = fx; } }
+  const active = [];
+  for (let j = 0; j < m; j++) if (line(j, p) <= v + eps) active.push(j);
+  const col = new Array(m).fill(0);
+  const pick = (better) => active.reduce((x, y) => (better(slope(y), slope(x)) ? y : x));
+  if (p === 0) col[pick((s, t) => s < t)] = 1;
+  else if (p === 1) col[pick((s, t) => s > t)] = 1;
+  else {
+    const flat = active.find((j) => Math.abs(slope(j)) <= eps);
+    const up = active.filter((j) => slope(j) > eps), down = active.filter((j) => slope(j) < -eps);
+    if (flat != null || !up.length || !down.length) col[pick((s, t) => Math.abs(s) < Math.abs(t))] = 1;
+    else {
+      const u = up[0], d = down[0], su = slope(u), sd = slope(d);
+      col[u] = -sd / (su - sd); col[d] = su / (su - sd);
+    }
+  }
+  return { row: [p, 1 - p], col, value: v };
+}
+// A label drawn from a mix { label: probability }: never one of probability 0.
+function drawFrom(mix, rng) {
+  const keys = Object.keys(mix).filter((k) => mix[k] > 0);
+  let u = rng.next() * keys.reduce((t, k) => t + mix[k], 0);
+  for (const k of keys) { u -= mix[k]; if (u < 0) return k; }
+  return keys[keys.length - 1];
+}
+// The action with its plan: a play's `siege`, or an ops choice's.
+const withPlan = (a, plan) => (a.type === "play" ? { ...a, siege: plan } : { ...a, choice: { ...a.choice, siege: plan } });
+// `action` (an attack on a city by the Communists) played on `st` up to the
+// Nationalists' answer: the pendings on the way, if any, answered as in `simulate`.
+function untilAsked(st, action, rng) {
+  let s = E.apply(st, action);
+  for (let guard = 0; s.pending && s.pending.tag !== "siege" && s.winner == null && guard < 16; guard++) {
+    s = E.apply(s, { type: "choose", side: s.pending.who, choice: answer(s, s.pending, s.pending.who, rng) });
+  }
+  if (!s.pending || s.pending.tag !== "siege") throw new Error(`siegeGame: ${JSON.stringify(action)} did not reach the Nationalists' answer (phase ${s.phase}, pending ${s.pending && s.pending.tag})`);
+  return s;
+}
+// The game, for `side`, from the two states that ask the Nationalists (the plan
+// 打點, then 打援): each answer played out on each, valued by `side` (plus
+// `noise` per cell), solved. { game, raw (the value without the noise), cells }.
+function solveSiege(asked, side, rng, noise) {
+  const rows = E.SIEGE_PLANS.slice(), cols = asked[0].pending.options.map((o) => o.id);
+  if (JSON.stringify(asked[1].pending.options.map((o) => o.id)) !== JSON.stringify(cols)) throw new Error("siegeGame: the answers differ by plan");
+  const cells = asked.map((s) => cols.map((c) => simulate(s, { type: "choose", side: KMT, choice: c }, rng)));
+  const raw = cells.map((r) => r.map((s) => evaluate(s, side)));
+  const values = noise ? raw.map((r) => r.map((v) => v + noise * gauss(rng))) : raw;
+  const T = (M) => M[0].map((_, j) => M.map((r) => r[j]));
+  // The Communists choose a row; the Nationalists, who maximise their own values, a column.
+  const solve = (M) => (side === CCP ? zeroSum(M) : zeroSum(T(M)));
+  const s = solve(values), mine = side === CCP ? rows : cols, theirs = side === CCP ? cols : rows;
+  const label = (keys, ps) => Object.fromEntries(keys.map((k, i) => [k, ps[i]]));
+  return {
+    game: { rows, cols, values, mix: label(mine, s.row), against: label(theirs, s.col), value: s.value },
+    raw: noise ? solve(raw).value : s.value,
+    cells,
+  };
+}
+// The Communists' attack on a city (`action`, plan not yet named) on the guess `st`.
+function siegeGame(st, side, action, rng, noise) {
+  return solveSiege(E.SIEGE_PLANS.map((plan) => untilAsked(st, withPlan(action, plan), rng)), side, rng, noise);
+}
+// The Nationalists asked to answer on the guess `st`: the plan face down, so
+// each row puts its own plan on the step (the guess's random one is never read).
+function siegeAnswer(st, side, rng) {
+  if (!st.plan.length || st.plan[0].do !== "siege") throw new Error(`siegeAnswer: the plan's first step is ${st.plan[0] && st.plan[0].do}`);
+  const asked = E.SIEGE_PLANS.map((plan) => ({ ...st, plan: [{ ...st.plan[0], plan }, ...st.plan.slice(1)] }));
+  const { game } = solveSiege(asked, side, rng, 0);
+  return { type: "choose", side, choice: drawFrom(game.mix, rng), game, why: "siege" };
+}
+// Easy (orchestrator 裁決 #27): the random player, leaning to 打點 and to 固守.
+function easySiege(view, side, rng) {
+  const p = view.pending;
+  if (p && p.tag === "siege" && p.who === side) {
+    const ids = p.options.map((o) => o.id), rest = ids.filter((id) => id !== "hold");
+    return { type: "choose", side, choice: !rest.length || rng.next() < EASY_SIEGE.hold ? "hold" : pickOne(rest, rng), why: "random" };
+  }
+  const a = randomAction(view, side, rng);
+  if (!a) return a;
+  const plan = () => (rng.next() < EASY_SIEGE.point ? "point" : "relief");
+  if (a.type === "play" && a.siege) a.siege = plan();
+  else if (a.type === "choose" && a.choice && typeof a.choice === "object" && a.choice.siege) a.choice = { ...a.choice, siege: plan() };
+  a.why = "random";
+  return a;
+}
+
 // Zongheng #123: never offer a play that pushes 民生 to 崩潰 against `side`
 // right now, unless every legal play does (`E.actionWouldCollapse`). Above
 // 民生 4 nothing a card does in one play can reach 1, so the check is skipped.
@@ -724,9 +885,13 @@ function dropSelfCollapse(st, side, list) {
 // 馬歇爾調處 with its strongest pair; and the aid card (`legal().aid`): 扶植
 // (蘇援 also all in the Northeast for its +1, 美援 also all in cities for the
 // airlift), 奇襲 and 遊說.
-function actionCandidates(st, side, L) {
+// `sieges` (#27, a Set) is passed by the decision itself, never inside a
+// simulation: an attack on a city that must name a plan is then ONE candidate
+// (its `siege` a placeholder, the plan is drawn from its game), put in the set.
+function actionCandidates(st, side, L, sieges = null) {
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   const out = [];
+  const atk = (t) => (sieges && E.siegeNeeded(st, side, t) ? [{ target: t, siege: E.SIEGE_PLANS[0], [SIEGE_MARK]: true }] : attacks(st, side, t));
   const lob = (targets) => lobbyTargetsFor(st, side, targets);
   const memo = new Map();
   const placed = (ops, card, restrict, tag) => {
@@ -748,7 +913,7 @@ function actionCandidates(st, side, L) {
       if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, points });
       winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", ...order, points: pts }));
     }
-    if (u.campaign) for (const t of u.campaign.targets) for (const x of attacks(st, side, t)) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
+    if (u.campaign) for (const t of u.campaign.targets) for (const x of atk(t)) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
     if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", ...order, target: t.id });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
@@ -759,7 +924,7 @@ function actionCandidates(st, side, L) {
         if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
         winPlace(pops, (pts) => ({ type: "play", side, card: id, pair, use: "place", points: pts }));
       }
-      if (u.campaign) for (const t of u.campaign.targets) for (const x of attacks(st, side, t)) out.push({ type: "play", side, card: id, pair, use: "campaign", ...x });
+      if (u.campaign) for (const t of u.campaign.targets) for (const x of atk(t)) out.push({ type: "play", side, card: id, pair, use: "campaign", ...x });
       if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
     }
   }
@@ -773,9 +938,10 @@ function actionCandidates(st, side, L) {
       if (id === "american_aid") offer(placed(a.ops, id, isCity, "city"));
       winPlace(a.ops, (pts) => play("place", { points: pts }), id);
     }
-    if (a.campaign) for (const t of a.campaign.targets) for (const x of attacks(st, side, t)) out.push(play("campaign", x));
+    if (a.campaign) for (const t of a.campaign.targets) for (const x of atk(t)) out.push(play("campaign", x));
     if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
+  if (sieges) for (const a of out) if (a[SIEGE_MARK]) { delete a[SIEGE_MARK]; sieges.add(a); }
   return dropSelfCollapse(st, side, out);
 }
 
@@ -785,8 +951,9 @@ function replyValue(st, action, side, rng) {
   if (k > 1) { let t = 0; for (let i = 0; i < k; i++) t += replyOnce({ ...st, rngState: rng.int(2 ** 31) }, action, side, rng); return t / k; }
   return replyOnce(st, action, side, rng);
 }
-function replyOnce(st, action, side, rng) {
-  const s = simulate(st, action, rng);
+function replyOnce(st, action, side, rng) { return replyFrom(simulate(st, action, rng), side, rng); }
+// The other side's best one-ply reply from `s`, a state already played out.
+function replyFrom(s, side, rng) {
   if (s.winner != null) return evaluate(s, side);
   const opp = 1 - side;
   if (s.phase !== "action" || s.actor !== opp || s.pending) return evaluate(s, side);
@@ -868,29 +1035,76 @@ function surestWin(view, side, st, wins) {
 
 // ---------- the decision ----------
 // `view` is `E.view(st, side)`; it is not changed. The only chance is `rng`.
+// Mechanism B (#27): an attack on a city by the Communists (an action-round
+// candidate, or an attack in an ops choice) and the Nationalists' answer to one
+// are 圍點打援 games (`siegeGame`, `siegeAnswer`); the decision carries its `game`
+// (the bot's note: rows, cols, values, mix, against, value), which is not part
+// of the move and is taken off before it reaches the engine.
 export function decide(view, side, level = "normal", rng) {
-  if (level === "easy") { const a = randomAction(view, side, rng); if (a) a.why = "random"; return a; }
+  if (level === "easy") {
+    if (mechB(view)) return easySiege(view, side, rng);
+    const a = randomAction(view, side, rng); if (a) a.why = "random"; return a;
+  }
   const st = determinize(view, side, rng);
   const L = E.legal(st, side);
   const noise = NOISE[level] ?? 0.6;
   switch (L.kind) {
-    case "pending": return { type: "choose", side, choice: answer(st, L.pending, side, rng), why: L.pending.kind };
+    case "pending": {
+      const p = L.pending;
+      if (p.tag === "siege" && side === KMT) return siegeAnswer(st, side, rng);
+      if (p.kind === "ops" && side === CCP && mechB(st)) {
+        const top = {}, choice = bestOps(st, side, p.ops, p.allowed, rng, p.card, top);
+        return { type: "choose", side, choice, ...(top.game ? { game: top.game } : {}), why: p.kind };
+      }
+      return { type: "choose", side, choice: answer(st, p, side, rng), why: p.kind };
+    }
     case "headline": return L.cards.length ? { type: "headline", side, card: bestHeadline(view, side, L.cards, rng, level), why: "headline" } : null;
     case "action": {
-      const cands = actionCandidates(st, side, L);
+      const sieges = new Set();
+      const cands = actionCandidates(st, side, L, sieges);
       if (!cands.length) return null;
-      const scored = cands.map((a) => { const raw = evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) }; });
+      const games = new Map();
+      const scored = cands.map((a) => {
+        if (sieges.has(a)) { const g = siegeGame(st, side, a, rng, noise); games.set(a, g); return { a, raw: g.raw, v: g.game.value }; }
+        const raw = evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) };
+      });
       scored.sort((x, y) => y.v - x.v);
-      const sure = surestWin(view, side, st, scored.filter((x) => x.raw >= 1000 - 1e-6));
-      if (sure) return { ...sure, why: `${sure.use}:${sure.card}` };
+      // An attack on a city goes to the win check with the plan it would draw.
+      const plans = new Map();
+      const wins = scored.filter((x) => x.raw >= 1000 - 1e-6).map((x) => {
+        if (!games.has(x.a)) return x;
+        const a = { ...x.a, siege: drawFrom(games.get(x.a).game.mix, rng) };
+        plans.set(a, x.a);
+        return { ...x, a };
+      });
+      const sure = surestWin(view, side, st, wins);
+      if (sure) {
+        const g = plans.has(sure) && games.get(plans.get(sure));
+        return { ...sure, ...(g ? { game: g.game } : {}), why: `${sure.use}:${sure.card}` };
+      }
       const top = scored.slice(0, level === "hard" ? 4 : 1);
       if (level === "hard" && top.length > 1) {
-        for (const t of top) t.v = replyValue(st, t.a, side, rng) + noise * gauss(rng);
+        for (const t of top) t.v = (games.has(t.a) ? siegeReply(games.get(t.a), side, rng) : replyValue(st, t.a, side, rng)) + noise * gauss(rng);
         top.sort((x, y) => y.v - x.v);
       }
       const a = top[0].a;
+      if (games.has(a)) {
+        const g = games.get(a).game;
+        return { ...a, siege: drawFrom(g.mix, rng), game: g, why: `${a.use}:${a.card}` };
+      }
       return { ...a, why: `${a.use}:${a.card}` };
     }
     default: return null;
   }
+}
+// 困難's look one ply further for an attack on a city: the other side's best
+// reply after each cell, weighted by the two mixes (cells of probability 0 skipped).
+function siegeReply(g, side, rng) {
+  const { mix, against, rows, cols } = g.game;
+  let v = 0;
+  for (let i = 0; i < rows.length; i++) for (let j = 0; j < cols.length; j++) {
+    const w = mix[rows[i]] * against[cols[j]];
+    if (w > 0) v += w * replyFrom(g.cells[i][j], side, rng);
+  }
+  return v;
 }
