@@ -86,6 +86,11 @@ const SPEC = {
   },
   toWin: { mie: 3, seals: 5 },
   free: { ccp: 3, kmt: 4 },
+  // P10 (#23) as the owner fixed it on #24 (2026-10-04, 「控制的鄉加察綏」): 受降 -- the Communists free-place only into
+  // the villages they control at that moment (red ≥ blue + S), and into 察綏 (晉察冀 held 張家口 from August 1945).
+  // At the start: 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4), plus 察綏 (2/2, nobody's).
+  // Group 4 recomputes it from SPEC_SPACES.
+  freeCcpIn: ["jizhong", "chasui", "taihang", "jiluyu", "shanbei"],
   deck: {
     total: 72,
     // era: [Nationalist, Communist, neutral, scoring]
@@ -231,7 +236,7 @@ check("開局沒有整編或易幟標記", () => {
 });
 
 check("200 個種子都開得了局,兩邊在第一個決定都有合法行動", () => {
-  const villages = E.SPACES.filter((s) => s.kind === "village").map((s) => s.id);
+  const villages = SPEC.freeCcpIn; // P10 (#23): only the villages the Communists control at the start
   const cities = E.SPACES.filter((s) => s.kind === "city" && s.region !== "northeast").map((s) => s.id);
   const N = 200;
   let hands = null;
@@ -618,14 +623,20 @@ check("supply 是一個開關:預設開;關掉時兩個效果都沒有,讀數照
 //               免費放 4 點。本回合第一個奇襲的一方,民心往對手移 2;若是國軍,美國支持再 −1。
 //   3 全面進攻  美國支持 −1。國軍奇襲 +1。
 //   4 重點進攻  國軍在西北、華東中原奇襲 +1,在其他區 −1。
-//   5 戰略反攻  蘇聯支持 +1。共軍本回合一次扶植可以不受相鄰限制放進一個鄉;共軍對鄉的奇襲 +1。
+//   5 戰略反攻  蘇聯支持 +1。共軍本回合一次扶植可以不受相鄰限制放進一個鄉;共軍對鄉的奇襲 +2。
 //   6 行憲      國軍行憲軌 ≥ 2 的話美國支持 +1。國軍每推進行憲一格,民心往國軍移 1,但共軍在任一座
 //               有藍的城放 1 點、不受相鄰限制。
-//   7 決戰      蘇聯支持 +1。共軍對城的奇襲 +1,而且不推民生、不受封鎖。本回合孤城結算時藍 −2。
+//   7 決戰      蘇聯支持 +1。共軍對城的奇襲不加值,但不推民生、不受封鎖。本回合孤城結算時藍 −2。
 //   8 和談      美國支持 −2。共軍對城的奇襲不推民生、不受封鎖。回合開始時國軍可以棄 2 張手牌提和:
 //               本回合雙方各只有 4 個行動回合;共軍可以拒絕:民心往國軍移 2,照常進行。
 //   回合結構:1 時局(翻開,做它回合開始的效果)→ 2 補牌到手牌上限 → 3 標題 → 4 行動回合:共軍先,輪流,
-//             回合數多的一方在最後連續行動。手牌 / 行動回合:接收期 國 9/7 共 8/6;易勢期 9/7、9/7;決戰期 國 8/6 共 9/7。
+//             回合數多的一方在最後連續行動。手牌 / 行動回合:接收期 國 9/7 共 8/7;易勢期 國 9/6 共 9/8;決戰期 國 9/7 共 8/6。
+//   受降的免費放置:共軍只能放進開局時共軍控制的鄉。
+//
+// owner 裁決(#23, 2026-10-04): the owner adopted the tuning proposal P10. Changed here from the rulebook's first
+// numbers: 戰略反攻 共軍打鄉 +1 → +2; 決戰 共軍打城 +1 → 不加值; 接收期行動回合 共 6 → 7; 易勢期 共 7 / 國 7 → 8 / 6;
+// 決戰期 手牌 共 9 / 國 8 → 8 / 9、行動回合 共 7 / 國 6 → 6 / 7; 共軍的免費放置只能放進自己控制的鄉. (The 民心 and 整編
+// changes of P10 are in group 11.)
 //   細則:第 1 回合東北三座城不能放點,包括事件與外援牌。國軍提和、共軍拒絕,各是一個要回答的決定,
 //         在第 8 回合補牌之前。提和棄的 2 張牌事件不觸發,不能棄記分卡。
 //   支持度:兩條軌各 0 到 4,美國支持開局 4,蘇聯支持開局 1。沒有牌介入的話,美國支持是
@@ -641,7 +652,7 @@ section("4 時局(機制 F)、依期不對稱的回合、支持度軌");
 
 const SPEC_SITUATIONS = [[1, "受降"], [2, "停戰"], [3, "全面進攻"], [4, "重點進攻"], [5, "戰略反攻"], [6, "行憲"], [7, "決戰"], [8, "和談"]];
 // era: [from turn, hand size [共, 國], action rounds [共, 國]]
-const SPEC_ERAS = { takeover: [1, [8, 9], [6, 7]], turning: [4, [9, 9], [7, 7]], decisive: [7, [9, 8], [7, 6]] };
+const SPEC_ERAS = { takeover: [1, [8, 9], [7, 7]], turning: [4, [9, 9], [8, 6]], decisive: [7, [8, 9], [6, 7]] }; // P10 (#23)
 // With 行憲軌 ≥ 2 at turn 6 and no card: 美國支持, 蘇聯支持, turn by turn.
 const SPEC_US = [4, 4, 3, 3, 3, 4, 4, 2], SPEC_SU = [1, 1, 1, 1, 2, 2, 3, 3];
 const NE_CITIES = ["changchun", "shenyang", "jinzhou"], NE_ALL = ["beiman", "changchun", "siping", "shenyang", "liaoxi", "jinzhou"];
@@ -703,7 +714,7 @@ check("常數:八張時局的回合與名稱;三期的手牌上限與行動回�
   return ok(true, `${E.SITUATIONS.map((s) => s.zh).join("、")};手牌 ${E.ERAS.map((e) => e.hand.join("/")).join("、")};行動回合 ${E.ERAS.map((e) => e.rounds.join("/")).join("、")}(共/國)`);
 });
 
-check("開局:美國支持 4、蘇聯支持 1;手牌 共 8 國 9;行動回合 共 6 國 7", () => {
+check("開局:美國支持 4、蘇聯支持 1;手牌 共 8 國 9;行動回合 共 7 國 7", () => {
   const t = sitTodo(); if (t) return t;
   let st = E.createGame(5);
   const first = J(st.support);
@@ -711,19 +722,41 @@ check("開局:美國支持 4、蘇聯支持 1;手牌 共 8 國 9;行動回合 �
   st = E.apply(st, { type: "choose", side: KMT, choice: st.pending.options.slice(0, SPEC.free.kmt) });
   return all(
     eq(first, "[1,4]", "createGame 之後的支持度 [蘇聯, 美國]"), eq(J(st.support), "[1,4]", "免費放置之後的支持度"),
-    eq(st.phase, "headline", "phase"), eq(lens(st), "[8,9]", "手牌 [共, 國]"), eq(J(st.rounds), "[6,7]", "st.rounds [共, 國]"),
+    eq(st.phase, "headline", "phase"), eq(lens(st), "[8,9]", "手牌 [共, 國]"), eq(J(st.rounds), "[7,7]", "st.rounds [共, 國]"),
     ok(true, `支持度 ${J(st.support)}(蘇聯、美國);手牌 ${lens(st)};行動回合 ${J(st.rounds)}`),
   );
 });
 
-check("補牌:第 4 回合 共 9 國 9、行動回合 7/7,易勢期牌庫洗入;第 7 回合 共 9 國 8、行動回合 7/6", () => {
+// P10 (#23, #24): the Communists' free placement of 受降 goes only into the villages they control at the start, and 察綏.
+// Control is red ≥ blue + stability (group 11's words); from the rulebook's opening table (SPEC_SPACES) that is
+// 冀中 2/0 (S 2)、太行 4/0 (S 3)、冀魯豫 3/0 (S 3)、陝北 4/0 (S 4) -- not 魯中 3/2, 淮海 2/1, 北滿 1/0; and 察綏 (2/2, nobody's), which the
+// owner allowed on #24 (晉察冀 held 張家口 from August 1945).
+const SPEC_CCP_FREE = SPEC.freeCcpIn;
+check("受降:共軍的免費放置只能放進開局時共軍控制的鄉與察綏;國軍照舊(東北以外的城)", () => {
+  const t = sitTodo(); if (t) return t;
+  const fromTable = Object.entries(SPEC_SPACES).filter(([id, [kind, , s, b, r]]) => kind === "village" && (r >= b + s || id === "chasui")).map(([id]) => id);
+  const pre = same(fromTable, SPEC_CCP_FREE, "從開局表算出來的共軍控制的鄉加察綏(這支測試自己的對照)"); if (pre !== true) return pre;
+  const lists = [1, 7, 23].map((seed) => { const st = E.createGame(seed); return st.pending && st.pending.who === CCP ? st.pending.options.slice() : null; });
+  if (lists.some((l) => l == null)) return "createGame 之後的待決定不是共軍的免費放置";
+  const st = E.createGame(7), kmt = E.apply(st, { type: "choose", side: CCP, choice: ["jizhong", "taihang", "shanbei"] });
+  const bad = thrown(() => E.apply(E.createGame(7), { type: "choose", side: CCP, choice: ["luzhong", "huaihai", "jizhong"] }));
+  const kcities = Object.entries(SPEC_SPACES).filter(([id, [kind]]) => kind === "city" && !NE_CITIES.includes(id)).map(([id]) => id);
+  return all(
+    ...lists.map((l, i) => same(l, SPEC_CCP_FREE, `第 ${i + 1} 個種子:共軍可以放的鄉`)),
+    eq(bad != null, true, "共軍把免費的點放進魯中、淮海(沒有控制)沒有被拒絕"),
+    eq(kmt.pending && kmt.pending.who, KMT, "共軍放完之後輪到國軍"), same(kmt.pending ? kmt.pending.options : [], kcities, "國軍可以放的城(東北以外的城,照舊)"),
+    ok(true, `共軍:${zhs(SPEC_CCP_FREE)};放進魯中、淮海被拒絕(「${bad}」);國軍:東北以外的 ${kcities.length} 座城`),
+  );
+});
+
+check("補牌:第 4 回合 共 9 國 9、行動回合 共 8 國 6,易勢期牌庫洗入;第 7 回合 共 8 國 9、行動回合 共 6 國 7", () => {
   const t = sitTodo(); if (t) return t;
   const t4 = enter(4, { refill: true }), t7 = enter(7, { refill: true });
   return all(
     eq(t4.turn, 4, "回合"), eq(t4.phase, "headline", "第 4 回合補牌後的 phase"), eq(t4.era, "turning", "第 4 回合的期"),
-    eq(t4.later.turning, undefined, "易勢期牌庫還留在 later 裡"), eq(lens(t4), "[9,9]", "第 4 回合的手牌 [共, 國]"), eq(J(t4.rounds), "[7,7]", "第 4 回合的行動回合"),
+    eq(t4.later.turning, undefined, "易勢期牌庫還留在 later 裡"), eq(lens(t4), "[9,9]", "第 4 回合的手牌 [共, 國]"), eq(J(t4.rounds), "[8,6]", "第 4 回合的行動回合"),
     eq(t7.turn, 7, "回合"), eq(t7.era, "decisive", "第 7 回合的期"), eq(t7.later.decisive, undefined, "決戰期牌庫還留在 later 裡"),
-    eq(lens(t7), "[9,8]", "第 7 回合的手牌 [共, 國]"), eq(J(t7.rounds), "[7,6]", "第 7 回合的行動回合"),
+    eq(lens(t7), "[8,9]", "第 7 回合的手牌 [共, 國]"), eq(J(t7.rounds), "[6,7]", "第 7 回合的行動回合"),
     ok(true, `第 4 回合 手牌 ${lens(t4)} 回合 ${J(t4.rounds)};第 7 回合 手牌 ${lens(t7)} 回合 ${J(t7.rounds)}`),
   );
 });
@@ -938,7 +971,7 @@ check("重點進攻:國軍在西北、華東中原奇襲 +1,在其他區 −1", 
   );
 });
 
-check("戰略反攻:蘇聯支持 +1;共軍對鄉的奇襲 +1,對城不加;國軍不加", () => {
+check("戰略反攻:蘇聯支持 +1;共軍對鄉的奇襲 +2,對城不加;國軍不加", () => {
   const t = sitTodo(); if (t) return t;
   let st = enter(5, { support: [1, 3], hands: [["score_north", "gao_shuxun", "shangdang_campaign"], ["score_east", "kunming_incident", "sino_soviet_treaty"]] });
   const sup = J(st.support);
@@ -949,10 +982,10 @@ check("戰略反攻:蘇聯支持 +1;共軍對鄉的奇襲 +1,對城不加;國軍
   const b = act(a, KMT, "kunming_incident", "campaign", { target: "jizhong" });
   const c = act(b, CCP, "shangdang_campaign", "campaign", { target: "zhengzhou" });
   return all(
-    eq(rb(a, "dabieshan"), "3/0", "共軍 2 點奇襲大別山(鄉,+1:移除 2、放 1)之後 紅/藍"),
+    eq(rb(a, "dabieshan"), "4/0", "共軍 2 點奇襲大別山(鄉,+2:移除 2、放 2)之後 紅/藍"),
     eq(rb(b, "jizhong"), "0/0", "國軍 2 點奇襲冀中(不加)之後 紅/藍"),
     eq(rb(c, "zhengzhou"), "0/0", "共軍 2 點奇襲鄭州(城,不加)之後 紅/藍"),
-    ok(true, "蘇聯支持 1→2;共軍打鄉 2/2→3/0;國軍打鄉 2/0→0/0;共軍打城 0/2→0/0"),
+    ok(true, "蘇聯支持 1→2;共軍打鄉 2/2→4/0;國軍打鄉 2/0→0/0;共軍打城 0/2→0/0"),
   );
 });
 
@@ -1037,7 +1070,7 @@ check("行憲:事件推進(直接呼叫 reformAdvance)一樣觸發;共軍推進�
   );
 });
 
-check("決戰:蘇聯支持 +1;共軍對城的奇襲 +1、不推民生、不受封鎖;對鄉照舊(不加、受封鎖)", () => {
+check("決戰:蘇聯支持 +1;共軍對城的奇襲不加值、不推民生、不受封鎖;對鄉照舊(不加、受封鎖)", () => {
   const t = sitTodo(); if (t) return t;
   const hands = [["score_north", "gao_shuxun", "shangdang_campaign", "into_manchuria"], []];
   const seven = toAction(enter(7, { hands, support: [2, 4], weariness: 2 })), six = toAction(enter(6, { hands, support: [2, 4], weariness: 2 }));
@@ -1056,9 +1089,9 @@ check("決戰:蘇聯支持 +1;共軍對城的奇襲 +1、不推民生、不受�
     eq(["xuzhou", "nanjing", "taiyuan"].every((id) => t7.includes(id)), true, "第 7 回合共軍的奇襲目標要有徐州(要衝)、南京(本土)、太原(華北的城)"),
     eq(t7.includes("chasui") || t7.includes("jinzhong"), false, "第 7 回合華北的鄉(察綏、晉中)解鎖了"),
     eq(t7.includes("dabieshan"), true, "大別山(華東中原的鄉,本來就沒有封鎖)不在目標裡"),
-    eq(rb(a, "xuzhou"), "0/0", "共軍 2 點 +1 奇襲徐州之後 紅/藍"), eq(a.weariness, 2, "奇襲徐州(城的要衝)之後的民生"), eq(a.winner, null, "勝者"),
+    eq(rb(a, "xuzhou"), "0/1", "共軍 2 點(不加值)奇襲徐州之後 紅/藍"), eq(a.weariness, 2, "奇襲徐州(城的要衝)之後的民生"), eq(a.winner, null, "勝者"),
     eq(rb(b, "dabieshan"), "2/0", "共軍 2 點奇襲大別山(鄉,不加)之後 紅/藍"),
-    ok(err != null, err == null ? "共軍在凋敝時奇襲察綏(華北的鄉)沒有被拒絕" : `蘇聯支持 2→3;徐州 0/3→0/0 民生不動;大別山 2/2→2/0;察綏仍被封鎖(「${err}」)`),
+    ok(err != null, err == null ? "共軍在凋敝時奇襲察綏(華北的鄉)沒有被拒絕" : `蘇聯支持 2→3;徐州 0/3→0/1 民生不動;大別山 2/2→2/0;察綏仍被封鎖(「${err}」)`),
   );
 });
 
@@ -1130,7 +1163,7 @@ check("和談:提和是三個決定(國軍提不提、棄哪 2 張、共軍接�
   return all(
     eq(J(c.rounds), "[4,4]", "接受之後的 st.rounds"), eq(c.mandate, m0, "接受之後的民心"), eq(c.phase, "headline", "phase"), eq(c.pending, null, "還有待決定"),
     eq(two.every((x) => c.discard.includes(x)), true, "棄的 2 張在棄牌堆"), eq(two.some((x) => c.removed.includes(x) || c.hands[KMT].includes(x)), false, "棄的 2 張被移出遊戲或還在手上"),
-    eq(lens(c), "[9,8]", "之後補牌到 [共 9, 國 8]"), eq(c.hands[KMT].includes("score_east") && c.hands[KMT].includes("sino_soviet_treaty"), true, "國軍留在手上的兩張還在"),
+    eq(lens(c), "[8,9]", "之後補牌到 [共 8, 國 9]"), eq(c.hands[KMT].includes("score_east") && c.hands[KMT].includes("sino_soviet_treaty"), true, "國軍留在手上的兩張還在"),
     eq(w.winner != null, true, `空手的那一局要走到終局(turn ${w.turn},phase ${w.phase})`), eq(roundsOf(w, 8), seq([4, 4]), "接受之後第 8 回合的行動順序"),
     ok(true, `國軍提和、棄 2 張(事件不觸發,進棄牌堆)、共軍接受:行動回合 ${J(c.rounds)},然後才補牌 ${lens(c)};行動順序 ${roundsOf(w, 8)}`),
   );
@@ -1149,10 +1182,10 @@ check("和談:共軍拒絕則民心往國軍移 2、照常進行;國軍不提、
   w = choose(choose(w, "offer"), two); w.discard = []; w = choose(w, "refuse");
   const few = enter(8, { hands: [[], ["score_east", "kunming_incident"]] });
   return all(
-    eq(refused.mandate - m0, -2, "共軍拒絕後民心的變動(負 = 往國軍)"), eq(J(refused.rounds), "[7,6]", "共軍拒絕後的 st.rounds"), eq(refused.pending, null, "拒絕之後還有待決定"),
-    eq(w.winner != null, true, `空手的那一局要走到終局(turn ${w.turn},phase ${w.phase})`), eq(roundsOf(w, 8), seq([7, 6]), "拒絕之後第 8 回合的行動順序"),
-    eq(passed.pending, null, "國軍不提之後還有待決定"), eq(passed.mandate, m0, "國軍不提之後的民心"), eq(J(passed.rounds), "[7,6]", "國軍不提之後的 st.rounds"), same(passed.hands[KMT], KH, "國軍不提之後的手牌"), eq(passed.phase, "headline", "phase"),
-    eq(few.turn, 8, "回合"), eq(few.pending, null, "國軍只有 1 張不是記分卡的牌,卻被問了"), eq(few.phase, "headline", "phase"), eq(J(few.rounds), "[7,6]", "st.rounds"),
+    eq(refused.mandate - m0, -2, "共軍拒絕後民心的變動(負 = 往國軍)"), eq(J(refused.rounds), "[6,7]", "共軍拒絕後的 st.rounds"), eq(refused.pending, null, "拒絕之後還有待決定"),
+    eq(w.winner != null, true, `空手的那一局要走到終局(turn ${w.turn},phase ${w.phase})`), eq(roundsOf(w, 8), seq([6, 7]), "拒絕之後第 8 回合的行動順序"),
+    eq(passed.pending, null, "國軍不提之後還有待決定"), eq(passed.mandate, m0, "國軍不提之後的民心"), eq(J(passed.rounds), "[6,7]", "國軍不提之後的 st.rounds"), same(passed.hands[KMT], KH, "國軍不提之後的手牌"), eq(passed.phase, "headline", "phase"),
+    eq(few.turn, 8, "回合"), eq(few.pending, null, "國軍只有 1 張不是記分卡的牌,卻被問了"), eq(few.phase, "headline", "phase"), eq(J(few.rounds), "[6,7]", "st.rounds"),
     ok(true, `拒絕:民心 −2(往國軍)、行動回合 ${J(refused.rounds)}、順序 ${roundsOf(w, 8)};不提:什麼都不動;只有 1 張可棄:不問`),
   );
 });
@@ -2183,9 +2216,9 @@ check("東北冬季攻勢 *(3):共軍對東北任一個鄉免費奇襲,行動點
     eq(rb(b, "siping"), "2/0", "奇襲四平(3 + 1:移除 2、放 2)之後 紅/藍"), same(opts(b), ["changchun", "shenyang"], "可以放的城(與四平相鄰)"),
     eq(redOf(c, "shenyang"), 1, "選瀋陽:瀋陽的紅"), eq(c.pending, null, "還有待決定"),
     eq(rb(s, "siping"), "0/0", "四平藍 4 時(移除 4)之後 紅/藍"), eq(s.pending, null, "沒有因此控制時還有待決定"),
-    eq(rb(f, "siping"), "3/0", "第 5 回合(戰略反攻,共軍打鄉再 +1)之後 紅/藍"),
+    eq(rb(f, "siping"), "4/0", "第 5 回合(戰略反攻,共軍打鄉再 +2)之後 紅/藍"),
     eq(E.controller(held, "siping"), CCP, "四平紅 4 藍 1 時的控制者"), eq(rb(h, "siping"), "4/0", "本來就控制四平時奇襲之後 紅/藍"), eq(h.pending, null, "本來就控制時還有待決定"),
-    eq(where(c, "winter_offensive"), "removed", "牌在哪裡"), ok(true, "四平 0/2→2/0,因此控制,瀋陽放 1;藍 4 時打成 0/0 不控制;第 5 回合是 5 點"),
+    eq(where(c, "winter_offensive"), "removed", "牌在哪裡"), ok(true, "四平 0/2→2/0,因此控制,瀋陽放 1;藍 4 時打成 0/0 不控制;第 5 回合是 6 點"),
   );
 });
 
@@ -2406,13 +2439,13 @@ check("淮海戰役 *(4):共軍對華東中原任一據點奇襲,行動點 4 +2"
   const S = holding(CCP, "huaihai_campaign"), a = ev(S, CCP, "huaihai_campaign");
   const p = pendingIs(a, CCP, "points", "淮海戰役"); if (p !== true) return p;
   const b = choose(a, ["xuzhou"]);
-  // Turn 7 (決戰), 民生 2: a city is still open to the Communists, the attack is one stronger and does not push 民生.
+  // Turn 7 (決戰), 民生 2: a city is still open to the Communists and the attack does not push 民生; since P10 (#23) it is not stronger.
   const seven = holding(CCP, "huaihai_campaign", { turn: 7, weariness: 2 }), c = answer(ev(seven, CCP, "huaihai_campaign"), CCP, "points", ["xuzhou"], "第 7 回合的淮海戰役");
   return all(
     eq(a.pending.n, 1, "要選的據點數"), same(opts(a), ["jinan", "luzhong", "xuzhou", "huaihai", "zhengzhou", "dabieshan"], "可以選的據點(華東中原、有藍)"),
     eq(rb(b, "xuzhou"), "3/0", "奇襲徐州(6 點:移除 3、放 3)之後 紅/藍"), eq(b.weariness, 4, "民生(徐州是城的要衝)"),
-    eq(rb(c, "xuzhou"), "4/0", "第 7 回合(再 +1)奇襲徐州之後 紅/藍"), eq(c.weariness, 2, "第 7 回合的民生(不推)"),
-    eq(where(b, "huaihai_campaign"), "removed", "牌在哪裡"), ok(true, "徐州 0/3→3/0,民生 5→4;第 7 回合是 7 點、不推民生、凋敝時照打"),
+    eq(rb(c, "xuzhou"), "3/0", "第 7 回合(不加值)奇襲徐州之後 紅/藍"), eq(c.weariness, 2, "第 7 回合的民生(不推)"),
+    eq(where(b, "huaihai_campaign"), "removed", "牌在哪裡"), ok(true, "徐州 0/3→3/0,民生 5→4;第 7 回合也是 6 點、不推民生、凋敝時照打"),
   );
 });
 
@@ -2605,6 +2638,10 @@ check("大公報社評(1):對手隨機棄 1 張牌(記分卡除外);若是打出
 //   易幟:共軍控制某勢力的全部據點 → 標記,得民心(綏 3、晉 2、桂 3、馬 2、滇 2;一局一次)。國軍重新控制本據時移除。3 個同時存在,共軍勝。
 //   整編:國軍控制本據且影響力達到上限 → 標記,民心 +1(一局一次)。共軍控制本據時移除。5 個同時存在,國軍勝。
 //   民心到達己方 20 立即勝。使民生到達崩潰者敗北。結算階段手上仍有記分卡者敗北。
+//   owner 裁決(#23, 2026-10-04, P10)改了其中兩條:
+//   整編:另外要國軍控制那一家的全部據點;每回合最多放一個整編標記。
+//   民心:國軍從第 6 回合起、到偏國軍 15 即勝;共軍從第 7 回合起、到偏共軍 20 即勝。國軍能民心勝利以前(第 1–5 回合)
+//         民心最多偏國軍 3;共軍能民心勝利以前最多偏共軍 19。
 //   遷都:回合結算時首都在對手控制下,對手民心 +3,首都遷走(陝北 → 太行;南京 → 廣州);新首都之後在回合末又被控制,該方敗北。
 //   終局:第 8 回合結束後五區各結算一次,民心領先者勝;平手國軍勝。
 //   對手陣營的牌當行動點用:事件照樣觸發,先後由打出者選。
@@ -2770,28 +2807,66 @@ check("整編:國軍控制本據且影響力達到上限;民心 +1 一局一次;
   st.inf.kunming = [0, 5]; E.checkMarkers(st); const full = [st.seals.dian, st.mandate];
   st.inf.kunming = [2, 4]; E.checkMarkers(st); const kept = st.seals.dian;         // nobody controls it: the marker stays
   st.inf.kunming = [5, 2]; E.checkMarkers(st); const gone = st.seals.dian;         // the Communists control the seat
+  st.turn += 1; // P10 (#23): one new marker a turn -- the marker comes back on a later turn
   st.inf.kunming = [0, 5]; E.checkMarkers(st); const again = [st.seals.dian, st.mandate];
-  const five = position({ chasui: { r: 0, b: 4 }, taiyuan: { b: 5 }, guilin: { b: 5 }, lanzhou: { b: 5 }, kunming: { b: 5 } }); E.checkMarkers(five);
+  // P10 (#23): one new marker a turn, so the fifth goes down on its own: the other four are already held.
+  const five = position({ chasui: { r: 0, b: 4 }, taiyuan: { b: 5 }, jinzhong: { r: 0, b: 2 }, guilin: { b: 5 }, lanzhou: { b: 5 }, kunming: { b: 5 } });
+  for (const s of ["sui", "jin", "gui", "ma"]) { five.seals[s] = true; if (five.sealVp) five.sealVp[s] = true; }
+  E.checkMarkers(five);
   return all(
     eq(four, undefined, "昆明藍 4(控制,但沒到上限 5)時滇的整編"), eq(J(full), J([true, -1]), "昆明藍 5:滇整編、民心"), eq(kept, true, "沒有人控制昆明時標記還在"),
     eq(gone, undefined, "共軍控制昆明後的標記"), eq(J(again), J([true, 1]), "國軍再堆到上限:標記回來,整編的民心不再給(−1 加上共軍控制昆明時滇易幟的 +2 = +1)"),
-    eq(five.winner, KMT, "五個整編同時存在的勝者"), eq(five.reason, "alliance", "結束的理由"),
+    eq(five.winner, KMT, "四個已在、第五個放下時的勝者"), eq(five.reason, "alliance", "結束的理由"),
     ok(true, "要控制而且到上限;+1 只給一次;本據被共軍控制就移除;5 個即勝"),
   );
 });
 
-check("民心到 20 立即勝;使民生到達崩潰者敗;結算時手上有記分卡者敗", () => {
-  const up = position(); up.mandate = 18; E.vp(up, CCP, 2);
-  const down = position(); down.mandate = -19; E.vp(down, KMT, 1);
+check("整編(P10):還要國軍控制那一家的全部據點;每回合最多放一個整編標記", () => {
+  // 晉 is 太原 and 晉中: 晉中 opens red 1 / blue 2 (S 2), not the Nationalists'. 綏 is 察綏 and 北平.
+  const seatOnly = position({ taiyuan: { b: 5 } }); E.checkMarkers(seatOnly);
+  const whole = position({ taiyuan: { b: 5 }, jinzhong: { r: 0, b: 2 } }); E.checkMarkers(whole);
+  const suiHalf = position({ chasui: { r: 0, b: 4 }, beiping: { r: 2, b: 3 } }); E.checkMarkers(suiHalf);
+  // Two powers ready at once (滇 and 馬, one space each): one marker this turn, and a second look the same turn adds none.
+  const two = position({ kunming: { b: 5 }, lanzhou: { b: 5 } }); E.checkMarkers(two);
+  const n1 = Object.keys(two.seals).length, m1 = two.mandate; E.checkMarkers(two);
+  const n2 = Object.keys(two.seals).length;
+  return all(
+    eq(seatOnly.seals.jin, undefined, "太原藍 5、晉中不是國軍控制時晉的整編"),
+    eq(J([whole.seals.jin, whole.mandate]), J([true, -1]), "太原藍 5、晉中國軍控制:晉整編、民心"),
+    eq(suiHalf.seals.sui, undefined, "察綏藍 4、北平紅 2 藍 3(沒有人控制)時綏的整編"),
+    eq(n1, 1, "滇、馬同時夠了:這一次放下的整編標記數"), eq(m1, -1, "民心(只有一個標記的 −1)"), eq(n2, 1, "同一回合再檢查一次之後的整編標記數"),
+    ok(true, `晉要太原與晉中;綏要察綏與北平;兩家同時夠了只放一個(${Object.keys(two.seals).join("")})`),
+  );
+});
+
+// P10 (#23): who may win on 民心, from when, at what number, and how far the track may lean before that.
+check("民心(P10):國軍第 6 回合起到 −15 即勝、共軍第 7 回合起到 +20 即勝;之前最多偏國軍 3、偏共軍 19", () => {
+  const at = (turn, mandate, side, n) => { const s = position(); s.turn = turn; s.mandate = mandate; E.vp(s, side, n); return s; };
+  const c1 = at(1, 18, CCP, 2), k1 = at(1, -2, KMT, 3), k5 = at(5, -3, KMT, 5);
+  const c6 = at(6, 18, CCP, 2), k6 = at(6, -14, KMT, 1), k6b = at(6, -3, KMT, 5);
+  const c7 = at(7, 18, CCP, 2), k7 = at(7, -14, KMT, 1);
+  const WR = (s) => J([s.mandate, s.winner, s.reason ?? null]);
+  return all(
+    eq(WR(c1), J([19, null, null]), "第 1 回合 +18 再往共軍 2"), eq(WR(k1), J([-3, null, null]), "第 1 回合 −2 再往國軍 3"), eq(WR(k5), J([-3, null, null]), "第 5 回合 −3 再往國軍 5"),
+    eq(WR(c6), J([19, null, null]), "第 6 回合 +18 再往共軍 2(共軍第 7 回合才能民心勝)"), eq(WR(k6), J([-15, KMT, "mandate"]), "第 6 回合 −14 再往國軍 1"),
+    eq(WR(k6b), J([-8, null, null]), "第 6 回合 −3 再往國軍 5(上限 3 只到第 5 回合)"),
+    eq(WR(c7), J([20, CCP, "mandate"]), "第 7 回合 +18 再往共軍 2"), eq(WR(k7), J([-15, KMT, "mandate"]), "第 7 回合 −14 再往國軍 1"),
+    ok(true, "第 1–5 回合夾在 −3 到 +19;第 6 回合起 −15 國軍勝;第 7 回合起 +20 共軍勝"),
+  );
+});
+
+check("使民生到達崩潰者敗;結算時手上有記分卡者敗", () => {
+  const up = position(); up.turn = 7; up.mandate = 18; E.vp(up, CCP, 2);
+  const down = position(); down.turn = 6; down.mandate = -14; E.vp(down, KMT, 1);
   const tired = position(); tired.weariness = 2; E.tire(tired, 1, CCP);
   const held = position(); held.hands = [[], ["score_east"]];
   const both = position(); both.hands = [["score_north"], ["score_east"]];
   const h = atSettle(held), bh = atSettle(both);
   return all(
-    eq(J([up.winner, up.reason]), J([CCP, "mandate"]), "民心到 +20"), eq(J([down.winner, down.reason]), J([KMT, "mandate"]), "民心到 −20"),
+    eq(J([up.winner, up.reason]), J([CCP, "mandate"]), "第 7 回合民心到 +20"), eq(J([down.winner, down.reason]), J([KMT, "mandate"]), "第 6 回合民心到 −15"),
     eq(J([tired.winner, tired.reason, tired.weariness]), J([KMT, "collapse", 1]), "共軍把民生推到崩潰"),
     eq(J([h.winner, h.reason]), J([CCP, "scoring"]), "結算時國軍手上有記分卡"), eq(J([bh.winner, bh.reason]), J([KMT, "scoringBoth"]), "兩邊手上都有記分卡(平手國軍勝)"),
-    ok(true, "民心 ±20、崩潰、留著記分卡,都立即分出勝負"),
+    ok(true, "民心(+20 / −15)、崩潰、留著記分卡,都立即分出勝負"),
   );
 });
 
@@ -2873,7 +2948,7 @@ check("situations 關掉:第 1 回合沒有免費放置,東北的城開著(扶�
     eq(on.pending != null && on.pending.kind, "points", "預設的對局一開局先問免費放置(對照組)"),
     eq(g.pending, null, "situations 關掉時 createGame 之後的待決定"), eq(g.turn, 1, "回合"), eq(g.phase, "headline", "phase"),
     eq(J([total(g, CCP), total(g, KMT)]), J([red, blue]), "開局的點數 [紅, 藍](沒有多放)"),
-    eq(lens(g), "[8,9]", "手牌 [共, 國]"), eq(J(g.rounds), "[6,7]", "行動回合 [共, 國]"), eq(J(g.support), "[1,4]", "支持度 [蘇聯, 美國]"),
+    eq(lens(g), "[8,9]", "手牌 [共, 國]"), eq(J(g.rounds), "[7,7]", "行動回合 [共, 國]"), eq(J(g.support), "[1,4]", "支持度 [蘇聯, 美國]"),
     eq(E.placeTargets(p0, KMT, 2).lit.has("jinzhou"), true, "第 1 回合國軍可以扶植錦州"), eq(E.placeTargets(p0, CCP, 2).lit.has("changchun"), true, "第 1 回合共軍可以扶植長春"),
     eq(E.place(E.clone(p0), KMT, "jinzhou", 1), 1, "第 1 回合 place(國軍, 錦州) 放進去的點數"),
     eq(hit, null, "第 1 回合國軍奇襲瀋陽被拒絕"),
@@ -2920,7 +2995,7 @@ check("situations 關掉:行憲沒有掛鉤、第 7 回合孤城掉 1、共軍�
     eq(rb(hit, "xuzhou"), "0/1", "第 7 回合共軍 2 點奇襲徐州(沒有 +1)之後 紅/藍"), eq(hit.weariness, 4, "奇襲徐州(城的要衝)之後的民生"),
     eq(["xuzhou", "nanjing", "taiyuan"].some((id) => t7.includes(id)), false, "第 7 回合民生凋敝時,徐州、南京、太原有任何一個可以奇襲"),
     eq(e7.winner != null, true, "第 7 回合走到結算"), eq(blueOf(e7, "jinan"), 1, "第 7 回合結算後濟南(孤城,藍 2)的藍"),
-    eq(eight.pending, null, "第 8 回合開始的待決定(沒有和談)"), eq(eight.phase, "headline", "第 8 回合開始後的 phase"), eq(J(eight.rounds), "[7,6]", "第 8 回合的行動回合"), eq(J(eight.support), "[1,2]", "第 8 回合開始後的支持度(時間表照走)"),
+    eq(eight.pending, null, "第 8 回合開始的待決定(沒有和談)"), eq(eight.phase, "headline", "第 8 回合開始後的 phase"), eq(J(eight.rounds), "[6,7]", "第 8 回合的行動回合"), eq(J(eight.support), "[1,2]", "第 8 回合開始後的支持度(時間表照走)"),
     ok(true, "行憲推進跟平常一樣;第 7 回合共軍打徐州 0/3→0/1、民生 5→4,凋敝時打不了城,孤城掉 1;第 8 回合不問和談"),
   );
 });
@@ -2935,7 +3010,7 @@ check("situations 關掉:空手走完八回合,一個決定都不問;支持度�
   return all(
     eq(J(seen.map((x) => x[0])), J([1, 2, 3, 4, 5, 6, 7, 8]), "走過的回合"),
     eq(J(seen.map((x) => x[1])), J(SPEC_US), "美國支持,逐回合"), eq(J(seen.map((x) => x[2])), J(SPEC_SU), "蘇聯支持,逐回合"),
-    eq(roundsOf(st, 1), seq([6, 7]), "第 1 回合的行動順序"), eq(roundsOf(st, 7), seq([7, 6]), "第 7 回合的行動順序"),
+    eq(roundsOf(st, 1), seq([7, 7]), "第 1 回合的行動順序"), eq(roundsOf(st, 7), seq([6, 7]), "第 7 回合的行動順序"),
     ok(true, `沒有任何待決定;美國支持 ${SPEC_US.join("")}、蘇聯支持 ${SPEC_SU.join("")};結束:${st.reason}`),
   );
 });
@@ -2955,7 +3030,7 @@ check("rounds: \"symmetric\":兩邊每期的手牌上限與行動回合數相同
   st = choose(st, ["shenyang", "shenyang", "jinzhou", "jinzhou"]);
   if (st.winner == null) return `對局沒有走完(turn ${st.turn},phase ${st.phase})`;
   return all(
-    eq(lens(d7), "[9,8]", "預設第 7 回合的手牌(對照組)"), eq(J(d7.rounds), "[7,6]", "預設第 7 回合的行動回合(對照組)"),
+    eq(lens(d7), "[8,9]", "預設第 7 回合的手牌(對照組)"), eq(J(d7.rounds), "[6,7]", "預設第 7 回合的行動回合(對照組)"),
     eq(lens(g), "[8,8]", "第 1 回合的手牌 [共, 國]"), eq(J(g.rounds), "[6,6]", "第 1 回合的行動回合"),
     eq(lens(t4), "[9,9]", "第 4 回合的手牌"), eq(J(t4.rounds), "[7,7]", "第 4 回合的行動回合"),
     eq(lens(t7), "[9,9]", "第 7 回合的手牌"), eq(J(t7.rounds), "[7,7]", "第 7 回合的行動回合"),

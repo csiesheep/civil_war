@@ -67,6 +67,9 @@ export function actionsLeft(st, side) {
 }
 
 // ---------- evaluation: how good is this position for `side` ----------
+// (#24: the bot does not read the engine's MANDATE_WIN / MANDATE_FROM /
+// MANDATE_CAP; P10 was measured in #23 with this bot, which sees the mandate
+// only as the engine clamps it and declares a win.)
 // Everything is in 民心 points (MANDATE_TO_WIN = 20 wins), from the
 // Communists' point of view (`vq`), turned to `side`'s at the end. `terms`,
 // when an object is passed, collects the same number split into named buckets
@@ -130,9 +133,11 @@ const MARK_TEMPO = [1, 0.95, 0.9, 0.8, 0.65, 0.5, 0.38, 0.28, 0.2, 0.14, 0.09, 0
 const MARK_DEFENCE = [1, 0.6, 0.5, 0.4, 0.32, 0.25, 0.19, 0.14, 0.1, 0.07, 0.05, 0.03, 0.02];
 const MARK_EITHER = [1, 0.8, 0.7, 0.6, 0.48, 0.37, 0.28, 0.21, 0.15, 0.1, 0.07, 0.05, 0.03];
 // #23 round four (orchestrator 裁決: the bot may learn the tuning rules, read only when their option is
-// set, so under the default rules nothing here changes): `forced` are the needs of powers the win must
-// include (`mieNeeds`), and `soon` false means the win cannot come this turn (`sealPerTurn`: more
-// markers missing than may go down this turn), so only the long road counts (`E.sealWinSoon`).
+// set): `forced` are the needs of powers the win must include (`mieNeeds`), and `soon` false means the
+// win cannot come this turn (`sealPerTurn`: more markers missing than may go down this turn), so only
+// the long road counts (`E.sealWinSoon`). #24 (P10 is the rules): `sealPerTurn: 1` and `sealNeeds:
+// "all"` are keys of DEFAULT_OPTIONS, so in a game created since, both readings are on by default;
+// `mieNeeds` is still only a tuning option.
 function markerRoad(st, side, needs, k, forced = [], soon = true) {
   if (k <= 0) return MARK_WIN;
   if (needs.length + forced.length < k) return 0;
@@ -275,6 +280,7 @@ function boardValue(st, side, terms = null) {
       // Control, and under sealAt "cap" blue at the cap: red above cap − stability must go first.
       let need = st.options.sealAt === "cap" ? Math.max(0, cap - c) + Math.max(0, q + S - cap) : Math.max(0, q + S - c);
       // #23 round four: under `sealNeeds: "all"` (only then) the power's other spaces must be the Nationalists' too.
+      // #24: "all" is a key of DEFAULT_OPTIONS, so this is read in every game created since.
       if (st.options.sealNeeds === "all") for (const x of E.spacesOfState(id)) if (x !== s.capital) { const [qx, cx] = E.infOf(st, x); need += Math.max(0, qx + SPACE[x].stability - cx); }
       sealNeed.push(need);
     }

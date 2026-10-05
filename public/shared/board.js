@@ -87,11 +87,19 @@ export const MOVED_CAPITAL = ["taihang", "guangzhou"];
 // placement of turn 1's 時局 (受降): the Communists 3 points in villages, the
 // Nationalists 4 points (the American support level at the start) in cities
 // outside the Northeast. Neither is bound by adjacency.
+// `freeHeld` and `freeAlso` (#24, owner 裁決 #24, 2026-10-04: 「共軍的免費放置只能
+// 放進自己控制的鄉,以及察綏(1945 年 8 月晉察冀佔張家口)」): of `freeIn`, only the
+// spaces that side controls at the moment it is asked, before its first point
+// goes down, and the spaces of `freeAlso` whoever controls them (engine.js, the
+// `setup` step). On this table that is 冀中, 察綏, 太行, 冀魯豫 and 陝北 (察綏
+// is red 2 blue 2): the five villages #23's P10 was measured with.
 export const SETUP = {
   ccp: {
     fixed: { beiman: 1, jizhong: 2, chasui: 2, taihang: 4, jinzhong: 1, jiluyu: 3, luzhong: 3, huaihai: 2, dabieshan: 2, shanbei: 4 },
     free: 3,
     freeIn: SPACES.filter((s) => s.kind === "village").map((s) => s.id),
+    freeHeld: true,
+    freeAlso: ["chasui"],
   },
   kmt: {
     fixed: {

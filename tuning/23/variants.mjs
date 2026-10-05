@@ -200,6 +200,17 @@ export const VARIANTS = {
     why: "一般命令第一號只准日軍向國軍投降,蔣 8 月 11 日令共軍「原地駐防待命」;共軍能受降的只有自己的解放區",
     options: { setupFreeBar: { ccp: villages.filter((id) => !["jizhong", "chasui", "taihang", "jiluyu", "shanbei"].includes(id)) } },
   },
+  // #24 (orchestrator 裁決): the sentence the owner adopted, 「共軍的免費放置只能放進開局時共軍控制的鄉」, read literally.
+  // L-ccpheld listed 察綏 too (it was 紅 4 under L-chasui4 in P4; P10 dropped the 紅 4 and kept the list). On the opening
+  // table (red ≥ blue + S) the villages the Communists control are these four; 察綏 is 紅 2 藍 2. Written as a bar so the
+  // engine before #24 (19ecae2) plays it. Measured in #24 (tuning/24/report.txt: 7 / 7 / 6 of 10); the owner then chose
+  // the controlled villages AND 察綏 (owner 裁決 #24), i.e. L-ccpheld's five: that is the default rule from #24 on
+  // (`SETUP.ccp.freeHeld` / `freeAlso`), and on that engine this lever bars 察綏 again.
+  "L-ccpheld4": {
+    what: "受降:共軍的免費放置只能放進開局時共軍控制的鄉(冀中、太行、冀魯豫、陝北)",
+    why: "#24:owner 採用的句子照字面;察綏開局紅 2 藍 2,不是共軍控制的",
+    options: { setupFreeBar: { ccp: villages.filter((id) => !["jizhong", "taihang", "jiluyu", "shanbei"].includes(id)) } },
+  },
   "L-taiyuan1": {
     what: "太原開局藍 2 → 1",
     why: "太原的兵是閻錫山自己的晉綏軍,中央軍一直進不去;蔣始終沒能收編他",
@@ -471,6 +482,12 @@ for (const l of PROPOSAL9) minus(`P9-no-${l.slice(2)}`, "P9", [l]);
 export const PROPOSAL10 = PROPOSAL9.filter((l) => l !== "L-attr11");
 combo("P10", "提案(第五輪,P9 拿掉不承重的 L-attr11)", PROPOSAL10);
 for (const l of PROPOSAL10) minus(`P10-no-${l.slice(2)}`, "P10", [l]);
+// #24: the owner adopted P10 (owner 裁決 #23, 2026-10-04: 「採用 P10(建議)」). P10s is P10 with the first sentence
+// read literally: only the four villages the Communists control at the start (L-ccpheld4), not 察綏 too. It fell
+// short on all three batches (tuning/24/report.txt), and the owner chose P10 as #23 measured it, 察綏 included
+// (owner 裁決 #24). From #24 on `base` ({}) plays P10 itself, and every variant here is laid over it.
+export const PROPOSAL10S = PROPOSAL10.map((l) => (l === "L-ccpheld" ? "L-ccpheld4" : l));
+combo("P10s", "P10,第 1 句照句子(共軍只放進開局時控制的四個鄉)", PROPOSAL10S);
 // P10 的消去表裡「戰略反攻 +2」(L-counter2)兩批都沒有讓任何一項變失敗(第 6 回合仍然交叉,但只差 1.5 / 3 個百分點):
 // 拿掉它就是 P11,和 P10-no-counter2 同一組選項
 export const PROPOSAL11 = PROPOSAL10.filter((l) => l !== "L-counter2");

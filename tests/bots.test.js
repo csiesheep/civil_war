@@ -228,26 +228,27 @@ check("評估:孤城裡的藍越多,國軍損失越大(藍 2 對藍 4;第 7 回�
 // ================================================================ 4
 section("B4 兩邊的行動回合數不一樣");
 
-// 接收期 the Communists have 6 action rounds and the Nationalists 7; 決戰期 it is 7 and 6. A side that
+// Since P10 (#23, #24) 易勢期 gives the Communists 8 action rounds and the Nationalists 6, and 決戰期 6 and 7
+// (接收期 is 7 and 7). A side that
 // holds a scoring card when the turn is settled loses the game. So with as many scoring cards in hand
 // as it has rounds left, a side must play one now, however tempting the other card: a bot that counts
 // the rounds of the other side, or Zongheng's one number for both, plays the other card and loses.
 const HEAD = { [CCP]: "score_north", [KMT]: "score_east" };
-check("最後一個行動回合手上有記分卡:打記分卡(共軍第 1 回合的第 6 個;國軍第 7 回合的第 6 個)", () => {
+check("最後一個行動回合手上有記分卡:打記分卡(共軍第 7 回合的第 6 個;國軍第 4 回合的第 6 個)", () => {
   if (TODO) return TODO;
-  const c = atRound(1, 6, CCP, [[HEAD[CCP], "score_northeast", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials"]]);
-  const k = atRound(7, 6, KMT, [[HEAD[CCP], "gao_shuxun", "shangdang_campaign"], [HEAD[KMT], "score_rear", "airlift"]]);
+  const c = atRound(7, 6, CCP, [[HEAD[CCP], "score_northeast", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials"]]);
+  const k = atRound(4, 6, KMT, [[HEAD[CCP], "gao_shuxun", "shangdang_campaign"], [HEAD[KMT], "score_rear", "airlift"]]);
   const pc = cardsPlayed(c, CCP, "normal", 10), pk = cardsPlayed(k, KMT, "normal", 10);
-  return all(eq(E.eraOf(1).rounds[CCP], 6, "接收期共軍的行動回合數(引擎)"), eq(E.eraOf(7).rounds[KMT], 6, "決戰期國軍的行動回合數(引擎)"),
+  return all(eq(E.eraOf(7).rounds[CCP], 6, "決戰期共軍的行動回合數(引擎)"), eq(E.eraOf(4).rounds[KMT], 6, "易勢期國軍的行動回合數(引擎)"),
     eq(pc.filter((x) => x === "score_northeast").length, 10, `共軍在第 6 個行動回合打記分卡的次數(10 個種子;實際打的:${[...new Set(pc)].join("、")})`),
     eq(pk.filter((x) => x === "score_rear").length, 10, `國軍在第 6 個行動回合打記分卡的次數(10 個種子;實際打的:${[...new Set(pk)].join("、")})`),
     ok(true, "兩邊各 10 個種子都打了記分卡"));
 });
 
-check("剩 2 個行動回合、手上 2 張記分卡:現在就要打記分卡(共軍第 1 回合的第 5 個;國軍第 7 回合的第 5 個)", () => {
+check("剩 2 個行動回合、手上 2 張記分卡:現在就要打記分卡(共軍第 7 回合的第 5 個;國軍第 4 回合的第 5 個)", () => {
   if (TODO) return TODO;
-  const c = atRound(1, 5, CCP, [[HEAD[CCP], "score_northeast", "score_northwest", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials", "return_to_nanjing"]]);
-  const k = atRound(7, 5, KMT, [[HEAD[CCP], "gao_shuxun", "shangdang_campaign", "land_law"], [HEAD[KMT], "score_rear", "score_northeast", "airlift"]]);
+  const c = atRound(7, 5, CCP, [[HEAD[CCP], "score_northeast", "score_northwest", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials", "return_to_nanjing"]]);
+  const k = atRound(4, 5, KMT, [[HEAD[CCP], "gao_shuxun", "shangdang_campaign", "land_law"], [HEAD[KMT], "score_rear", "score_northeast", "airlift"]]);
   const pc = cardsPlayed(c, CCP, "normal", 10), pk = cardsPlayed(k, KMT, "normal", 10);
   const sc = (xs) => xs.filter((x) => E.CARD[x] && E.CARD[x].scoring).length;
   return all(eq(sc(pc), 10, `共軍在第 5 個行動回合(還剩 2 個)打記分卡的次數(10 個種子;實際打的:${[...new Set(pc)].join("、")})`),
@@ -257,28 +258,29 @@ check("剩 2 個行動回合、手上 2 張記分卡:現在就要打記分卡(�
 
 check("打記分卡會當場輸、留著也會輸:還是打記分卡(留著記分卡的輸排在所有結果之後;orchestrator 裁決 #12)", () => {
   if (TODO) return TODO;
-  // 民心 −19 and the Communists' last round, holding 後方's scoring card: playing it scores 後方 for
-  // the Nationalists and ends the game at once by 民心; keeping it loses at the settle. Both lose.
+  // 民心 −14 on turn 7 (the Nationalists win at −15 from turn 6, P10) and the Communists' last round, holding
+  // 後方's scoring card: playing it scores 後方 for the Nationalists and ends the game at once by 民心;
+  // keeping it loses at the settle. Both lose.
   // Keeping the card is the loss the rules make certain, so it ranks last: with the two losses
   // valued alike the noise picks between them, and this check sees it.
-  const c = atRound(1, 6, CCP, [[HEAD[CCP], "score_rear", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials"]]);
-  c.mandate = -19;
+  const c = atRound(7, 6, CCP, [[HEAD[CCP], "score_rear", "into_manchuria"], [HEAD[KMT], "kunming_incident", "takeover_officials"]]);
+  c.mandate = -14;
   let played = null; try { played = E.apply(c, { type: "play", side: CCP, card: "score_rear", use: "event" }); } catch (e) { return `共軍打後方記分卡被拒絕:${e.message}`; }
   const pre = all(eq(played.winner, KMT, "打出後方記分卡之後的勝者(對照:當場輸)"), eq(played.reason, "mandate", "那一局結束的理由")); if (pre !== true) return pre;
   const pc = cardsPlayed(c, CCP, "normal", 10);
   return all(eq(pc.filter((x) => x === "score_rear").length, 10, `10 個種子裡打記分卡的次數(實際打的:${[...new Set(pc)].join("、")})`),
-    ok(true, "打出去是民心 −20 當場輸,留著是結算時輸:10 個種子都打記分卡"));
+    ok(true, "打出去是民心 −15 當場輸,留著是結算時輸:10 個種子都打記分卡"));
 });
 
-check("對照:行動回合還夠的時候,不必現在打記分卡(國軍第 1 回合的第 6 個:它有 7 個)", () => {
+check("對照:行動回合還夠的時候,不必現在打記分卡(共軍第 4 回合的第 6 個:它有 8 個)", () => {
   if (TODO) return TODO;
   // The same shape as the Communists' last round above, for the side that has one more round: the
   // engine must still offer the other card, or the checks above prove nothing about counting.
-  const k = atRound(1, 6, KMT, [[HEAD[CCP], "gao_shuxun", "shangdang_campaign"], [HEAD[KMT], "score_rear", "airlift"]]);
-  const L = E.legal(k, KMT), ids = L.kind === "action" ? L.cards.map((x) => x.id).sort().join(",") : L.kind;
-  let after = null; try { after = E.apply(k, { type: "play", side: KMT, card: "airlift", use: "event" }); } catch (e) { return `國軍在第 6 個行動回合打美軍空運被拒絕:${e.message}`; }
-  return all(eq(E.eraOf(1).rounds[KMT], 7, "接收期國軍的行動回合數(引擎)"), eq(ids, "airlift,score_rear", "國軍可以打的牌"),
-    eq(after.winner, null, "打了美軍空運之後還沒有人輸(國軍還有第 7 個行動回合)"), ok(true, "國軍第 6 個行動回合打別的牌,對局繼續"));
+  const k = atRound(4, 6, CCP, [[HEAD[CCP], "score_rear", "into_manchuria"], [HEAD[KMT], "gao_shuxun", "shangdang_campaign"]]);
+  const L = E.legal(k, CCP), ids = L.kind === "action" ? L.cards.map((x) => x.id).sort().join(",") : L.kind;
+  let after = null; try { after = E.apply(k, { type: "play", side: CCP, card: "into_manchuria", use: "event" }); } catch (e) { return `共軍在第 6 個行動回合打闖關東被拒絕:${e.message}`; }
+  return all(eq(E.eraOf(4).rounds[CCP], 8, "易勢期共軍的行動回合數(引擎)"), eq(ids, "into_manchuria,score_rear", "共軍可以打的牌"),
+    eq(after.winner, null, "打了闖關東之後還沒有人輸(共軍還有第 7、8 個行動回合)"), ok(true, "共軍第 6 個行動回合打別的牌,對局繼續"));
 });
 
 check("對局裡不會因為留著記分卡而輸:普通對普通,這樣結束的不超過 1 局", () => {
