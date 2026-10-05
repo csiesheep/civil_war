@@ -6,7 +6,8 @@
 // answer is pending the two states must look the same:
 //   - E.view(·, 國軍) and E.view(·, spectator), the whole object (board, log, pending, plan, effects);
 //   - E.legal(·, 國軍) (what the UI and the bots are offered);
-//   - the normal bot's decision from that view with the same rng seed.
+//   - the normal bot's decision from that view with the same rng seed;
+//   - the raw `st.log` and `st.pending` (the plan is in neither until the answer).
 // And the hidden part must really be hidden: the two raw states DO differ (else nothing was compared).
 // Prints `LEAK-VERDICT 比較 n 次 / 不同 n / 原狀態也相同 n`.
 import * as E from "../../public/shared/engine.js";
@@ -37,6 +38,9 @@ for (let seed = FIRST; seed < FIRST + GAMES; seed++) {
       const why = [];
       if (J(E.view(next, E.KMT)) !== J(E.view(other, E.KMT))) why.push("view(國軍)");
       if (J(E.view(next, null)) !== J(E.view(other, null))) why.push("view(觀眾)");
+      // The raw log and pending themselves (not only through `view`): the plan is in neither.
+      if (J(next.log) !== J(other.log)) why.push("st.log");
+      if (J(next.pending) !== J(other.pending)) why.push("st.pending");
       if (J(E.legal(E.view(next, E.KMT), E.KMT)) !== J(E.legal(E.view(other, E.KMT), E.KMT))) why.push("legal(國軍)");
       if (r.compared % 10 === 1) {
         r.botAsked++;
@@ -51,3 +55,5 @@ for (let seed = FIRST; seed < FIRST + GAMES; seed++) {
 console.log(`games ${GAMES} (seeds ${FIRST}..${FIRST + GAMES - 1}); bot asked ${r.botAsked} times`);
 for (const d of r.differ.slice(0, 10)) console.log(`不同 · 種子 ${d.seed} 第 ${d.n} 步 · ${d.why.join("、")}`);
 console.log(`LEAK-VERDICT 比較 ${r.compared} 次 / 不同 ${r.differ.length} / 原狀態也相同 ${r.rawSame}`);
+// Red when anything differs, when nothing was compared, or when the two raw states were ever the same (no secret to keep).
+process.exitCode = r.differ.length || !r.compared || r.rawSame ? 1 : 0;
