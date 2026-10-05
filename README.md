@@ -13,16 +13,17 @@ The rules engine for the first batch is written. There is no screen yet. What ex
 - the map (29 spaces: 17 cities, 12 villages) and the 72 cards, **every card with its event**;
 - supply, the eight situation cards (時局) with a hand size and action rounds that differ by era and by side, and the two support tracks (American and Soviet);
 - American Aid and Soviet Aid (these replace Zongheng's Nine Cauldrons), the American garrison, and base-area scoring;
-- the guard, `node --test tests/acceptance.test.js`: 165 checks pass, none is pending; its constants are copied from the rulebook, not read from the engine;
+- the guard, `node --test tests/acceptance.test.js`: 179 checks pass, none is pending; its constants are copied from the rulebook, not read from the engine;
 - a random-play fuzz, `node --test tests/fuzz.test.js`, which passes: it plays 2,000 random legal games; every game ends with no error, every tenth game replays identically from its seed, and all 67 events get resolved;
 - the bots, `public/shared/bots.js` (levels easy, normal, hard; easy is the random player), and the bot-vs-bot harness `tests/sim.js`;
-- the random player, `public/shared/random.js` (`randomAction`, `randomPoints`, `randomOps`, `randomChoice`), which the fuzz uses; `bots.js` re-exports those four from it.
+- the random player, `public/shared/random.js` (`randomAction`, `randomPoints`, `randomOps`, `randomChoice`), which the fuzz uses; `bots.js` re-exports those four from it;
+- mechanism B is the default rules (engine #26, bot and measurement #27, made the default in #28). An attack paid with action points is one of three kinds: the Communists on a city play 圍點打援 (they secretly choose to hit the point or to wait for the relief; the Nationalists answer in the open by holding, reinforcing or breaking out; then the card is turned over and a table settles it); the Communists on a village play 破襲 (the old 奇襲: remove blue, put red in what is left); the Nationalists on anything play 進剿 (the Communists choose to stand or to withdraw). The bots treat 圍點打援 as a zero-sum game: they solve the payoff matrix and draw their choice by its probabilities (normal and hard); easy keeps the random player but leans to hitting the point and to holding (`EASY_SIEGE`, 80% each). `{ mechanismB: false }` still plays the rules as they were before B.
 
 Not there yet: the client (M3).
 
 The year on each event card and the facts quoted in the rules were checked against sources in issue #10: none of the 58 card years was found wrong, but many rest on a weak second source (and the troop-strength figures on Chinese-Communist-side sources only), so they should be checked again against print sources before the numbers are printed for players.
 
-The rules are in the owner's vault: `Projects/civil_war/civil_war - rulebook.md` (batch 1), `civil_war plan.md` (decisions, milestones), `civil_war - mechanisms.md` (the mechanisms still to come).
+The rules are in the owner's vault: `Projects/civil_war/civil_war - rulebook.md` (batch 1), `civil_war plan.md` (decisions, milestones), `civil_war - mechanisms.md` (the mechanisms; B's rules are its section B, hand-copied in the opening comment of group 13 of `tests/acceptance.test.js`).
 
 ## Where the code comes from
 
@@ -37,7 +38,8 @@ Much of the copied engine still speaks Zongheng: its comments cite Zongheng's is
 | `mandate` | 民心 (Popular Support; the Communists win at +20, the Nationalists at −15, the Communists from turn 7 and the Nationalists from turn 6; before that turn the lead is held at +19 for the Communists and −3 for the Nationalists: `MANDATE_WIN`, `MANDATE_FROM`, `MANDATE_CAP`) |
 | `weariness` | 民生 (Livelihood) |
 | `reform` | 建軍 / 行憲 |
-| `campaign`, `lobby` | 進攻 (奇襲), 策反 (遊說) |
+| `campaign` | 進攻: since #28 mechanism B's three attacks (圍點打援 on a city, 破襲 on a village, 進剿 by the Nationalists; `E.SIEGE`, the option `mechanismB`); the card events that say 奇襲 are still the old attack |
+| `lobby` | 策反 (遊說) |
 | `AID` | 美援 and 蘇援, which replaced Zongheng's `jiuding` (Nine Cauldrons; gone from the engine) |
 | `STATES` | the five regional powers |
 
@@ -70,7 +72,7 @@ From a logged-in `wrangler`. Who deploys and when is in `TEAM.md`. Pushes to `ma
 | M0 | Phase 0: repo, placeholder live, `TEAM.md`, a first guard seen red |
 | M1 | the batch-1 engine: supply, the fixed situation card per turn, foreign support, 72 card events, a test per rule — **done** (owner, #11) |
 | M2 | bots and the bot-vs-bot harness; the first numbers; a stop-or-go decision — **delivered**; the decision was to adjust the rules first (#18), which ended in the rule set P10 (#23), now the default (#24) |
-| M2b… | mechanism batches (siege choice, power attitudes, …), each a loop of engine, bots, numbers |
+| M2b… | mechanism batches (siege choice, power attitudes, …), each a loop of engine, bots, numbers. Batch B is done: engine (#26), bot and measurement (#27), the default rules (#28). Measured at #27, B off vs on: 8 of the 10 targets either way, the Communists' win rate about 63% to 60%. The next batch is D |
 | M3 | the solo client |
 | M4 | rooms |
 | M5 | ship |
