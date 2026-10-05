@@ -3151,19 +3151,19 @@ check("打城的條件:要控制一個相鄰的據點;還要宣告打點或打�
   );
 });
 
-check("國軍的回應:固守、增援(徐州隔著魯中,k 受上限與徐州的藍限制)、突圍(魯中);孤城不能增援", () => {
+check("國軍的回應:固守、增援(徐州隔著魯中,k 受濟南的上限與最多 3 點限制)、突圍(魯中);孤城不能增援", () => {
   const t = bTodo(); if (t) return t;
   const after = (S) => act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "point" });
-  const a = after(siegeRig()), full = after(siegeRig({ edits: { jinan: { b: 4 } } })), thin = after(siegeRig({ edits: { xuzhou: { b: 1 } } }));
+  const a = after(siegeRig()), full = after(siegeRig({ edits: { jinan: { b: 4 } } })), roomy = after(siegeRig({ edits: { jinan: { b: 1 } } }));
   const cut = after(siegeRig({ edits: JINAN_CUT })); // 魯中紅 5:共軍控制魯中,濟南成了孤城,魯中也不能突圍
   const p = pendingIs(a, KMT, "option", "打濟南之後"); if (p !== true) return p;
   return all(
     same(optIds(a), ["hold", "reinforce:xuzhou:1", "reinforce:xuzhou:2", "breakout:luzhong"], "濟南藍 3:國軍的回應"),
     same(optIds(full), ["hold", "reinforce:xuzhou:1", "breakout:luzhong"], "濟南藍 4(上限 5,只放得下 1):國軍的回應"),
-    same(optIds(thin), ["hold", "reinforce:xuzhou:1", "breakout:luzhong"], "徐州只有藍 1:國軍的回應"),
+    same(optIds(roomy), ["hold", "reinforce:xuzhou:1", "reinforce:xuzhou:2", "reinforce:xuzhou:3", "breakout:luzhong"], "濟南藍 1(放得下 4):增援最多 3 點"),
     same(optIds(cut), ["hold"], "濟南是孤城、魯中是共軍控制:國軍的回應"),
     eq(thrown(() => choose(a, "reinforce:xuzhou:3")) != null, true, "增援 3 點(放不下)沒有被拒絕"),
-    ok(true, "固守、增援 1 或 2、突圍到魯中;濟南堆到 4 只能援 1;徐州只有 1 也只能援 1;孤城只能固守"),
+    ok(true, "固守、增援 1 或 2、突圍到魯中;濟南堆到 4 只能援 1;濟南只有 1 時最多援 3;孤城只能固守"),
   );
 });
 
@@ -3204,8 +3204,7 @@ check("打援:固守 → 圍城;增援 2 → 援軍被殲 2、共軍在冀魯豫
 check("圍城標記:濟南這一回合算孤城(國軍不能扶植)、共軍再打它 +1;回合結算掉 1 點,下一回合標記沒了", () => {
   const t = bTodo(); if (t) return t;
   const S = siegeRig(), hold = besiege(S, "relief", "hold"), base = E.campaignMod(S, CCP, "jinan");
-  const empty = E.clone(hold); empty.discard.push(...empty.hands[CCP], ...empty.hands[KMT]); empty.hands = [[], []];
-  const s = settle(empty); // nobody holds a card: the turn walks out to its 結算 and stops at turn 2's first decision
+  const s = atSettle(hold); // the turn's 結算 (group 11's helper), then turn 2 up to its first decision
   return all(
     eq(E.isolatedCities(S).includes("jinan"), false, "圍城之前濟南是孤城(對照組)"),
     eq(E.isolatedCities(hold).includes("jinan"), true, "圍城之後濟南算孤城"), eq(E.canPlaceAt(hold, KMT, "jinan"), false, "圍城之後國軍還能在濟南扶植"),
