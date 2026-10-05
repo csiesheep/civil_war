@@ -3459,14 +3459,15 @@ check("控制看態度:效忠的灰算國方;觀望的灰只擋共軍;通共的�
   const ctl = (edits, p, a, id) => { const st = dPosition(edits, { [p]: a }); return E.controller(st, id); };
   const who = (c) => (c === CCP ? "共" : c === KMT ? "國" : "無");
   const row = (edits, p, id) => ["loyal", "neutral", "ccp"].map((a) => who(ctl(edits, p, a, id))).join("");
-  // 太原 S 3:藍 4 灰 2(國軍:效忠 6 ≥ 3、觀望 4 ≥ 3、通共 4 ≥ 2 + 3 不成立);藍 1 灰 2(效忠 3 ≥ 3,其餘不成立)。
+  // 太原 S 3、上限 5:藍 3 灰 2(國軍:效忠 5 ≥ 3、觀望 3 ≥ 3、通共 3 ≥ 2 + 3 不成立);藍 1 灰 2(效忠 3 ≥ 3,其餘不成立)。
+  // (#31:第一版寫成藍 4 灰 2,超過上限,rig 在進引擎之前就丟了;BE 抓到的。)
   // 察綏 S 2:紅 3 灰 2(共軍要 3 ≥ 灰 2 + 2,三種態度都不成立;不算灰的話會成立)。
   return all(
-    eq(row({ taiyuan: { b: 4, g: 2 } }, "jin", "taiyuan"), "國國無", "太原藍 4 灰 2,效忠 / 觀望 / 通共時的控制者"),
+    eq(row({ taiyuan: { b: 3, g: 2 } }, "jin", "taiyuan"), "國國無", "太原藍 3 灰 2,效忠 / 觀望 / 通共時的控制者"),
     eq(row({ taiyuan: { b: 1, g: 2 } }, "jin", "taiyuan"), "國無無", "太原藍 1 灰 2,效忠 / 觀望 / 通共時的控制者"),
     eq(row({ chasui: { r: 3, g: 2 } }, "sui", "chasui"), "無無無", "察綏紅 3 灰 2,效忠 / 觀望 / 通共時的控制者"),
     eq(row({ chasui: { r: 4, g: 2 } }, "sui", "chasui"), "共共共", "察綏紅 4 灰 2,效忠 / 觀望 / 通共時的控制者"),
-    ok(true, "太原 4+2:國國無;1+2:國無無;察綏紅 3 對灰 2:無無無,紅 4:共共共"),
+    ok(true, "太原 3+2:國國無;1+2:國無無;察綏紅 3 對灰 2:無無無,紅 4:共共共"),
   );
 });
 
@@ -3570,6 +3571,21 @@ check("灰被打光的不算整編完成;國軍選先移哪一種(grayOrder)", (
   );
 });
 
+check("事件的奇襲也問先移哪一種:掃清外圍打晉中(藍 1 灰 2,打 2)", () => {
+  const t = dTodo(); if (t) return t;
+  // #31: the BE's event probe found no check for this (the fuzz never reached it in 300 games; a bot game crashed on it).
+  const S = dRig({ jinzhong: { b: 1, g: 2 } }, {}, { ccp: ["clearing_the_outskirts"], kmt: ["kunming_incident"] });
+  let a = act(S, CCP, "clearing_the_outskirts", "event");
+  if (a.pending && a.pending.who === CCP) a = choose(a, a.pending.kind === "points" ? ["jinzhong"] : "jinzhong");
+  const p = pendingIs(a, KMT, "option", "掃清外圍打晉中之後"); if (p !== true) return p;
+  const g = choose(a, "gray"), bl = choose(a, "blue");
+  return all(
+    eq(a.pending.tag, "grayOrder", "待決定的 tag"), same(optIds(a), ["blue", "gray"], "國軍的選項"),
+    eq(gb(g, "jinzhong"), "1/1/0", "先移灰之後 晉中 紅/藍/灰"), eq(gb(bl, "jinzhong"), "1/0/1", "先移藍之後 晉中 紅/藍/灰"),
+    ok(true, "晉中 1/1/2,事件奇襲 2 點:先移灰 → 1/1/0;先移藍 → 1/0/1"),
+  );
+});
+
 check("打到通共勢力的灰,態度退回觀望;只打到藍不退", () => {
   const t = dTodo(); if (t) return t;
   const S = dRig({ guilin: { b: 2, g: 2 }, guangzhou: { r: 4, b: 0 } }, { gui: "ccp" }, { ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
@@ -3599,7 +3615,10 @@ check("結算:孤城裡有灰,該勢力往通共一格;灰不掉,藍照樣掉", 
   const t = dTodo(); if (t) return t;
   // 晉效忠;晉中紅 4 灰 2(效忠:4 ≥ 0 + 2 + 2,共軍控制)、太行共軍的:太原(藍 1 灰 2)是孤城。
   const S = dPosition({ taiyuan: { b: 1, g: 2 }, jinzhong: { r: 4 } }, { jin: "loyal" });
-  const pre = all(same(E.isolatedCities(S).filter((id) => id === "taiyuan"), ["taiyuan"], "太原是孤城"));
+  // #31: a city with gray and no blue is a 孤城 too (A 的第 2 條:「有藍或灰的一個城」;BE 的補給探針抓到驗收沒有這一條)。
+  const grayOnly = dPosition({ taiyuan: { b: 0, g: 2 }, jinzhong: { r: 4 } }, { jin: "loyal" });
+  const pre = all(same(E.isolatedCities(S).filter((id) => id === "taiyuan"), ["taiyuan"], "太原是孤城"),
+    same(E.isolatedCities(grayOnly).filter((id) => id === "taiyuan"), ["taiyuan"], "太原(藍 0 灰 2)是孤城"));
   if (pre !== true) return pre;
   const s = atSettle(S);
   return all(
