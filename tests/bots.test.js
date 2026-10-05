@@ -475,6 +475,7 @@ section("B6 機制 D:灰看態度、整編的時機、統戰(選項 mechanismD)"
 // orchestrator 裁決(#32):
 //   - `B.GRAY_WEIGHT = { loyal: 1, neutral: 0.5, ccp: 0 }`(筆記的數字);評估怎麼用它是 BE 的事,這裡只驗方向:
 //     同一個盤面,一個勢力的態度從效忠往通共移,國軍的評估要變差、共軍的要變好。
+//   - (#32:自殺整編那一條,評估本身就把它排在後面,拿掉過濾不會紅;它的證偽改用「讓 bot 偏好整編」。)
 //   - 會讓自己當場輸掉一家的整編不做(把勢力推成通共、而本據斷了補給 → 立刻易幟);一步就易幟的統戰要做。
 // B 關掉、D 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
 const MDX = { mechanismD: true };
@@ -521,21 +522,27 @@ check("國軍不做會讓自己當場輸掉一家的整編:馬觀望、蘭州斷
 check("共軍會做一步就易幟的統戰:晉觀望、太原斷了補給,4 點統戰晉 = 晉通共 = 立刻易幟", () => {
   const t = dBotTodo(); if (t) return t;
   // 晉中紅 4(灰 2,觀望:4 ≥ 0 + 2 + 2,共軍控制)、太行共軍的:太原斷了補給。共軍手上淮海戰役(4 點)。
-  const S = dBoard({ edits: { jinzhong: [4, 0] }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
-  const pre = all(eq(S.actor, CCP, "輪到誰"), eq(E.supplied(S).has("taiyuan"), false, "太原有補給"), eq(E.attitudeOf(S, "jin"), "neutral", "晉的態度"));
+  // #32(BE 交付時指出第一版的局面不乾淨,改了):太原只有藍(藍 2 灰 0),所以結算不會白送晉一格;察綏藍 2 灰 2
+  // (共軍要 6 點紅才控制,上限 4),所以這一手沒有別的易幟。統戰晉是這一手唯一拿得到的易幟。
+  const S = dBoard({ edits: { jinzhong: [4, 0], taiyuan: [0, 2], chasui: [0, 2] }, gray: { taiyuan: 0 }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+  const pre = all(eq(S.actor, CCP, "輪到誰"), eq(E.supplied(S).has("taiyuan"), false, "太原有補給"), eq(E.attitudeOf(S, "jin"), "neutral", "晉的態度"),
+    eq(E.grayOf(S, "taiyuan"), 0, "太原的灰(結算不該白送一格)"), eq(E.controller(S, "chasui"), null, "察綏的控制者"));
   if (pre !== true) return pre;
   const got = asked(S, CCP), n = got["politics:jin"] || 0;
   return all(ok(n >= 16, `共軍 20 次裡統戰的次數至少 16(${J(got)})`), ok(true, `共軍 20 次:${J(got)}`));
 });
 
-check("D 開著普通對普通:每一局都結束;每局平均不超過 20 秒;兩邊都真的用政工", () => {
+check("D 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍真的整編、共軍至少統戰過", () => {
   const t = dBotTodo(); if (t) return t;
   const r = BD();
   const c = all(clean(r, "普通對普通(D)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
   const s = r.ms / r.games / 1000, k = r.politics ? r.politics[KMT] : 0, cc = r.politics ? r.politics[CCP] : 0;
   return all(
     ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`),
-    ok(k >= 0.3 * r.games, `國軍整編 ${k} 次(${r.games} 局,至少每局 0.3 次)`), ok(cc >= 0.3 * r.games, `共軍統戰 ${cc} 次(至少每局 0.3 次)`),
+    // #32: the Communists 統戰 rarely, and rightly: the 結算 gives the same step free once a city with gray is cut off
+    // (BE's count on seeds 10001-10020: 4 統戰, each taking an 易幟 that won the game, 20 more legal ones scored much
+    // worse). So the Communists must 統戰 at all, not every other game; that it is rare is a finding for the owner.
+    ok(k >= 0.3 * r.games, `國軍整編 ${k} 次(${r.games} 局,至少每局 0.3 次)`), ok(cc >= 1, `共軍統戰 ${cc} 次(${r.games} 局裡至少 1 次)`),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};整編 ${k}、統戰 ${cc};每局 ${s.toFixed(1)} 秒`),
   );
 });
