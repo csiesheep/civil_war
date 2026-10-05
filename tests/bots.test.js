@@ -415,6 +415,45 @@ check("困難對困難(B 開著)打得完,賽局也是均衡的", () => {
     ok(true, `${r.games} 局:共軍打城 ${r.siege.ccp.n} 次、國軍回答 ${r.siege.kmt.n} 次;每局平均 ${(r.ms / r.games / 1000).toFixed(1)} 秒`));
 });
 
+// 照機率抽(#27 交付時 BE 找到的洞:讓國軍「永遠取機率最大的那一個」,上面幾條都不紅——對局裡九成的賽局是
+// 純策略,混合的太少,4σ + 2 看不出來)。所以在兩個 mix 真的混合的局面各問 80 次,抽到的和 mix 的期望要對得上:
+//   國軍:siegeAsked("point") 的回答(普通):#27 的 bot 約七成固守、三成從徐州援 2。
+//   共軍:tests/fixtures/b5-ccp-mixed.json——B 開著普通對普通、種子 5 的第 73 個決定(照 tests/bots-chunk.js 的
+//   迴圈,用 #27 交付的 bot 3a0994a 存下來的盤面):第 4 回合共軍打天津(藍 5 滿編,國軍能固守或突圍到錦州、北平),
+//   約六成五打點、三成五打援。引擎改了狀態的形狀、或 bot 改到這裡不再混合,這一條會說,那時重存一個局面。
+// 第二多的那一種期望至少 10 次,不然這個局面驗不到抽法(母體非空)。
+const CCP_MIXED = JSON.parse(readFileSync(here("./fixtures/b5-ccp-mixed.json"), "utf8"));
+function drawsAt(st, side, pick, K = 80) {
+  const by = {}; let n = 0;
+  for (let i = 0; i < K; i++) {
+    const a = B.decide(E.view(st, side), side, "normal", E.makeRng(4000 + i));
+    if (!a || !a.game) continue;
+    n++;
+    const kinds = {};
+    for (const [k, p] of Object.entries(a.game.mix)) { const x = (by[k.split(":")[0]] ||= { drawn: 0, expected: 0, variance: 0 }); x.expected += p; kinds[k.split(":")[0]] = (kinds[k.split(":")[0]] || 0) + p; }
+    for (const [k, p] of Object.entries(kinds)) by[k].variance += p * (1 - p);
+    (by[String(pick(a)).split(":")[0]] ||= { drawn: 0, expected: 0, variance: 0 }).drawn++;
+  }
+  return { by, n };
+}
+function mixedEnough(r, who, K = 80) {
+  if (r.n < K / 2) return `${who}:問 ${K} 次只有 ${r.n} 次是圍點打援的決定(這個局面驗不到抽法,換一個)`;
+  // The second most likely kind (a kind of probability 0 everywhere, like 突圍 here, is not the other side).
+  const mass = Object.values(r.by).map((x) => x.expected).sort((a, b) => b - a), second = mass[1] ?? 0;
+  if (!(second >= 10)) return `${who}:第二多的那一種期望只有 ${second.toFixed(1)} 次(要至少 10 次;這個局面不夠混合,驗不到抽法,換一個)`;
+  return true;
+}
+
+check("照機率抽:兩個混合的局面各問 80 次,抽到的和 mix 對得上(國軍回答濟南;共軍打天津)", () => {
+  const t = bTodo(); if (t) return t;
+  const k = drawsAt(siegeAsked("point"), KMT, (a) => a.choice), c = drawsAt(CCP_MIXED, CCP, (a) => a.siege);
+  const m = all(mixedEnough(k, "國軍(濟南)"), mixedEnough(c, "共軍(天津)")); if (m !== true) return m;
+  const fk = drawsFit(k.by, "國軍(濟南)"), fc = drawsFit(c.by, "共軍(天津)");
+  if (!(fk && fk.pass)) return fk;
+  if (!(fc && fc.pass)) return fc;
+  return ok(true, `${fk.msg};${fc.msg}`);
+});
+
 check("簡單(B 開著)有固定的偏好:共軍打城至少七成打點、國軍至少七成固守(裁決是八成)", () => {
   const t = bTodo(); if (t) return t;
   const r = play(9001, games(20), "easy", "easy", MB);
