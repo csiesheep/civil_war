@@ -51,9 +51,25 @@ const MAX_ACTIONS = 4000;
 // The loop is tests/bots-chunk.js's, in its order and with its draws: the side is drawn even when
 // only one side must act. The bot is handed `E.view(st, side)`. Recording reads the state and the
 // log only and draws nothing, so a game is the same game with or without it.
+// #27: `more`, beside `rec` (whose shape tests/sim.test.js pins), the numbers of mechanism B and of the
+// 孤城 per game (`moreStats` adds them up). Read from the state, the log and the decisions; draws nothing.
 export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } = {}) {
   const levels = [ccp, kmt];
   const rec = { turnEnds: [], firstIsolated: {}, capitalMoved: {} };
+  const more = {
+    asked: 0, canReinforce: 0, canBreakout: 0, onlyHold: 0, noReinforce: { isolated: 0, noR: 0, full: 0 }, noRAndFull: 0,
+    plans: {}, answers: {}, cells: {}, picks: {}, sieges: 0, besieged: 0, besiegedLoss: 0, besiegedCities: 0,
+    sweep: {}, games: [{ n: 0, pure: 0 }, { n: 0, pure: 0 }],
+  };
+  // At the turn-end checks (probe.home, "turnEnd"): the besieged cities that supply still reaches, i.e.
+  // a 孤城 only by the marker; the `attrition` entry that follows is read against them.
+  let siegeOnly = new Set();
+  const onHome = (s, when) => {
+    if (when !== "turnEnd" || !s.options.mechanismB) return;
+    const ok = E.supplied(s);
+    siegeOnly = new Set(E.SPACES.filter((x) => x.kind === "city" && E.besieged(s, x.id) && ok.has(x.id) && E.infOf(s, x.id)[KMT] > 0).map((x) => x.id));
+    more.besiegedCities += siegeOnly.size;
+  };
   // 引擎的回合末: the moment the engine reports a turn's end (after the turn-end checks and the
   // discards). The probe is on only around the game's own apply: the bots think with the same module.
   const onTurnEnd = (s) => {
@@ -70,6 +86,12 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     for (let k = fresh.length - 1; k >= 0; k--) {
       const l = fresh[k];
       if (l.type === "capitalCheck" && l.result === "moved") rec.capitalMoved[l.whose] = l.t;
+      else if (l.type === "siegeResult") {
+        more.sieges++; bump(more.plans, l.plan); bump(more.answers, l.response); bump(more.cells, `${l.plan}/${l.response}`);
+        if (l.besieged) more.besieged++;
+      } else if (l.type === "siegeLoss" || l.type === "siegeCapture") bump(more.picks, l.type);
+      else if (l.type === "sweepResult") bump(more.sweep, l.response);
+      else if (l.type === "attrition") for (const [id, k] of Object.entries(l.losses)) if (siegeOnly.has(id)) more.besiegedLoss += k;
     }
     if (s.logSeq) logSeen = s.logSeq;
   };
@@ -83,16 +105,44 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     const who = E.mustAct(st);
     if (!who.length) throw new Error(`seed ${seed}: nobody must act (turn ${st.turn}, phase ${st.phase})`);
     const side = who[rng.int(who.length)];
-    const a = B.decide(E.view(st, side), side, levels[side], rng);
-    if (!a) throw new Error(`seed ${seed}: no decision for side ${side} (turn ${st.turn}, phase ${st.phase})`);
-    const before = E.probe.turnEnd;
-    E.probe.turnEnd = onTurnEnd;
+    if (st.pending && st.pending.tag === "siege") askedSiege(st, more);
+    const d = B.decide(E.view(st, side), side, levels[side], rng);
+    if (!d) throw new Error(`seed ${seed}: no decision for side ${side} (turn ${st.turn}, phase ${st.phase})`);
+    // #27: a 圍點打援 decision carries the bot's `game`; it is the bot's note, not part of the move.
+    let a = d;
+    if (d.game) {
+      const { game, ...move } = d; a = move;
+      const g = more.games[side]; g.n++; if (Math.max(...Object.values(game.mix)) >= 0.999) g.pure++;
+    }
+    const before = E.probe.turnEnd, beforeHome = E.probe.home;
+    E.probe.turnEnd = onTurnEnd; E.probe.home = onHome;
     try { st = E.apply(st, a); }
     catch (e) { const { why, ...shown } = a; throw new Error(`seed ${seed}: turn ${st.turn}, phase ${st.phase}: the engine refused or crashed on ${JSON.stringify(shown)}: ${e && e.message}`); }
-    finally { E.probe.turnEnd = before; }
+    finally { E.probe.turnEnd = before; E.probe.home = beforeHome; }
     lookIsolated(st); lookLog(st);
   }
-  return { st, rec };
+  return { st, rec, more };
+}
+// The Nationalists asked to answer an attack on T: what they may answer, and when they may not
+// reinforce, why -- T is a 孤城 (no reinforcement at all), no city may send (R: a city of theirs in
+// supply, not besieged, next to T or one village between that the Communists do not control), or T is
+// full (cap − blue = 0). The engine's `reinforceSources` is not exported; R is read the same way here.
+function askedSiege(st, more) {
+  const T = st.pending.target, ids = st.pending.options.map((o) => o.id);
+  more.asked++;
+  const reinforce = ids.some((id) => id.startsWith("reinforce:")), breakout = ids.some((id) => id.startsWith("breakout:"));
+  if (reinforce) more.canReinforce++;
+  if (breakout) more.canBreakout++;
+  if (ids.length === 1) more.onlyHold++;
+  if (reinforce) return;
+  if (E.isolatedCities(st).includes(T)) { more.noReinforce.isolated++; return; }
+  const ok = E.supplied(st), adj = E.adjOf(st, T);
+  const R = E.SPACES.filter((s) => s.kind === "city" && s.id !== T && E.controller(st, s.id) === KMT && ok.has(s.id) && !E.besieged(st, s.id)
+    && (adj.includes(s.id) || adj.some((v) => E.SPACE[v].kind === "village" && E.controller(st, v) !== CCP && E.adjOf(st, v).includes(s.id))));
+  const full = E.capOf(st, T) - E.infOf(st, T)[KMT] <= 0;
+  if (!R.length) { more.noReinforce.noR++; if (full) more.noRAndFull++; }
+  else if (full) more.noReinforce.full++;
+  else bump(more.noReinforce, "unexplained"); // this reading and the engine's disagree: reported, not hidden
 }
 
 // ---------------------------------------------------------------- sums
@@ -156,6 +206,26 @@ export function aheadByTurn(list) {
   return a;
 }
 
+// #27 (tuning/27/report.txt): mechanism B's numbers summed over games (`more` of each game), and per
+// game: how many attacks on a city (`siegesPerGame`), the turn its first 孤城 appeared (`firstIsolatedGame`,
+// "none" if never), how many 孤城 at the end of turn 3 (`isolatedAt3`, "ended" if the game ended before).
+// Kept out of `summarize` (its shape is pinned): `runChunk` hands it back beside the sums, as `more`.
+export function moreStats(list) {
+  let m = { siegesPerGame: {}, firstIsolatedGame: {}, isolatedAt3: {} };
+  for (const { rec, more } of list) {
+    if (more) {
+      const { games, ...rest } = more;
+      m = addSums(m, { ...rest, decided: games });
+      bump(m.siegesPerGame, more.sieges);
+    }
+    const turns = Object.values(rec.firstIsolated);
+    bump(m.firstIsolatedGame, turns.length ? Math.min(...turns) : "none");
+    const e3 = rec.turnEnds.find((e) => e.turn === 3);
+    bump(m.isolatedAt3, e3 ? e3.isolated.length : "ended");
+  }
+  return m;
+}
+
 export function simulate({ games = 100, seed = 1, ccp = "normal", kmt = "normal", options = {} } = {}) {
   const list = [];
   for (let k = 0; k < games; k++) list.push(playGame(seed + k, { ccp, kmt, options }));
@@ -190,7 +260,7 @@ function runChunk({ cell, first, count, ccp, kmt, variant = {} }) {
     try { list.push(playGame(seed, { ccp, kmt, options: { ...variant, ...CELLS[cell] } })); }
     catch (e) { errors.push({ seed, message: String((e && e.message) || e).slice(0, 400) }); }
   }
-  return { cell, first, count, sum: { ...summarize(list), winsBySide: winsBySide(list), aheadByTurn: aheadByTurn(list) }, errors, ms: Date.now() - t0 };
+  return { cell, first, count, sum: { ...summarize(list), winsBySide: winsBySide(list), aheadByTurn: aheadByTurn(list) }, more: moreStats(list), errors, ms: Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------- command line
@@ -243,7 +313,7 @@ async function runOneByOne(job) {
     let one;
     try { one = await runChild({ ...job, first: seed, count: 1 }, 2); }
     catch { one = { sum: summarize([]), errors: [{ seed, message: "the child process died twice on this game" }], ms: 0 }; }
-    total = { ...total, sum: addSums(total.sum, one.sum), errors: total.errors.concat(one.errors), ms: total.ms + one.ms };
+    total = { ...total, sum: addSums(total.sum, one.sum), more: addSums(total.more, one.more), errors: total.errors.concat(one.errors), ms: total.ms + one.ms };
   }
   return total;
 }
@@ -305,7 +375,7 @@ async function runCells(cfg) {
       try { r = await runChild(job, 3); } catch { r = await runOneByOne(job); }
       // Read the running sums only after the await: two workers must not overwrite each other.
       const c = state.cells[job.cell];
-      c.sum = addSums(c.sum, r.sum); c.errors = c.errors.concat(r.errors); c.ms += r.ms;
+      c.sum = addSums(c.sum, r.sum); c.more = addSums(c.more, r.more); c.errors = c.errors.concat(r.errors); c.ms += r.ms;
       c.done.push(`${job.first}:${job.count}`);
       if (statePath) saveState(statePath, state);
       played += job.count;
