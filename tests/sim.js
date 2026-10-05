@@ -208,7 +208,8 @@ export function aheadByTurn(list) {
 
 // #27 (tuning/27/report.txt): mechanism B's numbers summed over games (`more` of each game), and per
 // game: how many attacks on a city (`siegesPerGame`), the turn its first 孤城 appeared (`firstIsolatedGame`,
-// "none" if never), how many 孤城 at the end of turn 3 (`isolatedAt3`, "ended" if the game ended before).
+// at any moment; `firstIsolatedEnd`, at a turn's end; "none" if never), how many 孤城 at the end of turn 3
+// (`isolatedAt3`, "ended" if the game ended before).
 // Kept out of `summarize` (its shape is pinned): `runChunk` hands it back beside the sums, as `more`.
 export function moreStats(list) {
   let m = { siegesPerGame: {}, firstIsolatedGame: {}, isolatedAt3: {} };
@@ -220,6 +221,10 @@ export function moreStats(list) {
     }
     const turns = Object.values(rec.firstIsolated);
     bump(m.firstIsolatedGame, turns.length ? Math.min(...turns) : "none");
+    // The same question read at the turns' ends only (a city cut off for a moment and reconnected
+    // within the turn never pays for it): the first turn that ends with a 孤城.
+    const end = rec.turnEnds.find((e) => e.isolated.length > 0);
+    bump(m.firstIsolatedEnd ??= {}, end ? end.turn : "none");
     const e3 = rec.turnEnds.find((e) => e.turn === 3);
     bump(m.isolatedAt3, e3 ? e3.isolated.length : "ended");
   }
