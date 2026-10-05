@@ -1156,9 +1156,11 @@ export function besieged(st, id) { return (st.effects || []).some((e) => e.kind 
 function siegeBonusOn(st, id) { return (st.effects || []).some((e) => e.kind === "siege" && e.space === id && e.bonus); }
 // 增援's R: a city the Nationalists control, in supply, next to T or with one
 // village between them that the Communists do not control. None into a 孤城.
+// A besieged city is a 孤城 everywhere (orchestrator 裁決 #26, 4 and 6), so it is
+// not in supply and sends no reinforcement.
 function reinforceSources(st, T) {
   const ok = supplied(st);
-  return SPACES.filter((s) => s.kind === "city" && s.id !== T && controller(st, s.id) === KMT && ok.has(s.id)
+  return SPACES.filter((s) => s.kind === "city" && s.id !== T && controller(st, s.id) === KMT && ok.has(s.id) && !besieged(st, s.id)
     && (adjOf(st, T).includes(s.id) || adjOf(st, T).some((v) => SPACE[v].kind === "village" && controller(st, v) !== CCP && adjOf(st, v).includes(s.id))))
     .map((s) => s.id);
 }
@@ -1171,7 +1173,8 @@ function siegeResponses(st, T) {
       for (let k = 1; k <= most; k++) out.push(`reinforce:${R}:${k}`);
     }
   }
-  for (const R of adjOf(st, T)) if (controller(st, R) !== CCP) out.push(`breakout:${R}`);
+  // 突圍: not into a city nobody may place in (受降's Northeast cities; orchestrator 裁決 #26, 5).
+  for (const R of adjOf(st, T)) if (controller(st, R) !== CCP && !sovietHeld(st, R)) out.push(`breakout:${R}`);
   return out;
 }
 // 進剿's 撤: the villages next to `id` the Nationalists do not control.
