@@ -591,4 +591,9 @@ mdc("MD-sui4bar+twice", "MD-sui4 + MD-bar + MD-twice", ["MD-sui4", "MD-bar", "MD
 mdc("MD-sui4bar+jinL+twice", "MD-sui4 + MD-bar + MD-jinL + MD-twice", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice"]);
 mdc("MD-bar+twice", "MD-bar + MD-twice", ["MD-bar", "MD-twice"]);
 mdc("MD-bar+jinL+twice", "MD-bar + MD-jinL + MD-twice", ["MD-bar", "MD-jinL", "MD-twice"]);
-md("MD-thr-1","統戰門檻:綏 2、晉 3、桂 2、馬 3、滇 2(各少 1,滇已是 2 不再降)", "地下黨的工作早就在做(傅作義身邊的傅冬菊、程潛與陳明仁的聯絡):談判不必等到大牌", { dThreshold: { sui: 2, jin: 3, gui: 2, ma: 3, dian: 2 } });
+// The third round: MD-sui4bar+jinL+twice failed only the Communists' rate (71.7%) and the Nationalists' wins
+// bunched at turn 8 (and the two items every batch fails); give the Nationalists' 整編完成 more 民心.
+md("MD-sui2vp", "易幟給共軍的民心:綏 2", "沒有調防就沒有北平:綏只是察綏一個鄉,它的易幟(1949 年 9 月,北平方式之後)和晉、馬、滇一樣給 2", { dMieVp: { sui: 2 } });
+mdc("MD-S3", "MD-sui4bar + MD-jinL + MD-twice + MD-seal3", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3"]);
+mdc("MD-S3v", "MD-S3 + MD-sui2vp", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3", "MD-sui2vp"]);
+md("MD-thr-1", "統戰門檻:綏 2、晉 3、桂 2、馬 3、滇 2(各少 1,滇已是 2 不再降)", "地下黨的工作早就在做(傅作義身邊的傅冬菊、程潛與陳明仁的聯絡):談判不必等到大牌", { dThreshold: { sui: 2, jin: 3, gui: 2, ma: 3, dian: 2 } });
