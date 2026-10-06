@@ -48,6 +48,10 @@ look("自殺整編(國軍)", S1, KMT);
 const S2 = dBoard({ edits: { jinzhong: [4, 0] }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
 console.log(`talks: actor ${S2.actor}, taiyuan supplied ${E.supplied(S2).has("taiyuan")}, jin ${E.attitudeOf(S2, "jin")}`);
 look("一步易幟的統戰(共軍)", S2, CCP);
+// The acceptance's position since 38f4319 (太原 blue 2 gray 0, 察綏 red 0 blue 2 gray 2).
+const S2b = dBoard({ edits: { jinzhong: [4, 0], taiyuan: [0, 2], chasui: [0, 2] }, gray: { taiyuan: 0 }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+console.log(`38f4319 rig: taiyuan supplied ${E.supplied(S2b).has("taiyuan")}, gray taiyuan ${E.grayOf(S2b, "taiyuan")}, chasui ${JSON.stringify(S2b.inf.chasui)} gray ${E.grayOf(S2b, "chasui")} sui ${E.attitudeOf(S2b, "sui")} controller ${E.controller(S2b, "chasui")}`);
+look("38f4319 的統戰局面(共軍)", S2b, CCP);
 // The same with 察綏 out of the Communists' reach by placement (red 2, blue 2, gray 2: red would need
 // blue + gray + S = 6 > the cap 4), so that 統戰 晉 is the one 易幟 this card can buy.
 const S3 = dBoard({ edits: { jinzhong: [4, 0], chasui: [2, 2] }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });

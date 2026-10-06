@@ -61,6 +61,9 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     plans: {}, answers: {}, cells: {}, picks: {}, sieges: 0, besieged: 0, besiegedLoss: 0, besiegedCities: 0,
     sweep: {}, games: [{ n: 0, pure: 0 }, { n: 0, pure: 0 }],
   };
+  // #32, mechanism D (only with options.mechanismD: off D `more` has no `d` and nothing below runs).
+  const D = options.mechanismD ? newD() : null;
+  if (D) more.d = D;
   // At the turn-end checks (probe.home, "turnEnd"): the besieged cities that supply still reaches, i.e.
   // a 孤城 only by the marker; the `attrition` entry that follows is read against them.
   let siegeOnly = new Set();
@@ -92,6 +95,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
       } else if (l.type === "siegeLoss" || l.type === "siegeCapture") bump(more.picks, l.type);
       else if (l.type === "sweepResult") bump(more.sweep, l.response);
       else if (l.type === "attrition") for (const [id, k] of Object.entries(l.losses)) if (siegeOnly.has(id)) more.besiegedLoss += k;
+      if (D) readLogD(D, l);
     }
     if (s.logSeq) logSeen = s.logSeq;
   };
@@ -106,8 +110,10 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     if (!who.length) throw new Error(`seed ${seed}: nobody must act (turn ${st.turn}, phase ${st.phase})`);
     const side = who[rng.int(who.length)];
     if (st.pending && st.pending.tag === "siege") askedSiege(st, more);
+    const talks = D && side === CCP ? talksLegal(st, seed, n) : null;
     const d = B.decide(E.view(st, side), side, levels[side], rng);
     if (!d) throw new Error(`seed ${seed}: no decision for side ${side} (turn ${st.turn}, phase ${st.phase})`);
+    if (D) readDecisionD(D, st, side, d, talks);
     // #27: a 圍點打援 decision carries the bot's `game`; it is the bot's note, not part of the move.
     let a = d;
     if (d.game) {
@@ -121,7 +127,80 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     finally { E.probe.turnEnd = before; E.probe.home = beforeHome; }
     lookIsolated(st); lookLog(st);
   }
+  if (D) endD(D, st);
   return { st, rec, more };
+}
+
+// ---------------------------------------------------------------- mechanism D (#32)
+// Per game, read from the log, the decisions and the final state; summed over games by `moreStats` (which
+// also turns the per-game counts into distributions). Nothing here draws from the game's rng: the score
+// gap of a 統戰 not chosen is read on the bot's own guess with an rng of its own (`B.scoreCandidates`).
+const DPOW = Object.keys(E.DPOWERS || {});
+function newD() {
+  return {
+    integrate: 0, integratePoints: 0, talks: 0,
+    mie: { conquest: 0, talks: 0 }, seal: 0, grayHit: 0, grayHitPoints: 0,
+    attitude: {}, // why -> count: isolated (結算 of a 孤城 with gray), integrate, talks, attacked (通共 gray hit back to 觀望)
+    grayOrder: {}, // the Nationalists' choice when an attack hits blue and gray
+    firstMie: null, firstSeal: null,
+    talksLegal: { rounds: 0, chosen: 0, notChosen: 0, gapSum: 0, gapN: 0, gap: {}, opsAsks: 0, opsChosen: 0 },
+    integrateLegal: { rounds: 0, chosen: 0 },
+  };
+}
+const playsPolitics = (a) => (a.type === "play" && a.use === "politics") || (a.type === "choose" && a.choice && typeof a.choice === "object" && a.choice.use === "politics");
+function readLogD(D, l) {
+  if (l.type === "integrate") { D.integrate++; D.integratePoints += l.n; }
+  else if (l.type === "talks") D.talks++;
+  else if (l.type === "mie" && l.how) { D.mie[l.how] = (D.mie[l.how] || 0) + 1; (D.howOf ||= {})[l.state] = l.how; if (D.firstMie == null) D.firstMie = l.t; }
+  else if (l.type === "seal" && l.how === "integrated") { D.seal++; if (D.firstSeal == null) D.firstSeal = l.t; }
+  else if (l.type === "grayHit") { D.grayHit++; D.grayHitPoints += l.n; }
+  else if (l.type === "attitude") bump(D.attitude, l.why);
+}
+// Before the Communists decide: is a 統戰 legal now (an action round, or an ops choice that allows it), and
+// on an action round, the best 統戰's score against the best play's (one guess, the bot's own scoring).
+function talksLegal(st, seed, n) {
+  if (st.phase !== "action") return null;
+  if (st.pending) {
+    const p = st.pending;
+    return p.who === CCP && p.kind === "ops" && p.allowed.includes("politics") && E.politicsOptions(st, CCP, p.ops).length ? { ops: true } : null;
+  }
+  const L = E.legal(st, CCP);
+  if (L.kind !== "action" || !L.cards.some((c) => c.uses.politics && c.uses.politics.targets.length)) return null;
+  const sc = B.scoreCandidates(E.view(st, CCP), CCP, E.makeRng((seed * 7919 + n) >>> 0));
+  const pol = sc.find((x) => x.a.use === "politics");
+  return { ops: false, gap: sc.length && pol ? sc[0].v - pol.v : null };
+}
+function readDecisionD(D, st, side, d, talks) {
+  if (st.pending && st.pending.tag === "grayOrder" && side === KMT) bump(D.grayOrder, d.choice);
+  if (side === KMT && st.phase === "action" && !st.pending) {
+    const L = E.legal(st, KMT);
+    if (L.kind === "action" && L.cards.some((c) => c.uses.politics && c.uses.politics.targets.length)) { D.integrateLegal.rounds++; if (playsPolitics(d)) D.integrateLegal.chosen++; }
+  }
+  if (!talks) return;
+  const T = D.talksLegal, chose = playsPolitics(d);
+  if (talks.ops) { T.opsAsks++; if (chose) T.opsChosen++; return; }
+  T.rounds++;
+  if (chose) { T.chosen++; return; }
+  T.notChosen++;
+  if (talks.gap != null) {
+    const g = talks.gap;
+    if (g < 500) { T.gapSum += g; T.gapN++; } // a gap of 1000 is a winning play chosen instead: counted apart
+    bump(T.gap, g < 5 ? "<5" : g < 10 ? "5-10" : g < 20 ? "10-20" : g < 40 ? "20-40" : g >= 500 ? "win" : "40+");
+  }
+}
+// The final state: where each power ended (易幟 by conquest / by talks, 整編完成, neither) and its attitude;
+// the three 易幟 behind an 易幟 win; whether five 整編完成 happened.
+function endD(D, st) {
+  // (the log is trimmed in a long game: how each 易幟 came is kept as it is read, `howOf`)
+  const how = D.howOf || {};
+  delete D.howOf;
+  D.end = {};
+  for (const p of DPOW) {
+    const where = st.mie[p] ? `mie:${how[p] || "?"}` : st.seals[p] ? "seal" : "none";
+    D.end[p] = { [where]: 1, [`att:${E.attitudeOf(st, p)}`]: 1 };
+  }
+  D.trio = st.reason === "unification" ? { [Object.keys(st.mie).sort().join("+")]: 1 } : {};
+  D.fiveSeals = Object.keys(st.seals).length >= 5 ? 1 : 0;
 }
 // The Nationalists asked to answer an attack on T: what they may answer, and when they may not
 // reinforce, why -- T is a 孤城 (no reinforcement at all), no city may send (R: a city of theirs in
@@ -215,9 +294,17 @@ export function moreStats(list) {
   let m = { siegesPerGame: {}, firstIsolatedGame: {}, isolatedAt3: {} };
   for (const { rec, more } of list) {
     if (more) {
-      const { games, ...rest } = more;
+      const { games, d, ...rest } = more;
       m = addSums(m, { ...rest, decided: games });
       bump(m.siegesPerGame, more.sieges);
+      // #32: D's sums, and per game: the turn of the first 易幟 / 整編完成 ("none" if never), how many 整編 / 統戰.
+      if (d) {
+        const { firstMie, firstSeal, ...sums } = d;
+        m.d = addSums(m.d, sums);
+        const per = (m.dPerGame ??= { firstMie: {}, firstSeal: {}, integrate: {}, talks: {}, mie: {}, seal: {} });
+        bump(per.firstMie, firstMie ?? "none"); bump(per.firstSeal, firstSeal ?? "none");
+        bump(per.integrate, d.integrate); bump(per.talks, d.talks); bump(per.mie, d.mie.conquest + d.mie.talks); bump(per.seal, d.seal);
+      }
     }
     const turns = Object.values(rec.firstIsolated);
     bump(m.firstIsolatedGame, turns.length ? Math.min(...turns) : "none");
