@@ -1,0 +1,16 @@
+batches seed 1 done
+SAME games 1000: 270 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 60 leaves
+same Doff-s1 vs 28/default-s1 exit 0
+batches seed 20001 done
+SAME games 1000: 281 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 61 leaves
+same Doff-s20001 vs 28/default-s20001 exit 0
+batches seed 40001 done
+SAME games 1000: 277 leaves of sum (union of keys), errors 0; more (keys both have, not the criterion): same, 62 leaves
+same Doff-s40001 vs 28/default-s40001 exit 0
+targets tuning/32/runs/Doff-s1.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/32/runs/Doff-s20001.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/32/runs/Doff-s40001.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/32/runs/Don-s1.txt.state.json exit 0 TARGETS full 通過 5 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+targets tuning/32/runs/Don-s20001.txt.state.json exit 0 TARGETS full 通過 4 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+targets tuning/32/runs/Don-s40001.txt.state.json exit 0 TARGETS full 通過 5 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+ALL-DONE

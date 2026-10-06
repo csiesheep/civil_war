@@ -42,7 +42,7 @@ function chunk(first, count, ccp, kmt, options = null) {
     const r = spawnSync(process.execPath, [here("./bots-chunk.js"), String(first), String(count), ccp, kmt, ...(options ? [JSON.stringify(options)] : [])], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     const line = (r.stdout || "").split("\n").find((l) => l.startsWith("BOTS "));
     if (line) return { ...JSON.parse(line.slice(5)), attempt };
-    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, attempt };
+    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, politics: [0, 0], attempt };
   }
 }
 const cache = new Map();
@@ -50,7 +50,7 @@ const cache = new Map();
 function play(first, n, ccp, kmt, options = null) {
   const key = `${first}/${n}/${ccp}/${kmt}/${JSON.stringify(options)}`;
   if (cache.has(key)) return cache.get(key);
-  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0,
+  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0, politics: [0, 0],
     siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } } };
   for (let f = first; f < first + n; f += CHUNK) {
     const c = chunk(f, Math.min(CHUNK, first + n - f), ccp, kmt, options);
@@ -61,6 +61,7 @@ function play(first, n, ccp, kmt, options = null) {
     for (const k of ["asked", "differ", "mutated"]) t.pure[k] += c.pure[k];
     for (const [turn, e] of Object.entries(c.turnEnd)) { const x = (t.turnEnd[turn] ||= { games: 0, mandate: 0, isolated: 0 }); x.games += e.games; x.mandate += e.mandate; x.isolated += e.isolated; }
     if (c.attempt > 1) t.rerun++;
+    if (c.politics) for (const s of [CCP, KMT]) t.politics[s] += c.politics[s];
     if (c.siege) {
       for (const s of ["ccp", "kmt"]) {
         const a = t.siege[s], b = c.siege[s];
@@ -464,6 +465,86 @@ check("簡單(B 開著)有固定的偏好:共軍打城至少七成打點、國�
     ok(hold >= 0.7 * r.siege.kmt.n, `國軍固守 ${hold} / ${r.siege.kmt.n}(${pct(hold, r.siege.kmt.n)},至少七成)`),
     eq(B.EASY_SIEGE && J(B.EASY_SIEGE), J({ point: 0.8, hold: 0.8 }), "B.EASY_SIEGE"),
     ok(true, `打點 ${pct(point, r.siege.ccp.n)}、固守 ${pct(hold, r.siege.kmt.n)}`));
+});
+
+// ================================================================ 6
+section("B6 機制 D:灰看態度、整編的時機、統戰(選項 mechanismD)");
+// #32。筆記(Projects/civil_war/civil_war - mechanisms.md,D 的「bot」一節,手抄):
+//   - 評估:每個勢力的灰依態度打折(效忠 1、觀望 0.5、通共 0),再加「離易幟 / 整編完成還差幾步」。
+//   - 國軍 bot 要會算整編的時機:態度還剩幾格、灰還剩幾點、手上有沒有安撫。(這一版沒有安撫。)
+// orchestrator 裁決(#32):
+//   - `B.GRAY_WEIGHT = { loyal: 1, neutral: 0.5, ccp: 0 }`(筆記的數字);評估怎麼用它是 BE 的事,這裡只驗方向:
+//     同一個盤面,一個勢力的態度從效忠往通共移,國軍的評估要變差、共軍的要變好。
+//   - (#32:自殺整編那一條,評估本身就把它排在後面,拿掉過濾不會紅;它的證偽改用「讓 bot 偏好整編」。)
+//   - 會讓自己當場輸掉一家的整編不做(把勢力推成通共、而本據斷了補給 → 立刻易幟);一步就易幟的統戰要做。
+// B 關掉、D 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
+const MDX = { mechanismD: true };
+const dBotTodo = () => TODO || (E.DPOWERS === undefined ? "TODO: 引擎還沒有機制 D(#31)" : B.GRAY_WEIGHT === undefined ? "TODO: bots.js 還沒有 GRAY_WEIGHT(還不懂機制 D)" : null);
+// A D board: the engine's own D opening (#31), red / blue edits as [red, blue], gray and attitudes laid over it,
+// the hands dealt, both scoring cards headlined: the Communists to act first unless they hold nothing.
+function dBoard({ edits = {}, gray = {}, attitudes = {}, ccp = [], kmt = [] } = {}) {
+  let st = board(edits, { aid: false, ...MDX });
+  for (const [id, g] of Object.entries(gray)) E.setGray(st, id, g);
+  for (const [p, a] of Object.entries(attitudes)) E.setAttitude(st, p, a);
+  deal(st, CCP, ["score_north", ...ccp]); deal(st, KMT, ["score_east", ...kmt]);
+  for (const side of [CCP, KMT]) st = E.apply(st, { type: "headline", side, card: st.hands[side].find((c) => E.CARD[c].scoring) });
+  return st;
+}
+const what = (a) => `${a.use || a.type}:${a.target || a.power || ""}`;
+const asked = (st, side, n = 20) => { const out = {}; for (let i = 0; i < n; i++) { const k = what(B.decide(E.view(st, side), side, "normal", E.makeRng(700 + i))); out[k] = (out[k] || 0) + 1; } return out; };
+const BD = () => play(10001, games(20), "normal", "normal", MDX);
+
+check("GRAY_WEIGHT:灰依態度打折(效忠 1、觀望 0.5、通共 0)", () => {
+  const t = dBotTodo(); if (t) return t;
+  return all(eq(J(B.GRAY_WEIGHT), J({ loyal: 1, neutral: 0.5, ccp: 0 }), "B.GRAY_WEIGHT"), ok(true, "照筆記"));
+});
+
+check("評估看態度:同一個盤面,桂從效忠 → 觀望 → 通共,國軍的評估一路變差、共軍的一路變好", () => {
+  const t = dBotTodo(); if (t) return t;
+  const base = dBoard({ kmt: ["kunming_incident"] });
+  const ev = (a, side) => { const c = E.clone(base); E.setAttitude(c, "gui", a); return B.evaluate(c, side); };
+  const k = ["loyal", "neutral", "ccp"].map((a) => ev(a, KMT)), c = ["loyal", "neutral", "ccp"].map((a) => ev(a, CCP));
+  const f = (xs) => xs.map((x) => x.toFixed(2)).join(" → ");
+  return all(ok(k[0] > k[1] && k[1] > k[2], `國軍的評估(效忠 → 觀望 → 通共)要一路變小:${f(k)}`), ok(c[0] < c[1] && c[1] < c[2], `共軍的評估要一路變大:${f(c)}`),
+    ok(true, `國軍 ${f(k)};共軍 ${f(c)}`));
+});
+
+check("國軍不做會讓自己當場輸掉一家的整編:馬觀望、蘭州斷了補給,整編蘭州 = 馬通共 = 立刻易幟", () => {
+  const t = dBotTodo(); if (t) return t;
+  // 西安紅 3 藍 0(共軍控制):蘭州唯一的鄰居,蘭州斷了補給。國軍手上 2 點牌。
+  const S = dBoard({ edits: { xian: [3, 0] }, gray: { lanzhou: 2 }, attitudes: { ma: "neutral" }, kmt: ["takeover_officials", "kunming_incident"] });
+  const pre = all(eq(S.actor, KMT, "輪到誰"), eq(E.supplied(S).has("lanzhou"), false, "蘭州有補給"));
+  if (pre !== true) return pre;
+  const got = asked(S, KMT);
+  return all(eq(got["politics:lanzhou"] || 0, 0, `國軍 20 次裡整編蘭州的次數(${J(got)})`), ok(true, `國軍 20 次:${J(got)}`));
+});
+
+check("共軍會做一步就易幟的統戰:晉觀望、太原斷了補給,4 點統戰晉 = 晉通共 = 立刻易幟", () => {
+  const t = dBotTodo(); if (t) return t;
+  // 晉中紅 4(灰 2,觀望:4 ≥ 0 + 2 + 2,共軍控制)、太行共軍的:太原斷了補給。共軍手上淮海戰役(4 點)。
+  // #32(BE 交付時指出第一版的局面不乾淨,改了):太原只有藍(藍 2 灰 0),所以結算不會白送晉一格;察綏藍 2 灰 2
+  // (共軍要 6 點紅才控制,上限 4),所以這一手沒有別的易幟。統戰晉是這一手唯一拿得到的易幟。
+  const S = dBoard({ edits: { jinzhong: [4, 0], taiyuan: [0, 2], chasui: [0, 2] }, gray: { taiyuan: 0 }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
+  const pre = all(eq(S.actor, CCP, "輪到誰"), eq(E.supplied(S).has("taiyuan"), false, "太原有補給"), eq(E.attitudeOf(S, "jin"), "neutral", "晉的態度"),
+    eq(E.grayOf(S, "taiyuan"), 0, "太原的灰(結算不該白送一格)"), eq(E.controller(S, "chasui") === CCP, false, "察綏是共軍控制的(藍 2 + 效忠的灰 2:國軍控制;共軍一手拿不下)"));
+  if (pre !== true) return pre;
+  const got = asked(S, CCP), n = got["politics:jin"] || 0;
+  return all(ok(n >= 16, `共軍 20 次裡統戰的次數至少 16(${J(got)})`), ok(true, `共軍 20 次:${J(got)}`));
+});
+
+check("D 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍真的整編、共軍至少統戰過", () => {
+  const t = dBotTodo(); if (t) return t;
+  const r = BD();
+  const c = all(clean(r, "普通對普通(D)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
+  const s = r.ms / r.games / 1000, k = r.politics ? r.politics[KMT] : 0, cc = r.politics ? r.politics[CCP] : 0;
+  return all(
+    ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`),
+    // #32: the Communists 統戰 rarely, and rightly: the 結算 gives the same step free once a city with gray is cut off
+    // (BE's count on seeds 10001-10020: 4 統戰, each taking an 易幟 that won the game, 20 more legal ones scored much
+    // worse). So the Communists must 統戰 at all, not every other game; that it is rare is a finding for the owner.
+    ok(k >= 0.3 * r.games, `國軍整編 ${k} 次(${r.games} 局,至少每局 0.3 次)`), ok(cc >= 1, `共軍統戰 ${cc} 次(${r.games} 局裡至少 1 次)`),
+    ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};整編 ${k}、統戰 ${cc};每局 ${s.toFixed(1)} 秒`),
+  );
 });
 
 // ---------------------------------------------------------------- verdict

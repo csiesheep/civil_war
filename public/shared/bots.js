@@ -120,6 +120,9 @@ const W = {
   tempo: 0.5,
 };
 const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = E.MANDATE_TO_WIN;
+// Mechanism D (#32; the owner's mechanisms note, D, 「bot」): a power's gray is worth to the
+// Nationalists by its attitude (效忠 1, 觀望 0.5, 通共 0).
+export const GRAY_WEIGHT = { loyal: 1, neutral: 0.5, ccp: 0 };
 // #130 / Zongheng: a capital is a road to a loss (homeFall). FALL is what
 // losing it is worth to a one-ply bot that must see it coming; the road is the
 // share of it by the points the enemy still lacks and by who acts next. Under
@@ -274,6 +277,10 @@ function boardValue(st, side, terms = null) {
   // 5 整編 held at once): the points still missing for the cheapest set of
   // powers that completes it, read against who acts next (`markerRoad`).
   const mie = Object.keys(st.mie).length, seals = Object.keys(st.seals).length;
+  if (mechD(st)) {
+    vq += boardValueD(st, mie, seals, T);
+    return finishBoardValue(st, side, vq, T, turn, turns);
+  }
   const held = W.mieHeld * mie - W.sealHeld * seals;
   vq += held;
   if (T) T("markers", held);
@@ -300,7 +307,11 @@ function boardValue(st, side, terms = null) {
     : markerRoad(st, CCP, mieNeed, st.options.mie - mie) - markerRoad(st, KMT, sealNeed, st.options.seals - seals);
   vq += roads;
   if (T) T("markerRoads", roads);
-
+  return finishBoardValue(st, side, vq, T, turn, turns);
+}
+// The rest of the evaluation, after the markers: the same additions in the same order with or without
+// mechanism D (#32 split it here so that D's markers replace only the block above).
+function finishBoardValue(st, side, vq, T, turn, turns) {
   // The reform tracks (建軍 / 行憲): the perks, and under a win by box 6 the race to it.
   const reformPerk = W.reformPerk[st.reform[CCP]] - W.reformPerk[st.reform[KMT]];
   vq += reformPerk;
@@ -395,6 +406,95 @@ function boardValue(st, side, terms = null) {
   vq += spread;
   if (T) T("spread", spread);
   return side === CCP ? vq : -vq;
+}
+
+// ---------- mechanism D (#32): gray, the attitudes, 易幟 and 整編完成 ----------
+// Read only under the option `mechanismD`: without it nothing below runs and no number above moves.
+// The owner's note (D, 「bot」): a power's gray is discounted by its attitude (GRAY_WEIGHT), and the
+// evaluation adds how many steps each power still is from 易幟 / 整編完成. Under D both markers are
+// permanent and a power gets one of the two at most (engine `dMarkers`), so the roads to the instant
+// wins (3 易幟, 5 整編完成) are read per power that has neither, with D's own conditions:
+//   易幟: the Communists control its home (red ≥ blue + gray + S: gray blocks them in every
+//     attitude), or it leans to them (通共) and its home is out of supply. The points missing are the
+//     cheaper of the two: the red still missing at the home, or one 統戰 per step of attitude still to
+//     go (each a card of the power's threshold) plus, while the home is in supply, the red that cuts it.
+//   整編完成: no gray left, the last of it gone by 整編, the Nationalists control the home. Each space
+//     with gray takes one 整編, and each 整編 moves the attitude a step toward the Communists, which
+//     refuse 整編 once at 通共: a loyal power has two 整編 in it, a neutral one one. Out of reach when
+//     it needs more than that, when its gray went by an attack, or when the last 整編 would make it
+//     通共 with its home cut off (that is an 易幟, `suicideIntegrate`). The points missing are the gray
+//     still to turn (a card's ops turn as many) and the blue missing for control of the home once
+//     its gray is blue.
+const mechD = (st) => !!(st.options && st.options.mechanismD);
+const D_STEPS = { loyal: 2, neutral: 1, ccp: 0 };
+// W_D.gray: per gray point at GRAY_WEIGHT 1 (a loyal point is the Nationalists' at control and reach,
+// and a 整編 turns it blue). A marker held: under D it is permanent (W.mieHeld's markers could be lifted
+// again), so it is worth its share of the instant win it is part of: the last marker is the win itself
+// (the evaluation's 1000), the ones before it share MARK_WIN -- MARK_WIN / (the markers that win − 1).
+const W_D = { gray: 1.0 };
+const dMarkerWorth = (st) => [MARK_WIN / Math.max(1, st.options.mie - 1), MARK_WIN / Math.max(1, st.options.seals - 1)];
+// Per power with neither marker: the points missing for each (`mie`, `seal`, the lists markerRoad
+// reads), and how many powers meet a marker's condition already without having it (`mieDue`,
+// `sealDue`): never on a state the engine has played (it marks at once, but for a second 整編完成 in
+// one turn, `sealPerTurn`), only on the boards the bot lays out point by point (`greedyPlacement`,
+// `bestPoints`), which must see a placement's 易幟 as the engine would. A city of the power with gray
+// that is a 孤城 now moves the power a step toward the Communists at this turn's 結算 (engine
+// `supplyAttritionD`): that step costs no 統戰.
+export function dNeeds(st, ok = E.supplied(st)) {
+  const mie = [], seal = [];
+  let mieDue = 0, sealDue = 0;
+  for (const [p, d] of Object.entries(E.DPOWERS)) {
+    if (st.mie[p] || st.seals[p]) continue;
+    const h = d.home, [q, c] = E.infOf(st, h), S = SPACE[h].stability, gh = E.grayOf(st, h);
+    const att = E.attitudeOf(st, p) || d.attitude, cut = !ok.has(h);
+    const conquest = Math.max(0, c + gh + S - q);
+    if (conquest === 0 || (cut && att === "ccp")) { mieDue++; continue; }
+    const withGray = d.spaces.filter((id) => E.grayOf(st, id) > 0);
+    const free = withGray.some((id) => isCity(id) && (!ok.has(id) || E.besieged(st, id))) ? 1 : 0;
+    // The road by talks: the steps of attitude to go (統戰), and, while the home is in supply, cutting
+    // it: at most the red that takes every neighbour of the home not the Communists' already.
+    let cutCost = 0;
+    if (!cut) for (const x of E.adjOf(st, h)) { const [qx, cx] = E.infOf(st, x); cutCost += Math.max(0, cx + E.grayOf(st, x) + SPACE[x].stability - qx); }
+    mie.push(Math.min(conquest, cutCost + Math.max(0, D_STEPS[att] - free) * d.threshold));
+    const blueNeed = Math.max(0, q + S - c - gh);
+    if (!withGray.length) {
+      if (st.grayLast && st.grayLast[p] === "politics") { if (blueNeed === 0) sealDue++; else seal.push(blueNeed); }
+      continue;
+    }
+    if (withGray.length > D_STEPS[att] || (withGray.length === D_STEPS[att] && cut)) continue;
+    seal.push(withGray.reduce((t, id) => t + E.grayOf(st, id), 0) + blueNeed);
+  }
+  return { mie, seal, mieDue, sealDue };
+}
+function boardValueD(st, mieHeld, sealsHeld, T) {
+  let v = 0;
+  const { mie: mieNeed, seal: sealNeed, mieDue, sealDue } = dNeeds(st);
+  const mie = mieHeld + mieDue, seals = sealsHeld + sealDue;
+  const [mieW, sealW] = dMarkerWorth(st), held = mieW * mie - sealW * seals;
+  v += held;
+  if (T) T("markers", held);
+  const roads = markerRoad(st, CCP, mieNeed, st.options.mie - mie) - markerRoad(st, KMT, sealNeed, st.options.seals - seals, [], E.sealWinSoon(st));
+  v += roads;
+  if (T) T("markerRoads", roads);
+  let gray = 0;
+  if (st.gray) for (const [id, g] of Object.entries(st.gray)) if (g > 0) { const p = E.powerOf(id); gray += GRAY_WEIGHT[E.attitudeOf(st, p) || E.DPOWERS[p].attitude] * g; }
+  v -= W_D.gray * gray;
+  if (T) T("gray", -W_D.gray * gray);
+  return v;
+}
+// A 整編 that makes its power 通共 while the power's home is out of supply: an 易幟 on the spot
+// (orchestrator 裁決 #32: never played, unless every play is one). `a` is a play or an ops choice.
+function suicideIntegrate(st, side, a, ok) {
+  const c = a.type === "choose" ? a.choice : a;
+  if (side !== KMT || !c || c.use !== "politics") return false;
+  const p = E.powerOf(c.target);
+  return !!p && E.attitudeOf(st, p) === "neutral" && !ok.has(E.DPOWERS[p].home);
+}
+function dropSuicideIntegrate(st, side, list) {
+  if (!mechD(st) || side !== KMT || list.length <= 1) return list;
+  const ok = E.supplied(st);
+  const safe = list.filter((a) => !suicideIntegrate(st, side, a, ok));
+  return safe.length ? safe : list;
 }
 
 // ---------- the guess: a full state consistent with what this seat sees ----------
@@ -608,10 +708,16 @@ export function greedyPlacement(st, side, ops, card, restrict = null) {
 function lastAction(st, side) { return actionsLeft(st, side) <= 1 && actionsLeft(st, 1 - side) === 0; }
 function winTargets(st, side) {
   const out = [], opp = 1 - side;
-  if (side === CCP && Object.keys(st.mie).length >= st.options.mie - 1) {
+  if (mechD(st)) {
+    // #32, D's markers: the last 易幟 by conquest is control of the power's home; 整編完成 needs a
+    // 整編, never a placement alone.
+    if (side === CCP && Object.keys(st.mie).length >= st.options.mie - 1) {
+      for (const [p, d] of Object.entries(E.DPOWERS)) if (!st.mie[p] && !st.seals[p]) out.push({ ids: [d.home], done: (s, x) => E.controller(s, x) === CCP });
+    }
+  } else if (side === CCP && Object.keys(st.mie).length >= st.options.mie - 1) {
     for (const id of Object.keys(STATES)) if (!st.mie[id]) out.push({ ids: E.spacesOfState(id), done: (s, x) => E.controller(s, x) === CCP });
   }
-  if (side === KMT && Object.keys(st.seals).length >= st.options.seals - 1) {
+  if (side === KMT && !mechD(st) && Object.keys(st.seals).length >= st.options.seals - 1) {
     const sealed = (s, x) => E.controller(s, x) === KMT && (s.options.sealAt !== "cap" || E.infOf(s, x)[KMT] >= E.capOf(s, x));
     for (const [id, s] of Object.entries(STATES)) if (!st.seals[id]) out.push({ ids: [s.capital], done: sealed });
   }
@@ -685,7 +791,14 @@ function bestOps(st, who, ops, allowed, rng, card, top = null) {
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
   // Mechanism D (#31): 政工, offered by the ops ask only under D.
   const pol = allowed.includes("politics") ? E.politicsOptions(st, who, ops) : [];
-  for (const t of pol) cands.push({ use: "politics", ...politicsPayload(who, t) });
+  if (pol.length) {
+    // #32: never a 整編 that is an 易幟 on the spot, while anything else is offered.
+    const ok = who === KMT ? E.supplied(st) : null;
+    for (const t of pol) {
+      const c = { use: "politics", ...politicsPayload(who, t) };
+      if (!(ok && cands.length && suicideIntegrate(st, who, c, ok))) cands.push(c);
+    }
+  }
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
   if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", ...attacks(st, who, o.campaignTargets[0])[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
   if (!sieges.size) return bestOf(st, who, cands, rng);
@@ -950,7 +1063,7 @@ function actionCandidates(st, side, L, sieges = null) {
     if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
   if (sieges) for (const a of out) if (a[SIEGE_MARK]) { delete a[SIEGE_MARK]; sieges.add(a); }
-  return dropSelfCollapse(st, side, out);
+  return dropSuicideIntegrate(st, side, dropSelfCollapse(st, side, out));
 }
 
 // The other side's best one-ply reply, from the sampled state.

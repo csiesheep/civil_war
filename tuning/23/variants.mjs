@@ -18,6 +18,8 @@ export const VARIANTS = {
   B: { what: "機制 B(圍點打援、破襲、進剿)開著", why: "M2b 第 1 批(#26 引擎、#27 bot 與模擬)", options: { mechanismB: true } },
   // #28: B is the default rules since #28 (so `base` and `B` play the same); `Boff` is the rules before B.
   Boff: { what: "機制 B 關掉(#28 之前的預設規則)", why: "#28 證明 { mechanismB: false } 照舊是原本的規則", options: { mechanismB: false } },
+  // #32: mechanism D's core (#31, not a default) on, the bots taught D (#32); measured against the default rules.
+  D: { what: "機制 D(實力派的態度:灰、整編、統戰、易幟 / 整編完成)開著", why: "M2b 第 2 批(#31 引擎、#32 bot 與模擬)", options: { mechanismD: true } },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {
