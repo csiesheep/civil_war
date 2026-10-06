@@ -549,3 +549,25 @@ combo("F0", "整編的地基:本據不收免費放置 + 察綏紅 4 + 本據藍 
 for (const l of ["L-rounds77", "L-uscap3", "L-soviet2", "L-counter2", "L-jinzhong3", "L-jinpu", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4", "L-nerail", "L-nerail6", "L-rear012", "L-ccpbase", "L-sealall"]) {
   combo(`F0+${l.slice(2)}`, `F0 + ${VARIANTS[l].what}`, ["F0", l]);
 }
+
+// ---- #33: D's numbers (owner 裁決 #33: 「調一輪 D 的數字」). Every `MD-…` is laid over the variant D
+// ({ mechanismD: true }) and uses only #33's options (engine.js, at DPOWERS); a part's d-keys that are tables
+// are merged power by power / space by space, a later part winning. `what` is the rulebook sentence, `why` its
+// reason (the note's map v0.2, its 史實 lines, or history).
+const MD = {};
+const md = (name, what, why, options) => { MD[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismD: true, ...options } }; };
+const mdc = (name, what, parts) => {
+  const options = { mechanismD: true };
+  for (const p of parts) for (const [k, v] of Object.entries(MD[p].options)) {
+    options[k] = v && typeof v === "object" && !Array.isArray(v) ? { ...(options[k] || {}), ...v } : v;
+  }
+  VARIANTS[name] = { what, why: parts.join(" + "), parts, options };
+};
+export const GRAY_V02 = { chasui: 4, taiyuan: 4, jinzhong: 3, lanzhou: 4, guilin: 4, kunming: 4 };
+md("MD-g4", "開局的灰:察綏 4、太原 4、晉中 3、蘭州 4、桂林 4、昆明 4(這六個據點沒有藍)",
+  "筆記的地圖 v0.2(「察綏 灰 4、紅 2」…「昆明 灰 4」):察綏要 6 點紅才拿得下,整編也要大牌或兩次", { dGray: GRAY_V02 });
+md("MD-sui4", "開局的灰:察綏 4(其餘照 #30 各 2)",
+  "只改筆記 v0.2 裡擋住開局易幟的那一格:傅作義的主力在綏遠,1945 年晉察冀佔張家口沒有動到他的本錢", { dGray: { chasui: 4 } });
+md("MD-bar", "機制 D:共軍受降的免費放置不能放進勢力的據點(察綏)",
+  "1945 年 8 月晉察冀佔的是察哈爾的張家口;綏遠(歸綏、包頭)一直在傅作義手上,1946 年 10 月他還打回張家口", { dFreeBar: true });
+mdc("MD-g4bar", "MD-g4 + MD-bar", ["MD-g4", "MD-bar"]);
