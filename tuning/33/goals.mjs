@@ -65,7 +65,7 @@ export function dist(o) {
   return Object.entries(o || {}).sort((a, b) => (isNaN(a[0]) || isNaN(b[0]) ? String(a[0]).localeCompare(String(b[0])) : a[0] - b[0])).map(([k, v]) => `${k}:${v}`).join(" ");
 }
 export function row(b) {
-  return `${b.name.padEnd(22)} 共軍 ${f1(b.ccp).padStart(6)}  十項 ${String(b.targets ?? "?").padStart(2)}  G1 ${f1(b.g1).padStart(6)}  G2 最低 ${f1(b.lowest).padStart(6)}  G3 ${f1(b.g3).padStart(6)}  G5 ${f1(b.g5).padStart(6)}  `
+  return `${b.name.padEnd(30)} 共軍 ${f1(b.ccp).padStart(6)}  十項 ${String(b.targets ?? "?").padStart(2)}  G1 ${f1(b.g1).padStart(6)}  G2 最低 ${f1(b.lowest).padStart(6)}  G3 ${f1(b.g3).padStart(6)}  G5 ${f1(b.g5).padStart(6)}  `
     + `[${["g1", "g2", "g3", "g4"].map((k) => (b.pass[k] ? k.toUpperCase() : "--")).join(" ")}]`;
 }
 
