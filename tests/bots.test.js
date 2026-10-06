@@ -526,7 +526,7 @@ check("共軍會做一步就易幟的統戰:晉觀望、太原斷了補給,4 點
   // (共軍要 6 點紅才控制,上限 4),所以這一手沒有別的易幟。統戰晉是這一手唯一拿得到的易幟。
   const S = dBoard({ edits: { jinzhong: [4, 0], taiyuan: [0, 2], chasui: [0, 2] }, gray: { taiyuan: 0 }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"] });
   const pre = all(eq(S.actor, CCP, "輪到誰"), eq(E.supplied(S).has("taiyuan"), false, "太原有補給"), eq(E.attitudeOf(S, "jin"), "neutral", "晉的態度"),
-    eq(E.grayOf(S, "taiyuan"), 0, "太原的灰(結算不該白送一格)"), eq(E.controller(S, "chasui"), null, "察綏的控制者"));
+    eq(E.grayOf(S, "taiyuan"), 0, "太原的灰(結算不該白送一格)"), eq(E.controller(S, "chasui") === CCP, false, "察綏是共軍控制的(藍 2 + 效忠的灰 2:國軍控制;共軍一手拿不下)"));
   if (pre !== true) return pre;
   const got = asked(S, CCP), n = got["politics:jin"] || 0;
   return all(ok(n >= 16, `共軍 20 次裡統戰的次數至少 16(${J(got)})`), ok(true, `共軍 20 次:${J(got)}`));
