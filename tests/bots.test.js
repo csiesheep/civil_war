@@ -42,7 +42,7 @@ function chunk(first, count, ccp, kmt, options = null) {
     const r = spawnSync(process.execPath, [here("./bots-chunk.js"), String(first), String(count), ccp, kmt, ...(options ? [JSON.stringify(options)] : [])], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     const line = (r.stdout || "").split("\n").find((l) => l.startsWith("BOTS "));
     if (line) return { ...JSON.parse(line.slice(5)), attempt };
-    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, politics: [0, 0], attempt };
+    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 }, attempt };
   }
 }
 const cache = new Map();
@@ -50,7 +50,7 @@ const cache = new Map();
 function play(first, n, ccp, kmt, options = null) {
   const key = `${first}/${n}/${ccp}/${kmt}/${JSON.stringify(options)}`;
   if (cache.has(key)) return cache.get(key);
-  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0, politics: [0, 0],
+  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 },
     siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } } };
   for (let f = first; f < first + n; f += CHUNK) {
     const c = chunk(f, Math.min(CHUNK, first + n - f), ccp, kmt, options);
@@ -62,6 +62,7 @@ function play(first, n, ccp, kmt, options = null) {
     for (const [turn, e] of Object.entries(c.turnEnd)) { const x = (t.turnEnd[turn] ||= { games: 0, mandate: 0, isolated: 0 }); x.games += e.games; x.mandate += e.mandate; x.isolated += e.isolated; }
     if (c.attempt > 1) t.rerun++;
     if (c.politics) for (const s of [CCP, KMT]) t.politics[s] += c.politics[s];
+    if (c.eActs) for (const k of ["print", "radical", "peg"]) t.eActs[k] += c.eActs[k];
     if (c.siege) {
       for (const s of ["ccp", "kmt"]) {
         const a = t.siege[s], b = c.siege[s];
@@ -545,6 +546,89 @@ check("D 開著普通對普通:每一局都結束;每局平均不超過 20 秒;�
     ok(k >= 0.3 * r.games, `國軍整編 ${k} 次(${r.games} 局,至少每局 0.3 次)`), ok(cc >= 1, `共軍統戰 ${cc} 次(${r.games} 局裡至少 1 次)`),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};整編 ${k}、統戰 ${cc};每局 ${s.toFixed(1)} 秒`),
   );
+});
+
+// ================================================================ 7
+section("B7 機制 E:印鈔與激進的價格(選項 mechanismE)");
+// #36。筆記(Projects/civil_war/civil_war - mechanisms.md,E 的「bot」一節,手抄):
+//   - 印鈔和激進都是「這 2 點行動點現在值多少」對「離下一個門檻還有幾格」。bot 把門檻的代價攤到每一格上當價格。
+//   - 國軍 bot 在最後一回合會把通膨印到 9:這是對的,也是史實。
+// orchestrator 裁決(#36):
+//   - `B.ePrice(st, side)`:這一方自己的軌(國軍通膨、共軍左傾)再走一格的價格(評估的分數,越大越貴)。怎麼攤是 BE 的事;
+//     這裡只驗方向:通膨 9(下一格就崩潰)比通膨 0 貴得多。
+//   - 評估看 E:同一個盤面,通膨越高國軍越差;左傾越高共軍越差;中間派偏向誰誰好。
+//   - 最後一回合國軍的倒數第二個行動:通膨 7、8 時要印(8 的手牌 −1 已經沒有下一回合;筆記「印到 9」);通膨 9 時永遠不印(10 = 當場輸)。
+//     (#36:第一版放在全局最後一個行動,BE 指出那裡國軍怎麼下都贏、17 個選項都是 1000 分,bot 只是在平手裡亂選;
+//     倒數第二個行動印不印才會改變結果。筆記說的是「最後一回合」,不是最後一個行動。)
+// E 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
+const MEX = { mechanismE: true };
+const eBotTodo = () => TODO || (E.E_SPEC === undefined ? "TODO: 引擎還沒有機制 E(#35)" : typeof B.ePrice !== "function" ? "TODO: bots.js 還沒有 ePrice(還不懂機制 E)" : null);
+// An E board at turn 1's action rounds: the engine's E opening, the hands dealt, both scoring cards headlined.
+function eBoard({ ccp = [], kmt = [], inflation = 0, leftism = 0, centrists = 0 } = {}) {
+  let st = board({}, { aid: false, ...MEX });
+  deal(st, CCP, ["score_north", ...ccp]); deal(st, KMT, ["score_east", ...kmt]);
+  for (const side of [CCP, KMT]) st = E.apply(st, { type: "headline", side, card: st.hands[side].find((c) => E.CARD[c].scoring) });
+  E.setInflation(st, inflation); E.setLeftism(st, leftism); E.setCentrists(st, centrists);
+  return st;
+}
+// atRound (section B4) for an E game: the same walk, from an opening with the given options.
+function atRoundE(turn, round, actor, hands, options) {
+  let st = opening({ aid: false, ...options });
+  if (turn > 1) {
+    st.turn = turn - 1; st.round = 0; st.effects = []; st.era = E.eraOf(turn).id; st.draw = []; st.discard = []; st.later = {};
+    st.headline = [null, null]; st.phase = "action"; st.pending = null; st.plan = [{ do: "startTurn" }];
+  }
+  deal(st, CCP, hands[CCP]); deal(st, KMT, hands[KMT]);
+  if (turn > 1) st = E.run(st);
+  if (st.pending || st.phase !== "headline" || st.turn !== turn) throw new Error(`atRoundE: 期望停在第 ${turn} 回合的標題階段,實際 turn ${st.turn},phase ${st.phase},pending ${st.pending && st.pending.kind}`);
+  for (const side of [CCP, KMT]) st = E.apply(st, { type: "headline", side, card: st.hands[side].find((c) => E.CARD[c].scoring) });
+  st = E.clone(st); st.round = round; st.actor = actor;
+  return st;
+}
+const BE7 = () => play(11001, games(20), "normal", "normal", MEX);
+const printed = (a) => !!(a && (a.print || (a.choice && typeof a.choice === "object" && a.choice.print)));
+
+check("ePrice:通膨 9(下一格崩潰)的價格比通膨 0 高得多", () => {
+  const t = eBotTodo(); if (t) return t;
+  const p0 = B.ePrice(eBoard({ inflation: 0 }), KMT), p9 = B.ePrice(eBoard({ inflation: 9 }), KMT);
+  return all(ok(p9 > p0 && p9 > 0, `國軍通膨 0 的價格 ${p0},通膨 9 的價格 ${p9}(9 要比 0 高)`), ok(true, `通膨 0:${p0};通膨 9:${p9}`));
+});
+
+check("評估看 E:通膨越高國軍越差;左傾越高共軍越差;中間派偏向誰誰好", () => {
+  const t = eBotTodo(); if (t) return t;
+  const k = [0, 5, 9].map((n) => B.evaluate(eBoard({ inflation: n }), KMT));
+  const c = [0, 3, 5].map((n) => B.evaluate(eBoard({ leftism: n }), CCP));
+  const m = [-2, 0, 2].map((n) => B.evaluate(eBoard({ centrists: n }), CCP));
+  const f = (xs) => xs.map((x) => x.toFixed(2)).join(" → ");
+  return all(
+    ok(k[0] > k[1] && k[1] > k[2], `國軍的評估(通膨 0 → 5 → 9)要一路變小:${f(k)}`),
+    ok(c[0] > c[1] && c[1] > c[2], `共軍的評估(左傾 0 → 3 → 5)要一路變小:${f(c)}`),
+    ok(m[0] < m[1] && m[1] < m[2], `共軍的評估(中間派 親國 2 → 中立 → 親共 2)要一路變大:${f(m)}`),
+    ok(true, `國軍 ${f(k)};共軍(左傾)${f(c)};共軍(中間派)${f(m)}`),
+  );
+});
+
+check("最後一回合國軍的倒數第二個行動(turns: 7):通膨 7、8 時印鈔(各至少 16 / 20);通膨 9 時一次都不印", () => {
+  const t = eBotTodo(); if (t) return t;
+  // 選項 turns: 7 讓第 7 回合是最後一回合(第 8 回合一開始有和談的決定,走不到行動回合);決戰期國軍有 7 個行動回合,
+  // 第 6 個是倒數第二個(共軍沒有牌,國軍接著還有第 7 個)。國軍手上兩張 2 點牌。
+  const at = (n) => { const st = atRoundE(7, 6, KMT, [["score_north"], ["score_east", "kunming_incident", "takeover_officials"]], { ...MEX, turns: 7 }); E.setInflation(st, n); return st; };
+  const ask = (st) => Array.from({ length: 20 }, (_, i) => B.decide(E.view(st, KMT), KMT, "normal", E.makeRng(900 + i)));
+  const p7 = ask(at(7)).filter(printed).length, p8 = ask(at(8)).filter(printed).length, p9 = ask(at(9)).filter(printed).length;
+  return all(ok(p7 >= 16, `通膨 7:20 次裡印鈔 ${p7} 次(至少 16)`), ok(p8 >= 16, `通膨 8:20 次裡印鈔 ${p8} 次(至少 16;筆記「印到 9」)`), eq(p9, 0, "通膨 9:20 次裡印鈔的次數"),
+    ok(true, `通膨 7 印 ${p7} / 20;8 印 ${p8} / 20;9 印 0`));
+});
+
+check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍印過鈔、共軍激進過;沒有一局是國軍自己印到崩潰", () => {
+  const t = eBotTodo(); if (t) return t;
+  const r = BE7();
+  const c = all(clean(r, "普通對普通(E)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
+  const s = r.ms / r.games / 1000, p = r.eActs ? r.eActs.print : 0, rad = r.eActs ? r.eActs.radical : 0;
+  // #36 (the BE: a bot blind to the collapse ended both of its games by inflation and this check stayed green).
+  const collapsed = r.reasons.inflation || 0;
+  return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(p >= 1, `國軍印鈔 ${p} 次(${r.games} 局裡至少 1 次)`), ok(rad >= 1, `共軍激進 ${rad} 次(至少 1 次)`),
+    eq(collapsed, 0, "以通膨崩潰結束的局數(國軍自己印到 10)"),
+    ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};印鈔 ${p}、激進 ${rad}、平抑 ${r.eActs ? r.eActs.peg : 0};每局 ${s.toFixed(1)} 秒`));
 });
 
 // ---------------------------------------------------------------- verdict

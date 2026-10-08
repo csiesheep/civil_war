@@ -1,0 +1,16 @@
+batches seed 1 done
+SAME games 1000: 270 columns of sum (union of keys), errors 0, 60 columns of more (keys both have; only in a: [], only in b: [])
+same Eoff-s1 vs 28/default-s1 exit 0
+batches seed 20001 done
+SAME games 1000: 281 columns of sum (union of keys), errors 0, 61 columns of more (keys both have; only in a: [], only in b: [])
+same Eoff-s20001 vs 28/default-s20001 exit 0
+batches seed 40001 done
+SAME games 1000: 277 columns of sum (union of keys), errors 0, 62 columns of more (keys both have; only in a: [], only in b: [])
+same Eoff-s40001 vs 28/default-s40001 exit 0
+targets tuning/36/runs/Eoff-s1.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/36/runs/Eoff-s20001.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/36/runs/Eoff-s40001.txt.state.json exit 0 TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+targets tuning/36/runs/Eon-s1.txt.state.json exit 0 TARGETS full 通過 7 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+targets tuning/36/runs/Eon-s20001.txt.state.json exit 0 TARGETS full 通過 7 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+targets tuning/36/runs/Eon-s40001.txt.state.json exit 0 TARGETS full 通過 7 / 10;停損的兩項(民心曲線、開局沒有孤城)失敗
+ALL-DONE

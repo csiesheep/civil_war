@@ -64,6 +64,9 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   // #32, mechanism D (only with options.mechanismD: off D `more` has no `d` and nothing below runs).
   const D = options.mechanismD ? newD() : null;
   if (D) more.d = D;
+  // #36, mechanism E (only with options.mechanismE: off E `more` has no `e` and nothing below runs).
+  const X = options.mechanismE ? newE() : null;
+  if (X) more.e = X;
   // At the turn-end checks (probe.home, "turnEnd"): the besieged cities that supply still reaches, i.e.
   // a 孤城 only by the marker; the `attrition` entry that follows is read against them.
   let siegeOnly = new Set();
@@ -77,6 +80,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   // discards). The probe is on only around the game's own apply: the bots think with the same module.
   const onTurnEnd = (s) => {
     rec.turnEnds.push({ turn: s.turn, mandate: s.mandate, isolated: E.isolatedCities(s).slice().sort(), support: [s.support[CCP], s.support[KMT]] });
+    if (X) turnEndE(X, s);
   };
   const lookIsolated = (s) => {
     for (const id of E.isolatedCities(s)) if (rec.firstIsolated[id] === undefined) rec.firstIsolated[id] = s.turn;
@@ -96,6 +100,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
       else if (l.type === "sweepResult") bump(more.sweep, l.response);
       else if (l.type === "attrition") for (const [id, k] of Object.entries(l.losses)) if (siegeOnly.has(id)) more.besiegedLoss += k;
       if (D) readLogD(D, l);
+      if (X) readLogE(X, l, s.options.turns);
     }
     if (s.logSeq) logSeen = s.logSeq;
   };
@@ -128,7 +133,45 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     lookIsolated(st); lookLog(st);
   }
   if (D) endD(D, st);
+  if (X) endE(X, st);
   return { st, rec, more };
+}
+
+// ---------------------------------------------------------------- mechanism E (#36)
+// Per game, read from the log and the engine's turn-end probe only (nothing drawn); summed over games by
+// `moreStats`, which also keeps the per-game counts as distributions (`ePerGame`).
+//   print / peg / radical: the plays (log `print`, `peg`, `radical`), and by turn (`byTurn[t]`).
+//   threshold["inflation:3"]: { turn: count } -- the turn each threshold was crossed (左傾 6 every time).
+//   atTurnEnd[t]: the centrists, inflation and leftism at the end of turn t (the engine's turnEnd probe).
+//   settle[t]: the 民心 the centrists moved at turn t's 結算 (log `centristsSettle`; + toward the Communists);
+//     settleToCcp / settleToKmt: the totals each way.
+//   centristsMoved[why]: the steps the centrists moved, by cause (truce, inflation, leftism), signed.
+//   returnHome[space]: where 還鄉團's blue went ("none" when no space had room).
+//   lastTurnTo9: 1 when the Nationalists printed inflation to 9 during the game's last turn.
+function newE() {
+  return {
+    print: 0, peg: 0, radical: 0, byTurn: {}, threshold: {}, atTurnEnd: {}, settle: {}, settleToCcp: 0, settleToKmt: 0,
+    centristsMoved: {}, returnHome: {}, lastTurnTo9: 0, collapse: 0,
+  };
+}
+function readLogE(X, l, turns) {
+  const at = (k) => bump(slot(X.byTurn, l.t, () => ({})), k);
+  if (l.type === "print") { X.print++; at("print"); }
+  else if (l.type === "peg") { X.peg++; at("peg"); }
+  else if (l.type === "radical") { X.radical++; at("radical"); }
+  else if (l.type === "eThreshold") bump(slot(X.threshold, `${l.track}:${l.n}`, () => ({})), l.t);
+  else if (l.type === "centristsSettle") { bump(X.settle, l.t, l.n); if (l.n > 0) X.settleToCcp += l.n; else X.settleToKmt -= l.n; }
+  else if (l.type === "centrists") bump(X.centristsMoved, l.why, l.to - l.from);
+  else if (l.type === "returnHome") bump(X.returnHome, l.space ?? "none");
+  else if (l.type === "inflation" && l.why === "print" && l.to === 9 && l.t === turns) X.lastTurnTo9 = 1;
+}
+function turnEndE(X, s) {
+  const e = slot(X.atTurnEnd, s.turn, () => ({ centrists: {}, inflation: {}, leftism: {} }));
+  bump(e.centrists, E.centristsOf(s)); bump(e.inflation, E.inflationOf(s)); bump(e.leftism, E.leftismOf(s));
+}
+function endE(X, st) {
+  X.end = { inflation: { [E.inflationOf(st)]: 1 }, leftism: { [E.leftismOf(st)]: 1 }, centrists: { [E.centristsOf(st)]: 1 } };
+  if (st.reason === "inflation") X.collapse = 1;
 }
 
 // ---------------------------------------------------------------- mechanism D (#32)
@@ -294,7 +337,13 @@ export function moreStats(list) {
   let m = { siegesPerGame: {}, firstIsolatedGame: {}, isolatedAt3: {} };
   for (const { rec, more } of list) {
     if (more) {
-      const { games, d, ...rest } = more;
+      const { games, d, e, ...rest } = more;
+      // #36: E's sums, and per game: how many 印鈔 / 平抑 / 激進, the end's inflation and leftism (in `e.end`).
+      if (e) {
+        m.e = addSums(m.e, e);
+        const per = (m.ePerGame ??= { print: {}, peg: {}, radical: {} });
+        bump(per.print, e.print); bump(per.peg, e.peg); bump(per.radical, e.radical);
+      }
       m = addSums(m, { ...rest, decided: games });
       bump(m.siegesPerGame, more.sieges);
       // #32: D's sums, and per game: the turn of the first 易幟 / 整編完成 ("none" if never), how many 整編 / 統戰.

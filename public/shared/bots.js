@@ -25,6 +25,9 @@
 //     side holding as many scoring cards as it has rounds left must play one
 //     now (`actionsLeft`). The simulation does not show the loss when the other
 //     side still acts after this side's last round, so the evaluation counts.
+//   - mechanism E (#36, only under the option `mechanismE`): 印鈔 and 激進 are priced by the thresholds of
+//     the side's own track spread over the steps to them (`ePrice`), the evaluation charges the walked part
+//     and values the centrists, and 印鈔 / 激進 / 平抑 are candidates (see "mechanism E" below).
 //
 // The bot never catches the engine's refusal of its own candidates: a candidate
 // the engine refuses while the bot thinks is a bug of the candidate lists, and
@@ -397,6 +400,13 @@ function finishBoardValue(st, side, vq, T, turn, turns) {
     if (T) T("support", sup);
   }
 
+  // Mechanism E (#36): the two tracks' prices and the centrists (`eValue`); nothing without the option.
+  if (mechE(st)) {
+    const e = eValue(st);
+    vq += e;
+    if (T) T("mechE", e);
+  }
+
   let spread = 0;
   for (const s of SPACES) {
     const [q, c] = E.infOf(st, s.id), ctl = E.controller(st, s.id);
@@ -506,6 +516,156 @@ function dropSuicideIntegrate(st, side, list) {
   const ok = E.supplied(st);
   const safe = list.filter((a) => !suicideIntegrate(st, side, a, ok));
   return safe.length ? safe : list;
+}
+
+// ---------- mechanism E (#36): the price of 印鈔 and 激進 ----------
+// Read only under the option `mechanismE`: without it nothing below runs, no candidate is added and no
+// number of the evaluation moves. The owner's note (E, 「bot」, hand-copied in tests/bots.test.js B7):
+// 「印鈔和激進都是『這 2 點行動點現在值多少』對『離下一個門檻還有幾格』。bot 把門檻的代價攤到每一格上當價格。」
+// Each threshold t of a side's own track (通膨 the Nationalists', 左傾 the Communists') costs that side
+// C_t (`eThresholdCost`, in 民心 points as the whole evaluation), spread evenly over the steps from the
+// threshold before it (`eSegStart`) to t: each step is C_t / (t − a). The evaluation charges a side the part
+// of the next threshold not yet reached that its track has walked (`eTrackCost`); a threshold's own effect,
+// once reached, is in the state (民心, the centrists) or in `eHandCut` (8's smaller hand), so nothing is
+// counted twice. `ePrice` is what one more step costs. The centrists (`eCentrists`) are worth their lean at
+// every 結算 still to come.
+//   通膨: 3 → 民心 1; 6 → 民心 2 and the centrists a step toward the Communists (the 結算 still to come, unless
+//     they are at +2 already); 8 → one card fewer at every refill after this turn (W_E.card a card); 10 → the
+//     Nationalists lose: the two steps from 8 are priced as the prints the Nationalists could still use
+//     (W_E.print a print, times the time left, `ePrintRoom`: nothing at the game's last action), and the step
+//     into 10 is the loss itself (E_LOSS; never offered, `printable`).
+//   左傾: 2 → the centrists a step toward the Nationalists; 4 → 民心 2; 6 (every time) → −1 red in every village
+//     the Communists control (W_E.villageRed each, W_E.villageCtl more where the red is exactly what holds
+//     it), then back to 3: the segment of 6 starts at the reset (3).
+const mechE = (st) => !!(st.options && st.options.mechanismE);
+// W_E.print: what the bot's own evaluation gives 2 more ops at a moment the Nationalists may print, plus the price
+// paid (tuning/36/print-worth.mjs: 177 decisions of 12 E games, mean 3.3, median 1.9); W_E.card: a card dealt.
+export const W_E = { card: 1.0, print: 3, villageRed: 0.5, villageCtl: 1.0 };
+const E_LOSS = 1000;
+const INFL = E.E_SPEC.inflation, LEFT = E.E_SPEC.leftism, INFL_LOSS = INFL[INFL.length - 1];
+// The 結算 still to come: this turn's, then the turns after it, discounted as every "turns to come" here.
+function eSettlements(st) {
+  if (st.winner != null) return 0;
+  const turn = Math.max(1, st.turn), turns = st.options.turns;
+  return (turn <= turns ? 1 : 0) + discountedTurns(turn, turns);
+}
+// The share of a print still to be used after this moment: the turns to come, and the Nationalists' own
+// action rounds left this turn (`now`: the state of a decision, whose own action is not "later").
+function ePrintRoom(st, now) {
+  const turn = Math.max(1, st.turn), turns = st.options.turns;
+  let acts = actionsLeft(st, KMT);
+  if (now && st.phase === "action" && !st.pending && st.actor === KMT) acts = Math.max(0, acts - 1);
+  const R = Array.isArray(st.rounds) ? Math.max(1, st.rounds[KMT]) : 7;
+  return Math.min(1, discountedTurns(turn, turns) + acts / R);
+}
+// The red the Communists stand to lose at 左傾 6: −1 in every village they control.
+function eVillagesAtStake(st) {
+  let v = 0;
+  for (const s of SPACES) {
+    if (s.kind !== "village" || E.controller(st, s.id) !== CCP) continue;
+    const [q, c] = E.infOf(st, s.id);
+    const after = { ...st, inf: { ...st.inf, [s.id]: [q - 1, c] } };
+    v += W_E.villageRed + (E.controller(after, s.id) !== CCP ? W_E.villageCtl : 0);
+  }
+  return v;
+}
+// C_t: what threshold t of `side`'s track costs that side, read now.
+function eThresholdCost(st, side, t, now) {
+  const c = E.centristsOf(st), [lo, hi] = E.E_SPEC.centrists;
+  if (side === KMT) {
+    if (t === INFL[0]) return 1;
+    if (t === INFL[1]) return 2 + (c < hi ? eSettlements(st) : 0);
+    if (t === INFL[2]) return W_E.card * discountedTurns(Math.max(1, st.turn), st.options.turns);
+    return 2 * W_E.print * ePrintRoom(st, now);
+  }
+  if (t === LEFT[0]) return c > lo ? eSettlements(st) : 0;
+  if (t === LEFT[1]) return 2;
+  return eVillagesAtStake(st);
+}
+function eSegStart(side, t) {
+  if (side === CCP && t === LEFT[2]) return E.E_SPEC.leftismReset;
+  const list = side === KMT ? INFL : LEFT, i = list.indexOf(t);
+  return i > 0 ? list[i - 1] : 0;
+}
+// The next threshold of `side`'s track still to come (左傾 6 comes every time), or null.
+function eNext(m, side) {
+  if (side === KMT) return INFL.find((t) => !m.reached.inflation.includes(t)) ?? null;
+  return LEFT.find((t) => t === LEFT[2] || !m.reached.leftism.includes(t)) ?? null;
+}
+// The part of the next threshold's cost that `side`'s track has walked (negative below the segment's start,
+// after a 平抑, down to −C_t).
+export function eTrackCost(st, side, now = false) {
+  const m = st.mechE;
+  if (!m) return 0;
+  const t = eNext(m, side);
+  if (t == null) return 0;
+  const n = side === KMT ? m.inflation : m.leftism, a = eSegStart(side, t);
+  return eThresholdCost(st, side, t, now) * Math.max(-1, Math.min(1, (n - a) / (t - a)));
+}
+// 8's smaller hand at every refill after this turn (the engine's `handCutFrom`; a threshold marked reached
+// without its effect, as `E.setInflation` lays it out, from the next turn).
+function eHandCut(st) {
+  const m = st.mechE;
+  if (!m || (m.handCutFrom == null && !m.reached.inflation.includes(INFL[2]))) return 0;
+  const turn = Math.max(1, st.turn), from = Math.max(turn + 1, m.handCutFrom ?? turn + 1);
+  let v = 0;
+  for (let t = from; t <= st.options.turns; t++) v += GAMMA ** (t - turn);
+  return W_E.card * v;
+}
+function eCentrists(st) { return E.centristsOf(st) * eSettlements(st); }
+// E's part of the evaluation, from the Communists' point of view.
+function eValue(st) { return eTrackCost(st, KMT) + eHandCut(st) - eTrackCost(st, CCP) + eCentrists(st); }
+// What one more step of `side`'s own track costs `side` now (the orchestrator's 裁決 #36: 「這一方自己的軌再
+// 走一格的價格」): the change of its part of the evaluation, and the effects of a threshold it crosses.
+export function ePrice(st, side) {
+  if (!mechE(st) || !st.mechE) return 0;
+  const m = st.mechE, sign = side === KMT ? 1 : -1;
+  if (side === KMT && m.inflation + 1 >= INFL_LOSS) return E_LOSS;
+  const own = (s) => eTrackCost(s, side, true) + (side === KMT ? eHandCut(s) : 0) + sign * eCentrists(s);
+  const n = side === KMT ? m.inflation + 1 : m.leftism + 1;
+  const reached = { inflation: m.reached.inflation.slice(), leftism: m.reached.leftism.slice() };
+  let mandate = 0, centrists = m.centrists, level = n;
+  const [lo, hi] = E.E_SPEC.centrists;
+  if (side === KMT) {
+    for (const [i, t] of INFL.entries()) {
+      if (n < t || reached.inflation.includes(t)) continue;
+      reached.inflation.push(t);
+      if (i === 0) mandate += 1;
+      else if (i === 1) { mandate += 2; centrists = Math.min(hi, centrists + 1); }
+    }
+  } else {
+    for (const t of [LEFT[0], LEFT[1]]) {
+      if (n < t || reached.leftism.includes(t)) continue;
+      reached.leftism.push(t);
+      if (t === LEFT[0]) centrists = Math.max(lo, centrists - 1);
+      else mandate += 2;
+    }
+    if (n >= LEFT[2]) { mandate += eVillagesAtStake(st); level = E.E_SPEC.leftismReset; }
+  }
+  const after = { ...st, mechE: { ...m, reached, centrists, ...(side === KMT ? { inflation: level } : { leftism: level }) } };
+  return mandate + own(after) - own(st);
+}
+// May the Nationalists print now without losing on the spot (通膨 10)?
+const printable = (st, side) => mechE(st) && side === KMT && E.inflationOf(st) + 1 < INFL_LOSS;
+// A step that costs nothing (the last turn below 8; 8 to 9 at the game's last action): the print dominates
+// the same play without it, which is then not offered.
+const freePrint = (st, side) => printable(st, side) && ePrice(st, side) <= 1e-9;
+// The villages worth a 激進 now, best first: the red it adds there (E_SPEC.radical per op, under the cap)
+// valued on the board, per op; at most RADICAL_TRY of those a 扶植 can reach.
+const RADICAL_TRY = 2;
+function radicalChoices(st, side, villages) {
+  if (!villages || !villages.length) return [];
+  const lit = E.placeTargets(st, side, 4, []).lit;
+  const s = E.clone(st); s.log = [];
+  const base = evaluate(s, side), scored = [];
+  for (const v of villages) {
+    if (!lit.has(v)) continue;
+    const a = s.inf[v] || (s.inf[v] = [0, 0]), start = a[side], cost = E.placeCost(s, side, v);
+    a[side] = Math.min(E.capOf(s, v), start + E.E_SPEC.radical * cost);
+    scored.push({ v, r: (evaluate(s, side) - base) / cost });
+    a[side] = start;
+  }
+  return scored.sort((x, y) => y.r - x.r).slice(0, RADICAL_TRY).map((x) => x.v);
 }
 
 // ---------- the guess: a full state consistent with what this seat sees ----------
@@ -681,11 +841,20 @@ function bestPoints(st, p, who, rng) {
 // the most per op spent on the evaluation; one point of it is committed and
 // the next is chosen again. `restrict` keeps the points to some spaces (蘇援
 // all in the Northeast, 美援 all in cities).
-export function greedyPlacement(st, side, ops, card, restrict = null) {
+// #36, mechanism E: `radical` (a village of `E.radicalOptions`) makes it a 激進: the first point goes there,
+// and every point there is E_SPEC.radical red per op it costs (the engine's `radicalRed`, under the cap).
+// Without it (null) every line below reads as before.
+export function greedyPlacement(st, side, ops, card, restrict = null, radical = null) {
   const s = E.clone(st); s.log = [];
   const points = [];
+  const redFor = (a, id, c) => { a[side] = Math.min(E.capOf(s, id), a[side] + E.E_SPEC.radical * c); };
+  if (radical != null) {
+    if ((restrict && !restrict(radical)) || !E.placeTargets(st, side, ops, [], card, radical).lit.has(radical)) return [];
+    redFor(s.inf[radical] || (s.inf[radical] = [0, 0]), radical, E.placeCost(s, side, radical));
+    points.push(radical);
+  }
   for (let guard = 0; guard < 12; guard++) {
-    const { lit, left } = E.placeTargets(st, side, ops, points, card);
+    const { lit, left } = E.placeTargets(st, side, ops, points, card, radical);
     const ids = [...lit].filter((id) => !restrict || restrict(id));
     if (!ids.length) break;
     const bonus = card === "soviet_aid" && points.every(inNortheast) ? 1 : 0;
@@ -698,7 +867,8 @@ export function greedyPlacement(st, side, ops, card, restrict = null) {
       for (let k = 0; k < 3 && a[side] < cap; k++) {
         const c = E.placeCost(s, side, id);
         if (spent + c > budget) break;
-        a[side]++; spent += c;
+        if (id === radical) redFor(a, id, c); else a[side]++;
+        spent += c;
         const r = (evaluate(s, side) - base) / spent;
         if (r > here) here = r;
       }
@@ -707,7 +877,8 @@ export function greedyPlacement(st, side, ops, card, restrict = null) {
     }
     if (best == null) break;
     points.push(best);
-    (s.inf[best] || (s.inf[best] = [0, 0]))[side]++;
+    const b = s.inf[best] || (s.inf[best] = [0, 0]);
+    if (best === radical) redFor(b, best, E.placeCost(s, side, best)); else b[side]++;
   }
   return points;
 }
@@ -785,18 +956,36 @@ function winsNow(st, action) { return E.apply(st, action).winner === action.side
 // `top` (#27) is passed by the decision itself, never inside a simulation: an
 // attack on a city is then one candidate, valued by its 圍點打援 game, and when it
 // is the best its plan is drawn from the game's mix; `top.game` gets the game.
-function bestOps(st, who, ops, allowed, rng, card, top = null) {
+// #36, mechanism E: `ask` is the ops question itself; under E it says whether these ops may be printed
+// (`canPrint`) and where a 激進 could go (`radical`), and the printed / radical versions are offered too.
+function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null) {
   const aid = card && E.isAid(card) ? card : undefined;
   const o = E.opsOptions(st, who, aid);
   const cands = [], sieges = new Set();
+  const print = !!(ask && ask.canPrint) && printable(st, who), plain = !(print && freePrint(st, who));
+  const PR = E.E_SPEC.print;
   if (allowed.includes("place")) {
-    const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
-    for (const pts of winningPlacements(st, who, ops, aid)) cands.push({ use: "place", points: pts });
+    if (plain) {
+      const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
+      for (const pts of winningPlacements(st, who, ops, aid)) cands.push({ use: "place", points: pts });
+    }
+    if (print) {
+      const points = greedyPlacement(st, who, ops + PR, aid); if (points.length) cands.push({ use: "place", points, print: true });
+      for (const pts of winningPlacements(st, who, ops + PR, aid)) cands.push({ use: "place", points: pts, print: true });
+    }
+    if (ask && ask.radical && ask.radical.length && who === CCP && mechE(st)) {
+      for (const v of radicalChoices(st, who, ask.radical)) {
+        const points = greedyPlacement(st, who, ops, aid, null, v); if (points.length) cands.push({ use: "place", points, radical: v });
+      }
+    }
   }
   if (allowed.includes("campaign")) {
     for (const t of o.campaignTargets) {
       if (top && E.siegeNeeded(st, who, t)) { const x = { use: "campaign", target: t, siege: E.SIEGE_PLANS[0] }; sieges.add(x); cands.push(x); }
-      else for (const x of attacks(st, who, t)) cands.push({ use: "campaign", ...x });
+      else for (const x of attacks(st, who, t)) {
+        if (plain) cands.push({ use: "campaign", ...x });
+        if (print) cands.push({ use: "campaign", ...x, print: true });
+      }
     }
   }
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
@@ -805,9 +994,17 @@ function bestOps(st, who, ops, allowed, rng, card, top = null) {
   if (pol.length) {
     // #32: never a 整編 that is an 易幟 on the spot, while anything else is offered.
     const ok = who === KMT ? E.supplied(st) : null;
-    for (const t of pol) {
+    if (plain) for (const t of pol) {
       const c = { use: "politics", ...politicsPayload(who, t) };
       if (!(ok && cands.length && suicideIntegrate(st, who, c, ok))) cands.push(c);
+    }
+  }
+  // #36: 政工 with printed ops (D and E both on), on the targets of the bigger ops.
+  if (print && allowed.includes("politics")) {
+    const ok = E.supplied(st);
+    for (const t of E.politicsOptions(st, who, ops + PR)) {
+      const c = { use: "politics", ...politicsPayload(who, t), print: true };
+      if (!(cands.length && suicideIntegrate(st, who, c, ok))) cands.push(c);
     }
   }
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
@@ -853,7 +1050,7 @@ export function answer(st, p, who, rng) {
     // 收手 (realign-own): go on while the next attempt gains on average.
     case "option": if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
       return bestOf(st, who, p.options.map((o) => o.id), rng);
-    case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card);
+    case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card, null, p);
     default: throw new Error(`answer: ${p.kind}`);
   }
 }
@@ -1023,30 +1220,53 @@ function actionCandidates(st, side, L, sieges = null) {
   const atk = (t) => (sieges && E.siegeNeeded(st, side, t) ? [{ target: t, siege: E.SIEGE_PLANS[0], [SIEGE_MARK]: true }] : attacks(st, side, t));
   const lob = (targets) => lobbyTargetsFor(st, side, targets);
   const memo = new Map();
-  const placed = (ops, card, restrict, tag) => {
+  const placed = (ops, card, restrict, tag, radical = null) => {
     const key = `${ops}/${card || ""}/${tag || ""}`;
-    if (!memo.has(key)) memo.set(key, greedyPlacement(st, side, ops, card, restrict));
+    if (!memo.has(key)) memo.set(key, greedyPlacement(st, side, ops, card, restrict, radical));
     return memo.get(key);
   };
   const winPlace = (ops, make, card, restrict) => {
     for (const points of winningPlacements(st, side, ops, card, restrict)) { const a = make(points); if (winsNow(st, a)) out.push(a); }
   };
+  // Mechanism E (#36): the Nationalists' 印鈔 (`uses.print`, under E only) -- each 扶植, attack and 政工 of the
+  // card once more with the ops + E_SPEC.print and `print: true`; a free step (`freePrint`) offers only those.
+  // The Communists' 激進 (`L.radical`, under E only): a 扶植 that starts in one of the best villages
+  // (`radicalChoices`), per number of ops.
+  const PR = E.E_SPEC.print;
+  const canPrint = printable(st, side), freeStep = canPrint && freePrint(st, side);
+  const rads = side === CCP && L.radical && L.radical.length && mechE(st) ? radicalChoices(st, side, L.radical) : [];
   for (const c of L.cards) {
     const u = c.uses, id = c.id;
     out.push({ type: "play", side, card: id, use: "event" });
     if (CARD[id].scoring) continue;
     const order = u.enemy ? { order: "opsFirst" } : {};
+    const pr = canPrint && u.print, plain = !(pr && freeStep);
     if (u.reform) out.push({ type: "play", side, card: id, use: "reform" });
     if (u.place) {
-      const points = placed(u.place.ops);
-      if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, points });
-      winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", ...order, points: pts }));
+      if (plain) {
+        const points = placed(u.place.ops);
+        if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, points });
+        winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", ...order, points: pts }));
+      }
+      if (pr) {
+        const points = placed(u.place.ops + PR);
+        if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, print: true, points });
+        winPlace(u.place.ops + PR, (pts) => ({ type: "play", side, card: id, use: "place", ...order, print: true, points: pts }));
+      }
+      for (const v of rads) {
+        const points = placed(u.place.ops, undefined, null, `radical:${v}`, v);
+        if (points.length) out.push({ type: "play", side, card: id, use: "place", ...order, radical: v, points });
+      }
     }
-    if (u.campaign) for (const t of u.campaign.targets) for (const x of atk(t)) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
+    if (u.campaign) for (const t of u.campaign.targets) for (const x of atk(t)) {
+      if (plain) out.push({ type: "play", side, card: id, use: "campaign", ...order, ...x });
+      if (pr) out.push({ type: "play", side, card: id, use: "campaign", ...order, print: true, ...x });
+    }
     if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", ...order, target: t.id });
     // Mechanism D (#31): 政工 on every target the engine offers (`uses.politics` exists only under D),
     // valued like any other play; the bots know nothing else of D yet (that is the next issue).
-    if (u.politics) for (const t of u.politics.targets) out.push({ type: "play", side, card: id, use: "politics", ...order, ...politicsPayload(side, t) });
+    if (u.politics && plain) for (const t of u.politics.targets) out.push({ type: "play", side, card: id, use: "politics", ...order, ...politicsPayload(side, t) });
+    if (u.politics && pr) for (const t of E.politicsOptions(st, side, u.politics.ops + PR)) out.push({ type: "play", side, card: id, use: "politics", ...order, print: true, ...politicsPayload(side, t) });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
       const pair = u.pair.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));
@@ -1069,13 +1289,18 @@ function actionCandidates(st, side, L, sieges = null) {
       if (id === "soviet_aid") offer(placed(a.ops, id, inNortheast, "ne"));
       if (id === "american_aid") offer(placed(a.ops, id, isCity, "city"));
       winPlace(a.ops, (pts) => play("place", { points: pts }), id);
+      // #36: 蘇援's 扶植 may be a 激進 too (an aid card never prints).
+      for (const v of rads) {
+        const points = placed(a.ops, id, null, `radical:${v}`, v);
+        if (points.length) out.push(play("place", { radical: v, points }));
+      }
     }
     if (a.campaign) for (const t of a.campaign.targets) for (const x of atk(t)) out.push(play("campaign", x));
     if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
-  // Mechanism E (#35): the bots know nothing of E yet (the next issue), but under it 美援 may always peg, so
-  // an empty hand with no other use of the aid card still acts: 平抑 is then the one candidate (`legal().peg`).
-  if (!out.length && L.peg) out.push({ type: "play", side, card: "american_aid", use: "peg" });
+  // Mechanism E: 平抑 (`legal().peg`, under E only) is a candidate whenever the engine allows it (#36; #35 offered
+  // it only to an empty hand with no other use of the aid card), valued as any play: 通膨 −E_SPEC.peg.
+  if (L.peg) out.push({ type: "play", side, card: "american_aid", use: "peg" });
   if (sieges) for (const a of out) if (a[SIEGE_MARK]) { delete a[SIEGE_MARK]; sieges.add(a); }
   return dropSuicideIntegrate(st, side, dropSelfCollapse(st, side, out));
 }
@@ -1188,7 +1413,7 @@ export function decide(view, side, level = "normal", rng) {
       const p = L.pending;
       if (p.tag === "siege" && side === KMT) return siegeAnswer(st, side, rng);
       if (p.kind === "ops" && side === CCP && mechB(st)) {
-        const top = {}, choice = bestOps(st, side, p.ops, p.allowed, rng, p.card, top);
+        const top = {}, choice = bestOps(st, side, p.ops, p.allowed, rng, p.card, top, p);
         return { type: "choose", side, choice, ...(top.game ? { game: top.game } : {}), why: p.kind };
       }
       return { type: "choose", side, choice: answer(st, p, side, rng), why: p.kind };
