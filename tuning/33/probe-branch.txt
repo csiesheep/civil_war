@@ -1,0 +1,25 @@
+ok   dGray 開著:六個據點 紅/藍/灰(地圖 v0.2:察綏 灰 4 紅 2、太原 4、晉中 灰 3 紅 1、蘭州 4、桂林 4、昆明 4): "2/0/4 0/0/4 1/0/3 0/0/4 0/0/4 0/0/4"
+ok   dGray 沒給:同樣六個據點(#30:各灰 2、藍 0): "2/0/2 0/0/2 1/0/2 0/0/2 0/0/2 0/0/2"
+ok   dGray 開著:共軍免費放 察綏 2 點之後 綏易幟?/ 民心: [false,0]
+ok   dGray 沒給:同樣放之後 綏易幟?/ 民心: [true,3]
+ok   dGray 超過上限被拒(察綏上限 4,灰 5): true
+ok   dFreeBar 開著:共軍免費放置可選的勢力據點: []
+ok   dFreeBar 沒給:共軍免費放置可選的勢力據點: ["chasui"]
+ok   dFreeBar 開著:國軍的免費放置不變(太原、蘭州、桂林、昆明照樣可選): ["taiyuan","lanzhou","guilin","kunming"]
+ok   dAttitude 開著:五家的開局態度: ["loyal","loyal","loyal","loyal","neutral"]
+ok   dAttitude 沒給:五家的開局態度(筆記的表): ["loyal","neutral","neutral","loyal","neutral"]
+ok   dAttitude 晉效忠 / 沒給(觀望):太原 藍 1 灰 2 的控制者: [1,null]
+ok   dThreshold 滇 3:2 點 / 3 點能不能統戰滇: [[],["dian"]]
+ok   dThreshold 沒給(滇 2):2 點能不能統戰滇: ["dian"]
+ok   dMieVp 綏 1:易幟、民心: [true,1]
+ok   dMieVp 沒給(綏 3):易幟、民心: [true,3]
+ok   dSealVp 3:整編完成、民心: [true,-3]
+ok   dSealVp 沒給(2):整編完成、民心: [true,-2]
+ok   dIntegrateMax 2:4 點整編 蘭州(灰 4)之後 紅/藍/灰: "0/2/2"
+ok   dIntegrateMax 沒給:4 點整編 蘭州(灰 4)之後 紅/藍/灰: "0/4/0"
+ok   dSettle 沒給:太原 藍 2 灰 2 孤城,結算後(藍掉 1、晉往通共一格): ["0/1/2","neutral"]
+ok   dSettle noBlue:藍 2 → 結算掉 1 還有藍,晉不動: ["0/1/2","loyal"]
+ok   dSettle noBlue:藍 1 → 結算掉光,沒有藍了,晉往通共一格: ["0/0/2","neutral"]
+ok   dSettle twice:上一次結算太原不是孤城 → 晉不動,記下這一次的孤城: ["0/1/2","loyal",true]
+ok   dSettle twice:上一次結算太原也是孤城 → 晉往通共一格: ["0/1/2","neutral",true]
+PROBE-33 ok 24 / red 0

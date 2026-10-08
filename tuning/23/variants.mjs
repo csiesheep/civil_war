@@ -549,3 +549,51 @@ combo("F0", "整編的地基:本據不收免費放置 + 察綏紅 4 + 本據藍 
 for (const l of ["L-rounds77", "L-uscap3", "L-soviet2", "L-counter2", "L-jinzhong3", "L-jinpu", "L-huaihai2", "L-huaihai3", "L-pinghan", "L-tianjin4", "L-nerail", "L-nerail6", "L-rear012", "L-ccpbase", "L-sealall"]) {
   combo(`F0+${l.slice(2)}`, `F0 + ${VARIANTS[l].what}`, ["F0", l]);
 }
+
+// ---- #33: D's numbers (owner 裁決 #33: 「調一輪 D 的數字」). Every `MD-…` is laid over the variant D
+// ({ mechanismD: true }) and uses only #33's options (engine.js, at DPOWERS); a part's d-keys that are tables
+// are merged power by power / space by space, a later part winning. `what` is the rulebook sentence, `why` its
+// reason (the note's map v0.2, its 史實 lines, or history).
+const MD = {};
+const md = (name, what, why, options) => { MD[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismD: true, ...options } }; };
+const mdc = (name, what, parts) => {
+  const options = { mechanismD: true };
+  for (const p of parts) for (const [k, v] of Object.entries(MD[p].options)) {
+    options[k] = v && typeof v === "object" && !Array.isArray(v) ? { ...(options[k] || {}), ...v } : v;
+  }
+  VARIANTS[name] = { what, why: parts.join(" + "), parts, options };
+};
+export const GRAY_V02 = { chasui: 4, taiyuan: 4, jinzhong: 3, lanzhou: 4, guilin: 4, kunming: 4 };
+md("MD-g4", "開局的灰:察綏 4、太原 4、晉中 3、蘭州 4、桂林 4、昆明 4(這六個據點沒有藍)",
+  "筆記的地圖 v0.2(「察綏 灰 4、紅 2」…「昆明 灰 4」):察綏要 6 點紅才拿得下,整編也要大牌或兩次", { dGray: GRAY_V02 });
+md("MD-sui4", "開局的灰:察綏 4(其餘照 #30 各 2)",
+  "只改筆記 v0.2 裡擋住開局易幟的那一格:傅作義的主力在綏遠,1945 年晉察冀佔張家口沒有動到他的本錢", { dGray: { chasui: 4 } });
+md("MD-bar", "機制 D:共軍受降的免費放置不能放進勢力的據點(察綏)",
+  "1945 年 8 月晉察冀佔的是察哈爾的張家口;綏遠(歸綏、包頭)一直在傅作義手上,1946 年 10 月他還打回張家口", { dFreeBar: true });
+mdc("MD-g4bar", "MD-g4 + MD-bar", ["MD-g4", "MD-bar"]);
+// Single levers for the second round (each laid over D, combined with the first round's by `mdc`).
+md("MD-jinL", "開局態度:晉效忠", "閻錫山反共最堅決:太原守到 1949 年 4 月,從沒有談過;筆記的「觀望」寫的是他對蔣的獨立,不是對共軍", { dAttitude: { jin: "loyal" } });
+md("MD-guiL", "開局態度:桂效忠", "1945–1947 年桂系在中央裡(白崇禧國防部長、李宗仁北平行營主任);和蔣翻臉是 1948 年副總統選舉之後", { dAttitude: { gui: "loyal" } });
+md("MD-rear3", "開局的灰:桂林 3、昆明 3", "桂、滇的主力 1945 年都調出本省:桂系第 7、48 軍在華中,滇軍第 60、93 軍去越北受降、再運到東北;留在家裡的少", { dGray: { guilin: 3, kunming: 3 } });
+md("MD-noBlue", "結算時,孤城裡有灰而且沒有藍(這次結算掉藍之後),該勢力往通共一格", "中央軍還在城裡,地方派不敢動:太原 1948–49 年有空運進去的中央軍,閻錫山守到最後", { dSettle: "noBlue" });
+md("MD-twice", "結算時,同一座城連續兩次結算都是孤城,該勢力才往通共一格", "孤城要圍得夠久才動搖:長春圍了五個月(1948 年 5 到 10 月)滇軍才起義", { dSettle: "twice" });
+md("MD-int2", "整編:把最多 min(X, 2) 點灰換成藍", "整編地方部隊一次只能動一部分(1946 年整軍是一個軍一個軍縮成整編師)", { dIntegrateMax: 2 });
+md("MD-seal3", "整編完成:國軍民心 +3", "整編完成是中央真的拿下了一省的兵權,值得和綏、桂的易幟一樣多", { dSealVp: 3 });
+// The second round (tuning/33/report.txt): the first round fixed turn 0 (MD-bar, MD-g4bar) but the Communists
+// still won 83–85%, by 綏 at turn 1–2 and 晉 + 馬 talked over (結算 of their cut-off seats). Slow the talks
+// (dSettle), make 晉 two steps from 通共 (MD-jinL), and keep the rear's gray at 2 where 整編 needs it (MD-sui4bar).
+mdc("MD-g4bar+twice", "MD-g4bar + MD-twice", ["MD-g4", "MD-bar", "MD-twice"]);
+mdc("MD-g4bar+noBlue", "MD-g4bar + MD-noBlue", ["MD-g4", "MD-bar", "MD-noBlue"]);
+mdc("MD-g4bar+jinL", "MD-g4bar + MD-jinL", ["MD-g4", "MD-bar", "MD-jinL"]);
+mdc("MD-g4bar+jinL+twice", "MD-g4bar + MD-jinL + MD-twice", ["MD-g4", "MD-bar", "MD-jinL", "MD-twice"]);
+mdc("MD-sui4bar", "MD-sui4 + MD-bar", ["MD-sui4", "MD-bar"]);
+mdc("MD-sui4bar+twice", "MD-sui4 + MD-bar + MD-twice", ["MD-sui4", "MD-bar", "MD-twice"]);
+mdc("MD-sui4bar+jinL+twice", "MD-sui4 + MD-bar + MD-jinL + MD-twice", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice"]);
+mdc("MD-bar+twice", "MD-bar + MD-twice", ["MD-bar", "MD-twice"]);
+mdc("MD-bar+jinL+twice", "MD-bar + MD-jinL + MD-twice", ["MD-bar", "MD-jinL", "MD-twice"]);
+// The third round: MD-sui4bar+jinL+twice failed only the Communists' rate (71.7%) and the Nationalists' wins
+// bunched at turn 8 (and the two items every batch fails); give the Nationalists' 整編完成 more 民心.
+md("MD-sui2vp", "易幟給共軍的民心:綏 2", "沒有調防就沒有北平:綏只是察綏一個鄉,它的易幟(1949 年 9 月,北平方式之後)和晉、馬、滇一樣給 2", { dMieVp: { sui: 2 } });
+mdc("MD-S3", "MD-sui4bar + MD-jinL + MD-twice + MD-seal3", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3"]);
+mdc("MD-S3v", "MD-S3 + MD-sui2vp", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3", "MD-sui2vp"]);
+md("MD-thr-1", "統戰門檻:綏 2、晉 3、桂 2、馬 3、滇 2(各少 1,滇已是 2 不再降)", "地下黨的工作早就在做(傅作義身邊的傅冬菊、程潛與陳明仁的聯絡):談判不必等到大牌", { dThreshold: { sui: 2, jin: 3, gui: 2, ma: 3, dian: 2 } });

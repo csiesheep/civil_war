@@ -63,6 +63,8 @@
 //     `controller`, `place`, `canPlaceAt`, `pointsOf`), 政工 (`politics`), the
 //     order of an attack on blue + gray (`hitKmt`, `grayOrder`), D's markers
 //     (`dMarkers`) and the 結算's 孤城 (`supplyAttritionD`).
+//   - #33 D's numbers as options, none a default (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`,
+//     `dFreeBar`, `dSettle`, `dIntegrateMax`; read where D reads the number, see at DPOWERS).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -407,6 +409,39 @@ export const ATTITUDES = ["loyal", "neutral", "ccp"];
 // 整編完成: 民心 2 toward the Nationalists (the note, rule 10).
 export const D_SEAL_VP = 2;
 const mechD = (st) => !!(st.options && st.options.mechanismD);
+// #33, D's numbers as options (orchestrator brief #33; owner 裁決 #33: 「調一輪 D 的數字」). None is a key
+// of DEFAULT_OPTIONS and none is read without `mechanismD`; an absent one plays today's D (#31) byte for byte.
+//   dGray          { space: gray }: the opening's gray at the named spaces of the powers (the others keep
+//                  GRAY_START's); the blue there is today's less the gray, as GRAY_START's is (`grayStartOf`)
+//   dAttitude      { power: attitude }: the opening attitudes, in place of DPOWERS'
+//   dThreshold     { power: ops }: 統戰's thresholds, in place of DPOWERS' (`dThreshold`)
+//   dMieVp         { power: n }: the 民心 an 易幟 gives the Communists, in place of DPOWERS' (`dMieVp`)
+//   dSealVp        n: the 民心 an 整編完成 gives the Nationalists, in place of D_SEAL_VP (`dSealVp`)
+//   dFreeBar       true: the Communists' free placement (受降) may not go into a space of a power
+//   dSettle        the 結算's step toward the Communists (A4, `supplyAttritionD`) only for a 孤城 with gray and
+//                  "noBlue": no blue left in it (read after this 結算's blue loss); "twice": that was a 孤城 at
+//                  the last 結算 too (`st.dIsoLast`, a key only with this value) (`dSettleLeans`)
+//   dIntegrateMax  n: a 整編 turns at most min(X, gray, n) (`dIntegrateCap`)
+const dOpt = (st, key) => (st.options ? st.options[key] : undefined);
+export function grayStartOf(options) {
+  const g = { ...GRAY_START, ...((options && options.dGray) || {}) };
+  for (const [id, n] of Object.entries(g)) {
+    if (!POWER_OF[id]) fail(`dGray: ${id} is not a space of a power`);
+    if (!Number.isInteger(n) || n < 0 || n > SPACE[id].stability + options.cap) fail(`dGray: ${id} ${n} (0 to the cap)`);
+  }
+  return g;
+}
+export function dThreshold(st, p) { const t = dOpt(st, "dThreshold"); return t && t[p] != null ? t[p] : DPOWERS[p].threshold; }
+export function dMieVp(st, p) { const t = dOpt(st, "dMieVp"); return t && t[p] != null ? t[p] : DPOWERS[p].vp; }
+export function dSealVp(st) { const v = dOpt(st, "dSealVp"); return v != null ? v : D_SEAL_VP; }
+export function dIntegrateCap(st) { const v = dOpt(st, "dIntegrateMax"); return v != null ? v : Infinity; }
+// Whether the 孤城 `id` (with gray) moves its power a step at this 結算, as far as `dSettle` says.
+export function dSettleLeans(st, id) {
+  const s = dOpt(st, "dSettle");
+  if (s === "noBlue") return infOf(st, id)[KMT] === 0;
+  if (s === "twice") return !!st.dIsoLast && st.dIsoLast.includes(id);
+  return true;
+}
 const POWER_OF = {};
 for (const [p, d] of Object.entries(DPOWERS)) for (const id of d.spaces) POWER_OF[id] = p;
 // The power whose space `id` is under D, or null.
@@ -1307,7 +1342,7 @@ function politicsRefusal(st, side, ops, { target, power }, iso) {
   if (!d) return `統戰: unknown power ${power}`;
   if (marked(st, power)) return "統戰: the power has its marker already";
   if (st.attitude[power] === "ccp") return "統戰: the power leans to the Communists already";
-  if (ops < d.threshold) return `統戰: ${ops} ops, the threshold is ${d.threshold}`;
+  if (ops < dThreshold(st, power)) return `統戰: ${ops} ops, the threshold is ${dThreshold(st, power)}`;
   if (st.talks[power] === st.turn) return "統戰: once a turn for each power";
   if (!atGates(st, power, iso)) return "統戰: the Communists are not at the power's gates (兵臨城下)";
   return null;
@@ -1327,7 +1362,7 @@ function politics(st, side, ops, choice) {
   const why = politicsRefusal(st, side, ops, choice);
   if (why) fail(why);
   if (side === KMT) {
-    const t = choice.target, p = POWER_OF[t], k = Math.min(ops, grayOf(st, t));
+    const t = choice.target, p = POWER_OF[t], k = Math.min(ops, grayOf(st, t), dIntegrateCap(st));
     loseGray(st, t, k, "politics");
     ensure(st, t)[KMT] += k;
     log(st, { type: "integrate", side, target: t, power: p, ops, n: k });
@@ -1364,7 +1399,7 @@ function dMarkers(st) {
           turned[id] = place(st, CCP, id, g);
         }
         st.mie[p] = true; log(st, { type: "mie", state: p, how, turned });
-        if (!st.mieVp[p]) { st.mieVp[p] = true; vp(st, CCP, d.vp); }
+        if (!st.mieVp[p]) { st.mieVp[p] = true; vp(st, CCP, dMieVp(st, p)); }
         if (st.winner != null) return;
         again = true;
         continue;
@@ -1374,7 +1409,7 @@ function dMarkers(st) {
       if (sealed) {
         st.seals[p] = true; log(st, { type: "seal", state: p, how: "integrated" });
         st.sealTurn = { turn: st.turn, n: sealsThisTurnD(st) + 1 };
-        if (!st.sealVp[p]) { st.sealVp[p] = true; vp(st, KMT, D_SEAL_VP); }
+        if (!st.sealVp[p]) { st.sealVp[p] = true; vp(st, KMT, dSealVp(st)); }
         if (st.winner != null) return;
       }
     }
@@ -1393,9 +1428,11 @@ function supplyAttritionD(st, n) {
   for (const id of iso) {
     const p = POWER_OF[id];
     if (!p || !grayOf(st, id) || leaned.has(p) || marked(st, p)) continue;
+    if (!dSettleLeans(st, id)) continue; // #33 `dSettle`; absent: every 孤城 with gray
     leaned.add(p);
     leanCcp(st, p, "isolated");
   }
+  if (st.options.dSettle === "twice") st.dIsoLast = iso.slice();
   if (Object.keys(losses).length || leaned.size) checkMarkers(st);
 }
 
@@ -1796,7 +1833,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-05-2"; // #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))))
+export const RULES_VERSION = "2026-10-05-3"; // #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1831,11 +1868,15 @@ function startGame(seed, options) {
   }
   // #31, mechanism D: the opening's blue at the six spaces of `GRAY_START` is gray;
   // the attitudes are the note's. These keys exist only with the option.
+  // #33: `dGray` and `dAttitude` change these numbers (`grayStartOf`); `dSettle: "twice"` remembers the 孤城.
   if (mechD(st)) {
     st.gray = {};
-    for (const [id, g] of Object.entries(GRAY_START)) { st.gray[id] = g; const a = ensure(st, id); a[KMT] = Math.max(0, a[KMT] - g); }
-    st.attitude = Object.fromEntries(Object.entries(DPOWERS).map(([p, d]) => [p, d.attitude]));
+    for (const [id, g] of Object.entries(grayStartOf(st.options))) { st.gray[id] = g; const a = ensure(st, id); a[KMT] = Math.max(0, a[KMT] - g); }
+    const att = st.options.dAttitude || {};
+    for (const [p, a] of Object.entries(att)) if (!DPOWERS[p] || !ATTITUDES.includes(a)) fail(`dAttitude: ${p} ${a}`);
+    st.attitude = Object.fromEntries(Object.entries(DPOWERS).map(([p, d]) => [p, att[p] || d.attitude]));
     st.talks = {}; st.grayLast = {};
+    if (st.options.dSettle === "twice") st.dIsoLast = [];
   }
   if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
@@ -1854,7 +1895,10 @@ function startGame(seed, options) {
   const free = [CCP, KMT].map((side) => {
     const S = SETUP[SIDES[side]];
     const n = tune(st, "setupFree") ? st.options.setupFree[side] : S.free;
-    const bar = (tune(st, "setupFreeBar") && st.options.setupFreeBar[SIDES[side]]) || null;
+    let bar = (tune(st, "setupFreeBar") && st.options.setupFreeBar[SIDES[side]]) || null;
+    // #33 `dFreeBar` (under D): the Communists' free points go into no space of a power (`also` is read only
+    // for a space still in `spaces`, so 察綏 is out).
+    if (side === CCP && mechD(st) && st.options.dFreeBar) bar = [...(bar || []), ...Object.keys(POWER_OF)];
     // #24: `held` -- of these, only the spaces this side controls when it is asked, and those of `also`
     // whoever controls them (SETUP's `freeHeld` and `freeAlso`).
     return { do: "setup", side, n, spaces: bar ? S.freeIn.filter((id) => !bar.includes(id)) : S.freeIn, ...(S.freeHeld ? { held: true, also: (S.freeAlso || []).slice() } : {}), choices: [] };

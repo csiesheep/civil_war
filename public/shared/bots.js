@@ -450,21 +450,32 @@ export function dNeeds(st, ok = E.supplied(st)) {
     const conquest = Math.max(0, c + gh + S - q);
     if (conquest === 0 || (cut && att === "ccp")) { mieDue++; continue; }
     const withGray = d.spaces.filter((id) => E.grayOf(st, id) > 0);
-    const free = withGray.some((id) => isCity(id) && (!ok.has(id) || E.besieged(st, id))) ? 1 : 0;
+    // (#33 `dSettle`: only the 孤城 the option still lets lean; absent, every one.)
+    const free = withGray.some((id) => isCity(id) && (!ok.has(id) || E.besieged(st, id)) && E.dSettleLeans(st, id)) ? 1 : 0;
     // The road by talks: the steps of attitude to go (統戰), and, while the home is in supply, cutting
     // it: at most the red that takes every neighbour of the home not the Communists' already.
     let cutCost = 0;
     if (!cut) for (const x of E.adjOf(st, h)) { const [qx, cx] = E.infOf(st, x); cutCost += Math.max(0, cx + E.grayOf(st, x) + SPACE[x].stability - qx); }
-    mie.push(Math.min(conquest, cutCost + Math.max(0, D_STEPS[att] - free) * d.threshold));
+    mie.push(Math.min(conquest, cutCost + Math.max(0, D_STEPS[att] - free) * E.dThreshold(st, p)));
     const blueNeed = Math.max(0, q + S - c - gh);
     if (!withGray.length) {
       if (st.grayLast && st.grayLast[p] === "politics") { if (blueNeed === 0) sealDue++; else seal.push(blueNeed); }
       continue;
     }
-    if (withGray.length > D_STEPS[att] || (withGray.length === D_STEPS[att] && cut)) continue;
+    const steps = integrateSteps(st, withGray);
+    if (steps > D_STEPS[att] || (steps === D_STEPS[att] && cut)) continue;
     seal.push(withGray.reduce((t, id) => t + E.grayOf(st, id), 0) + blueNeed);
   }
   return { mie, seal, mieDue, sealDue };
+}
+// The 整編 it takes to turn the gray at `withGray` (#33): one a space, as #32 read it (today's gray is at
+// most 2 and a card's ops turn as many) -- unless `dGray` or `dIntegrateMax` is given: then a space of gray g
+// takes ceil(g / most a 整編 turns), the most being the largest card's ops (OPS_MAX) capped by `dIntegrateMax`.
+const OPS_MAX = Math.max(...E.CARDS.map((c) => c.ops));
+function integrateSteps(st, withGray) {
+  if (st.options.dGray == null && st.options.dIntegrateMax == null) return withGray.length;
+  const most = Math.max(1, Math.min(OPS_MAX, E.dIntegrateCap(st)));
+  return withGray.reduce((t, id) => t + Math.ceil(E.grayOf(st, id) / most), 0);
 }
 function boardValueD(st, mieHeld, sealsHeld, T) {
   let v = 0;
