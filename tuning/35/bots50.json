@@ -1,0 +1,2181 @@
+{
+ "options": {
+  "mechanismE": true
+ },
+ "games": 50,
+ "results": [
+  {
+   "seed": 1,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 21328,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1
+    },
+    "settleVp": 4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 2,
+   "ok": true,
+   "winner": 0,
+   "reason": "final",
+   "turn": 8,
+   "ms": 42592,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 3,
+   "ok": true,
+   "winner": 0,
+   "reason": "final",
+   "turn": 8,
+   "ms": 42318,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 4,
+   "ok": true,
+   "winner": 0,
+   "reason": "unification",
+   "turn": 8,
+   "ms": 23117,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 5,
+   "ok": true,
+   "winner": 1,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 59175,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 6,
+   "ok": true,
+   "winner": 1,
+   "reason": "final",
+   "turn": 8,
+   "ms": 17847,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 7,
+   "ok": true,
+   "winner": 1,
+   "reason": "homeFall",
+   "turn": 7,
+   "ms": 33221,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1
+    },
+    "settleVp": -5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 8,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 33597,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 9,
+   "ok": true,
+   "winner": 0,
+   "reason": "final",
+   "turn": 8,
+   "ms": 33750,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 10,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 21170,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1
+    },
+    "settleVp": -4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 11,
+   "ok": true,
+   "winner": 0,
+   "reason": "unification",
+   "turn": 8,
+   "ms": 32752,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 12,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 7,
+   "ms": 23345,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1
+    },
+    "settleVp": -5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 13,
+   "ok": true,
+   "winner": 1,
+   "reason": "final",
+   "turn": 8,
+   "ms": 33426,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 14,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 7,
+   "ms": 17939,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1
+    },
+    "settleVp": -5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 15,
+   "ok": true,
+   "winner": 1,
+   "reason": "final",
+   "turn": 8,
+   "ms": 44566,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 16,
+   "ok": true,
+   "winner": 0,
+   "reason": "emperor",
+   "turn": 8,
+   "ms": 25393,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 17,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 7,
+   "ms": 29243,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1
+    },
+    "settleVp": 5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 18,
+   "ok": true,
+   "winner": 0,
+   "reason": "unification",
+   "turn": 8,
+   "ms": 33685,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 19,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 45835,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1,
+     "8": 1
+    },
+    "settleVp": 7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 20,
+   "ok": true,
+   "winner": 0,
+   "reason": "unification",
+   "turn": 8,
+   "ms": 26652,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1
+    },
+    "settleVp": 6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 21,
+   "ok": true,
+   "winner": 0,
+   "reason": "final",
+   "turn": 8,
+   "ms": 45859,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 22,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 15538,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1
+    },
+    "settleVp": 4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 23,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 5,
+   "ms": 17421,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1
+    },
+    "settleVp": 3,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 24,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 37958,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 25,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 36458,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1
+    },
+    "settleVp": 6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 26,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 7,
+   "ms": 23781,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1
+    },
+    "settleVp": 5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 27,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 47734,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 28,
+   "ok": true,
+   "winner": 0,
+   "reason": "unification",
+   "turn": 8,
+   "ms": 22231,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1
+    },
+    "settleVp": 6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 29,
+   "ok": true,
+   "winner": 1,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 42320,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 30,
+   "ok": true,
+   "winner": 1,
+   "reason": "homeFall",
+   "turn": 8,
+   "ms": 31287,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1
+    },
+    "settleVp": -6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 31,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 21116,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1
+    },
+    "settleVp": -4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 32,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 5,
+   "ms": 25916,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1
+    },
+    "settleVp": 3,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 33,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 43783,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 34,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 31567,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1
+    },
+    "settleVp": 7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 35,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 36774,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 36,
+   "ok": true,
+   "winner": 1,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 31541,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 37,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 35846,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 38,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 16374,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1
+    },
+    "settleVp": 4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 39,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 7,
+   "ms": 27087,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1
+    },
+    "settleVp": 5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 40,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 32499,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1
+    },
+    "settleVp": 6,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 41,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 49073,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 42,
+   "ok": true,
+   "winner": 0,
+   "reason": "final",
+   "turn": 8,
+   "ms": 19230,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1,
+     "8": 1
+    },
+    "settleVp": 7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 43,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 5,
+   "ms": 19227,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "settleVp": 0,
+    "truce": 0
+   }
+  },
+  {
+   "seed": 44,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 39794,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 45,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 35880,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 46,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 6,
+   "ms": 25939,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1
+    },
+    "settleVp": -4,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 47,
+   "ok": true,
+   "winner": 1,
+   "reason": "homeFall",
+   "turn": 7,
+   "ms": 35757,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1
+    },
+    "settleVp": 5,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 48,
+   "ok": true,
+   "winner": 1,
+   "reason": "tie",
+   "turn": 8,
+   "ms": 24457,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": 1,
+     "3": 1,
+     "4": 1,
+     "5": 1,
+     "6": 1,
+     "7": 1,
+     "8": 1
+    },
+    "settleVp": 7,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 49,
+   "ok": true,
+   "winner": 1,
+   "reason": "alliance",
+   "turn": 5,
+   "ms": 19569,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1
+    },
+    "settleVp": -3,
+    "truce": 1
+   }
+  },
+  {
+   "seed": 50,
+   "ok": true,
+   "winner": 0,
+   "reason": "mandate",
+   "turn": 8,
+   "ms": 41759,
+   "e": {
+    "print": 0,
+    "peg": 0,
+    "radical": 0,
+    "returnHome": 0,
+    "thresholds": {},
+    "inflationEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "leftismEnd": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 0,
+     "7": 0,
+     "8": 0
+    },
+    "centristsEnd": {
+     "1": 0,
+     "2": -1,
+     "3": -1,
+     "4": -1,
+     "5": -1,
+     "6": -1,
+     "7": -1,
+     "8": -1
+    },
+    "settleVp": -7,
+    "truce": 1
+   }
+  }
+ ]
+}

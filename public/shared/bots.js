@@ -1073,6 +1073,9 @@ function actionCandidates(st, side, L, sieges = null) {
     if (a.campaign) for (const t of a.campaign.targets) for (const x of atk(t)) out.push(play("campaign", x));
     if (a.lobby) for (const t of lob(a.lobby.targets)) out.push(play("lobby", { target: t.id }));
   }
+  // Mechanism E (#35): the bots know nothing of E yet (the next issue), but under it 美援 may always peg, so
+  // an empty hand with no other use of the aid card still acts: 平抑 is then the one candidate (`legal().peg`).
+  if (!out.length && L.peg) out.push({ type: "play", side, card: "american_aid", use: "peg" });
   if (sieges) for (const a of out) if (a[SIEGE_MARK]) { delete a[SIEGE_MARK]; sieges.add(a); }
   return dropSuicideIntegrate(st, side, dropSelfCollapse(st, side, out));
 }

@@ -3662,6 +3662,233 @@ check("勝利照今天:整編完成 5 個國軍贏;易幟 3 個共軍贏", () =>
   );
 });
 
+// ---------------------------------------------------------------- group 15
+// 機制 E(M2b 的第三批,#34 / #35)。照 owner 的機制筆記(Projects/civil_war/civil_war - mechanisms.md,「E. 印鈔與土改」)
+// 手抄:
+//
+//   通膨軌(國軍,0 到 10)
+//   1 印鈔:國軍用一張牌的行動點做扶植、進攻或政工時,可以宣告印鈔:這張牌行動點 +2,通膨 +1。每個行動回合最多一次。
+//     標題牌和變法不能印。
+//   2 門檻(第一次到達時發生):3 民心往共軍移 1;6 民心往共軍移 2、中間派往共軍移一格;8 下回合起國軍手牌上限 −1;
+//     10 崩潰,國軍立即敗北。
+//   3 降回來的辦法只有兩個:把外援整張拿來平抑(不得行動點,通膨 −2);事件「金圓券 1948」(通膨 −4,但此後每次印鈔 +2)。
+//   4 通膨不會自己降。
+//   左傾軌(共軍,0 到 6)
+//   1 激進土改:共軍在一個已有紅的鄉扶植時,可以宣告激進:這次行動放在那個鄉的每 1 點行動點放 2 點紅(受上限)。左傾 +1。
+//     代價之二:國軍在一個相鄰的據點放 1 點藍(逃出去的人組還鄉團),地點國軍選。每回合最多一次。
+//   2 門檻(第一次到達時發生):2 中間派往國軍移一格;4 民心往國軍移 2;6 共軍在自己控制的每個鄉 −1;左傾退回 3。
+//   3 事件「糾偏 1948」:左傾 −3。
+//   中間派:一個標記,五格:親國 2、親國 1、中立、親共 1、親共 2。開局中立。回合結算時,標記偏向的一方得民心(1 或 2)。
+//     會動它的東西:通膨門檻、左傾門檻、肅諜抓錯、時局「停戰」先動手、事件(學潮、取締民盟、政協)。
+//
+// owner 裁決(2026-10-07,#34,對話裡的選擇題,原文):「E 和民生並存,先做成選項(建議)」——民生、封鎖、崩潰與牌文照舊;
+//   照筆記的數字;量 E 開 vs 關;取不取代民生是第二步。
+// orchestrator 裁決(#35):
+//   - 選項 `mechanismE: true`,預設關(不在 DEFAULT_OPTIONS 裡);關掉時照今天。
+//   - 印鈔:任何一張手牌拿來當行動點(扶植、進攻、政工;對手陣營的牌也行,它的事件照常觸發;事件先的行動點選擇也行)。
+//     事件、變法、標題、外援牌都不能印。一次行動一次,所以「每個行動回合最多一次」自然成立。
+//   - 門檻在第一次到達時發生(通膨 3 / 6 / 8 / 10、左傾 2 / 4);左傾 6 每次到達都發生(它退回 3,本來就是循環)。
+//     8:從下一回合補牌起國軍手牌上限 −1,之後一直如此。10:國軍立即敗北,reason "inflation"。
+//     (#35:「當回合就生效」和「下一回合起」在對局裡分不出來——補牌只在回合開始、任何人能印鈔之前——所以沒有檢查。)
+//   - 外援平抑:美援的第三種用法 `use: "peg"`:不得行動點,通膨 −2(不低於 0);可用的時機和美援一樣(一回合一次、支持度 ≥ 1)。
+//     只有國軍(蘇援不能平抑)。
+//   - 激進土改:共軍的扶植帶 `radical: <鄉>`;那個鄉要已有紅、而且在這次扶植的點裡;花在那個鄉的每 1 點行動點放 2 點紅
+//     (照筆記的字面:國軍控制的鄉一點要 2 行動點,所以一點變 4 點紅;受上限,放不下的消失;#35 裁決);左傾 +1;然後國軍在那個鄉的一個相鄰據點放 1 點藍(國軍選;放得進去的據點,不看相鄰範圍
+//     與補給)。每回合最多一次。外援牌的扶植也可以激進。
+//   - 中間派:-2(親國 2)到 +2(親共 2);回合結算時,民心往標記偏向的一方移那個格數(照 P10 的上限)。
+//     時局「停戰」先動手的一方:中間派往另一方移一格(和民心的罰則一起)。
+//   - 這一版沒有:金圓券、糾偏、學潮、取締民盟、政協的 E 效果(牌文照舊;owner 選的是並存)。
+// 介面(brief 寫死):
+//   E.E_SPEC = { print: 2, peg: 2, radical: 2, inflation: [3, 6, 8, 10], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+//   E.inflationOf(st)、E.leftismOf(st)、E.centristsOf(st)(選項關掉時都是 0);
+//   E.setInflation(st, n)、E.setLeftism(st, n)、E.setCentrists(st, n)(擺盤面用:把 ≤ n 的門檻記成已經到過,不清掉已經到過的,
+//   也不套用任何門檻的效果,包括 8 的手牌 −1);
+//   國軍印鈔:play 帶 `print: true`;平抑:`{ type: "play", card: "american_aid", use: "peg" }`;
+//   共軍激進:扶植的 play 帶 `radical: <鄉>`;還鄉團:pending { who: KMT, kind: "points", tag: "returnHome", n: 1, options: [據點] }。
+section("15 機制 E:印鈔、通膨、激進土改、左傾、中間派(選項 mechanismE)");
+
+const ME = { mechanismE: true };
+const E_SPEC = { print: 2, peg: 2, radical: 2, inflation: [3, 6, 8, 10], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+const eTodo = () => (E.E_SPEC === undefined ? "TODO: E.E_SPEC 還沒有;mechanismE 這個選項還沒有接進引擎" : null);
+// A turn-1 action state under E: today's opening (group 3's rig), the hands dealt (the Communists hold only a scoring
+// card unless `ccp` says, so the Nationalists act first), each side's spare keeping the turn from walking out,
+// the mandate set to 0 (clear of P10's caps), and E's tracks set by hand.
+function eRig({ edits = {}, ccp = [], kmt = [], inflation = 0, leftism = 0, centrists = 0, support = null, options = ME } = {}) {
+  const st = position(edits, options);
+  if (support) st.support = support.slice(); // with aid cards on, a side with a usable aid card must act
+  deal(st, CCP, ["score_north", ...ccp]); deal(st, KMT, ["score_east", ...kmt]);
+  const s = toAction(st);
+  s.mandate = 0;
+  if (options.mechanismE) { E.setInflation(s, inflation); E.setLeftism(s, leftism); E.setCentrists(s, centrists); }
+  return s;
+}
+const tracks = (st) => `${E.inflationOf(st)}/${E.leftismOf(st)}/${E.centristsOf(st)}`; // "通膨/左傾/中間派"
+
+check("常數:印鈔 +2、平抑 −2、激進 ×2、通膨門檻 3 / 6 / 8 / 10、左傾門檻 2 / 4 / 6(退回 3)、中間派 −2 到 +2;mechanismE 不是預設", () => {
+  const t = eTodo(); if (t) return t;
+  return all(eq(J(E.E_SPEC), J(E_SPEC), "E.E_SPEC"), eq(E.DEFAULT_OPTIONS.mechanismE, undefined, "mechanismE 不是預設"), ok(true, "照筆記;預設關"));
+});
+
+check("開局:通膨 0、左傾 0、中間派中立;選項關掉時三個都讀 0", () => {
+  const t = eTodo(); if (t) return t;
+  const on = E.createGame(11, { aid: false, ...ME }), off = E.createGame(11, { aid: false });
+  return all(eq(tracks(on), "0/0/0", "開著時 通膨/左傾/中間派"), eq(tracks(off), "0/0/0", "關掉時 通膨/左傾/中間派"), ok(true, "都從 0 開始"));
+});
+
+check("印鈔:2 點牌當 4 點扶植,通膨 +1;事件、變法不能印;選項關掉時不能印", () => {
+  const t = eTodo(); if (t) return t;
+  // 南京藍 4(上限 6)、上海藍 3(上限 5):各放 2。沒有印鈔時 2 點牌放 4 點要被拒絕。
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"] });
+  const pts = ["nanjing", "nanjing", "shanghai", "shanghai"];
+  const a = act(S, KMT, "kunming_incident", "place", { points: pts, print: true });
+  const off = eRig({ kmt: ["kunming_incident", "takeover_officials"], options: {} });
+  return all(
+    eq(S.actor, KMT, "輪到誰"),
+    eq(`${rb(a, "nanjing")} ${rb(a, "shanghai")}`, "0/6 0/5", "印鈔扶植之後 南京、上海 紅/藍"), eq(tracks(a), "1/0/0", "印鈔之後 通膨/左傾/中間派"),
+    eq(thrown(() => act(S, KMT, "kunming_incident", "place", { points: pts })) != null, true, "沒有印鈔,2 點牌放 4 點沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "kunming_incident", "event", { print: true })) != null, true, "事件印鈔沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "takeover_officials", "reform", { print: true })) != null, true, "變法印鈔沒有被拒絕"),
+    eq(thrown(() => act(off, KMT, "kunming_incident", "place", { points: pts, print: true })) != null, true, "選項關掉時印鈔沒有被拒絕"),
+    ok(true, "昆明事變 2 + 2 點:南京 4→6、上海 3→5,通膨 0→1;沒印、事件、變法、選項關掉都被拒絕"),
+  );
+});
+
+check("通膨門檻只在第一次到達時發生:3 民心往共軍 1;退回再印到 3 沒事", () => {
+  const t = eTodo(); if (t) return t;
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials", "sino_soviet_treaty"], inflation: 2 });
+  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
+  const back = E.clone(a); E.setInflation(back, 2); back.mandate = 0;
+  const b = act(back, KMT, "takeover_officials", "place", { points: ["wuhan", "guangzhou", "guilin", "kunming"], print: true });
+  return all(eq(E.inflationOf(a), 3, "印鈔之後的通膨"), eq(a.mandate - S.mandate, 1, "第一次到 3:民心的變動(往共軍)"),
+    eq(E.inflationOf(b), 3, "退回 2 再印之後的通膨"), eq(b.mandate - back.mandate, 0, "第二次到 3:民心的變動"),
+    ok(true, "2→3:民心 +1;擺回 2 再印到 3:不再發生"));
+});
+
+check("通膨 6:民心往共軍 2、中間派往共軍一格", () => {
+  const t = eTodo(); if (t) return t;
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: 5 });
+  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
+  return all(eq(tracks(a), "6/0/1", "印鈔之後 通膨/左傾/中間派"), eq(a.mandate - S.mandate, 2, "民心的變動(往共軍)"), ok(true, "5→6:民心 +2、中間派中立→親共 1"));
+});
+
+check("通膨 8:下一回合補牌起國軍手牌上限 −1(對照:通膨 7 時照常)", () => {
+  const t = eTodo(); if (t) return t;
+  const go = (from) => {
+    const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: from });
+    const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
+    let s = atSettle(a);
+    if (s.pending && s.pending.who === KMT && s.pending.kind === "points") s = choose(s, ["shenyang", "shenyang", "jinzhou", "jinzhou"]);
+    return { a, s };
+  };
+  const hit = go(7), ctl = go(6);
+  return all(
+    eq(E.inflationOf(hit.a), 8, "印鈔之後的通膨"), eq(hit.s.turn, 2, "結算之後的回合"), eq(hit.s.phase, "headline", "補完牌之後的 phase"),
+    eq(lens(ctl.s), "[8,9]", "對照(通膨 7):第 2 回合補完牌的手牌"), eq(lens(hit.s), "[8,8]", "通膨 8:第 2 回合補完牌的手牌"),
+    ok(true, "通膨 7:第 2 回合 [8,9];通膨 8:國軍少 1 張,[8,8]"),
+  );
+});
+
+check("通膨 10:國軍立即敗北", () => {
+  const t = eTodo(); if (t) return t;
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: 9 });
+  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
+  return all(eq(E.inflationOf(a), 10, "印鈔之後的通膨"), eq(a.winner, CCP, "勝者"), eq(a.reason, "inflation", "結束的方式"), ok(true, "9→10:國軍崩潰,共軍勝"));
+});
+
+check("外援平抑:美援整張換通膨 −2,不得行動點;支持度 0 不能;蘇援不能平抑", () => {
+  const t = eTodo(); if (t) return t;
+  // 蘇聯支持 0:共軍沒有可用的外援,國軍先動。
+  const S = eRig({ kmt: ["kunming_incident"], inflation: 3, support: [0, 4], options: { ...ME, aid: true } });
+  const a = act(S, KMT, "american_aid", "peg");
+  const zero = E.clone(S); zero.support[KMT] = 0;
+  const C = eRig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"], inflation: 3, support: [2, 4], options: { ...ME, aid: true } });
+  return all(
+    eq(E.inflationOf(a), 1, "平抑之後的通膨"), eq(J(a.aidUsed), "[false,true]", "平抑之後的 st.aidUsed"), eq(total(a, KMT), total(S, KMT), "藍的合計(不得行動點)"),
+    eq(thrown(() => act(zero, KMT, "american_aid", "peg")) != null, true, "美國支持 0 時平抑沒有被拒絕"),
+    eq(thrown(() => act(C, CCP, "soviet_aid", "peg")) != null, true, "共軍用蘇援平抑沒有被拒絕"),
+    ok(true, "通膨 3 → 1,美援用掉了,藍不變;支持度 0、蘇援都被拒絕"),
+  );
+});
+
+check("激進土改:放在有紅的鄉的每 1 點變 2 點紅,左傾 +1;國軍在相鄰據點放 1 點藍(國軍選)", () => {
+  const t = eTodo(); if (t) return t;
+  // 冀魯豫紅 3(S 3,上限 5)、冀中紅 2(上限 4)。共軍高樹勛起義(2 點)放冀魯豫 1、冀中 1,激進冀魯豫:冀魯豫 +2、冀中 +1。
+  const S = eRig({ ccp: ["gao_shuxun", "shangdang_campaign"], kmt: ["kunming_incident", "takeover_officials"] });
+  const S0 = eRig({ edits: { dabieshan: { r: 0 } }, ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  const a = act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" });
+  const p = pendingIs(a, KMT, "points", "激進之後"); if (p !== true) return p;
+  const b = choose(a, ["jinan"]);
+  const c = act(b, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing"] });
+  return all(
+    eq(`${rb(a, "jiluyu")} ${rb(a, "jizhong")}`, "5/0 3/0", "激進之後 冀魯豫、冀中 紅/藍"), eq(tracks(a), "0/1/0", "激進之後 通膨/左傾/中間派"),
+    eq(a.pending.tag, "returnHome", "國軍待決定的 tag"), same(a.pending.options, ["jizhong", "taihang", "jinan", "zhengzhou"], "還鄉團可以放的據點(冀魯豫的鄰居)"),
+    eq(rb(b, "jinan"), "0/3", "國軍選濟南之後 濟南 紅/藍"),
+    eq(thrown(() => act(c, CCP, "shangdang_campaign", "place", { points: ["taihang", "jizhong"], radical: "taihang" })) != null, true, "同一回合第二次激進沒有被拒絕"),
+    eq(thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["jinan", "jizhong"], radical: "jinan" })) != null, true, "在城(濟南)激進沒有被拒絕"),
+    eq(thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["jizhong", "jizhong"], radical: "jiluyu" })) != null, true, "激進的鄉不在這次的點裡,沒有被拒絕"),
+    // #35 (the BE's probe: no check refused a village with no red yet): 大別山 set to red 0 (S0), next to 淮海's red.
+    eq(thrown(() => act(S0, CCP, "gao_shuxun", "place", { points: ["dabieshan", "jizhong"], radical: "dabieshan" })) != null, true, "在沒有紅的鄉(大別山紅 0)激進沒有被拒絕"),
+    ok(true, "冀魯豫 3→5、冀中 2→3、左傾 1;國軍在濟南放 1;同一回合第二次、在城、不在點裡都被拒絕"),
+  );
+});
+
+check("激進在國軍控制的鄉:花在那裡的每 1 點行動點放 2 點紅(一點要 2 行動點 → 4 點紅,受上限)", () => {
+  const t = eTodo(); if (t) return t;
+  // 淮海 S 2、上限 4:紅 1 藍 4(國軍控制:4 ≥ 1 + 2)。共軍 2 點牌放 1 點(要 2 行動點),激進:2 × 2 = 4 點紅,上限只放得下 3 → 紅 4。
+  // 讀成「每放一點變兩點」的話是紅 3。
+  const S = eRig({ edits: { huaihai: { r: 1, b: 4 } }, ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  const pre = all(eq(E.controller(S, "huaihai"), KMT, "淮海的控制者"));
+  if (pre !== true) return pre;
+  const a = act(S, CCP, "gao_shuxun", "place", { points: ["huaihai"], radical: "huaihai" });
+  return all(eq(rb(a, "huaihai"), "4/4", "激進之後 淮海 紅/藍"), eq(E.leftismOf(a), 1, "左傾"), ok(true, "淮海 1/4 → 4/4(2 行動點 × 2,上限 4)"));
+});
+
+check("左傾門檻:2 中間派往國軍一格;4 民心往國軍 2;6 共軍控制的每個鄉 −1、左傾退回 3", () => {
+  const t = eTodo(); if (t) return t;
+  const go = (left) => {
+    const S = eRig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"], leftism: left });
+    const a = act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" });
+    return { S, a };
+  };
+  const two = go(1), four = go(3), six = go(5);
+  // #35: 4 only the first time. The setter marks what it passes: set 4 then 3 = at 3 with 4 already reached.
+  const again = (() => { const S = eRig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"] }); E.setLeftism(S, 4); E.setLeftism(S, 3); return { S, a: act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" }) }; })();
+  // 左傾到 6 的時候(還鄉團之前):共軍控制的鄉是冀中 3(放了 1)、太行 4、冀魯豫 5(激進之後)、陝北 4,各 −1。
+  const v = (st) => ["jizhong", "taihang", "jiluyu", "shanbei"].map((id) => E.infOf(st, id)[CCP]).join(",");
+  return all(
+    eq(tracks(two.a), "0/2/-1", "1→2:通膨/左傾/中間派"),
+    eq(tracks(four.a), "0/4/0", "3→4:通膨/左傾/中間派"), eq(four.a.mandate - four.S.mandate, -2, "3→4:民心的變動(往國軍)"),
+    eq(E.leftismOf(again.a), 4, "4 已經到過、再從 3 到 4:左傾"), eq(again.a.mandate - again.S.mandate, 0, "4 已經到過、再從 3 到 4:民心的變動"),
+    eq(E.leftismOf(six.a), 3, "5→6 之後的左傾(退回 3)"), eq(v(six.a), "2,3,4,3", "5→6 之後 冀中、太行、冀魯豫、陝北 的紅"),
+    ok(true, "左傾 2:中間派親國 1;4:民心 −2;6:冀中 3→2、太行 4→3、冀魯豫 5→4、陝北 4→3,左傾 6→3"),
+  );
+});
+
+check("中間派:回合結算時民心往偏向的一方移(親共 2:+2;親國 1:−1;中立:不動)", () => {
+  const t = eTodo(); if (t) return t;
+  const at = (c) => { const S = eRig({ kmt: ["kunming_incident"], centrists: c }); return atSettle(S).mandate; };
+  const base = at(0);
+  return all(eq(at(2) - base, 2, "親共 2 對中立:結算之後民心的差"), eq(at(-1) - base, -1, "親國 1 對中立:結算之後民心的差"), ok(true, "結算:親共 2 → 民心 +2;親國 1 → −1"));
+});
+
+check("停戰先動手的一方:中間派往另一方移一格", () => {
+  const t = eTodo(); if (t) return t;
+  const start = (hands) => { let st = enter(2, { options: ME, hands }); if (st.pending && st.pending.who === KMT) st = choose(st, ["shenyang", "shenyang", "jinzhou", "jinzhou"]); return toAction(st); };
+  const K = start([[], ["score_east", "kunming_incident", "return_to_nanjing"]]), C = start([["score_north", "gao_shuxun"], ["score_east", "kunming_incident"]]);
+  const k = raid(K, KMT, "kunming_incident", "jizhong"), c = raid(C, CCP, "gao_shuxun", "chasui");
+  return all(eq(K.turn, 2, "回合"), eq(E.centristsOf(k), 1, "國軍先動手之後的中間派(往共軍)"), eq(E.centristsOf(c), -1, "共軍先動手之後的中間派(往國軍)"),
+    ok(true, "第 2 回合:國軍先奇襲 → 中間派親共 1;共軍先 → 親國 1"));
+});
+
+check("選項關掉時沒有激進", () => {
+  const t = eTodo(); if (t) return t;
+  const S = eRig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"], options: {} });
+  return all(
+    eq(thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" })) != null, true, "選項關掉時激進沒有被拒絕"),
+    ok(true, "關掉時激進被拒絕"),
+  );
+});
+
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
   const s = summary();

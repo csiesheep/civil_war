@@ -20,6 +20,12 @@
 // and "politics" in an ops ask's `allowed`), its target drawn from the engine's `politicsOptions`;
 // the Nationalists' 先移藍 / 先移灰 (tag "grayOrder") is a pending option like any other.
 //
+// Mechanism E (#35, option `mechanismE`): 印鈔 is one more candidate for each of the Nationalists' cards
+// (`uses.print`), 激進 one more 扶植 for the Communists (`legal().radical`, the village its first point),
+// 平抑 one more play of 美援 (`legal().peg`); an ops ask offers both by its `canPrint` / `radical`; the
+// 還鄉團 (tag "returnHome") is a pending points choice like any other. None of these keys exists without
+// the option, so a game without it draws exactly what it drew.
+//
 // It reads the whole state (the opponent's hand included); playing from a
 // per-seat `view()` is M2's. Its only source of chance is the `rng` it is
 // given (`E.makeRng`'s, with `int(n)`), so a game of random players is fixed
@@ -41,14 +47,25 @@ function roomFor(st, p, id, counts) {
 
 // A 扶植 of `ops`: one point at a time on a space `placeTargets` lights, until
 // none is lit. `card` is the aid card's id when the ops are an aid card's.
-export function randomPoints(st, side, ops, rng, card) {
-  const points = [];
+// `radical` (#35, mechanism E): the village of a 激進, its first point (the caller has
+// checked that `placeTargets` lights it); the rest are read with its points there as the engine places them.
+export function randomPoints(st, side, ops, rng, card, radical) {
+  const points = radical != null ? [radical] : [];
   for (;;) {
-    const { lit } = E.placeTargets(st, side, ops, points, card);
+    const { lit } = E.placeTargets(st, side, ops, points, card, radical);
     if (!lit.size) return points;
     points.push(pickOne([...lit], rng));
   }
 }
+
+// Mechanism E (#35, option `mechanismE`): the villages a 激進 may name that a 扶植 of `ops` (with
+// `card`, an aid card's id or absent) can reach with its first point. Draws nothing.
+function radicalLit(st, side, ops, villages, card) {
+  if (!villages || !villages.length) return [];
+  const { lit } = E.placeTargets(st, side, ops, [], card);
+  return villages.filter((v) => lit.has(v));
+}
+const PRINT_USES = ["place", "campaign", "politics"];
 
 // A 奇襲's target, and under mechanism B (#26) the plan an attack on a city
 // must name (`E.siegeNeeded`): 打點 or 打援, at random. Without the option no
@@ -101,7 +118,23 @@ export function randomChoice(st, p, rng) {
       return out;
     }
     case "option": return pickOne(p.options, rng).id;
-    case "ops": return randomOps(st, p.who, p.ops, p.allowed, rng, p.card);
+    case "ops": {
+      // Mechanism E (#35): the ask says whether these ops may be printed (`canPrint`) and where a
+      // 激進 may go (`radical`); either is taken half the time it is possible. Neither key exists
+      // without the option, so nothing more is drawn then.
+      if (p.canPrint && rng.int(2)) {
+        const o = randomOps(st, p.who, p.ops + E.E_SPEC.print, p.allowed.filter((u) => PRINT_USES.includes(u)), rng, p.card);
+        if (o) return { ...o, print: true };
+      }
+      if (p.radical && p.allowed.includes("place")) {
+        const vs = radicalLit(st, p.who, p.ops, p.radical);
+        if (vs.length && rng.int(2)) {
+          const v = pickOne(vs, rng);
+          return { use: "place", points: randomPoints(st, p.who, p.ops, rng, undefined, v), radical: v };
+        }
+      }
+      return randomOps(st, p.who, p.ops, p.allowed, rng, p.card);
+    }
     default: throw new Error(`randomChoice: unknown kind ${p.kind}`);
   }
 }
@@ -143,13 +176,45 @@ export function randomAction(st, side, rng) {
           const { use, ...rest } = randomOps(st, side, E.opsOf(st, side, pair), ["place", "campaign", "lobby"], rng);
           return play(use, { pair, ...rest });
         });
+        // Mechanism E (#35): `uses.print` and `L.radical` exist only under the option.
+        // 印鈔: the card's ops +2 on 扶植, an attack or 政工 (an enemy card's ops first; with its event
+        // first the print is asked with the ops, `randomChoice`), and 馬歇爾調處's pair the same way.
+        if (u.print) {
+          const ok = PRINT_USES.filter((x) => u[x]);
+          if (ok.length) opts.push(() => {
+            const use = pickOne(ok, rng), ops = u[use].ops + E.E_SPEC.print, order = u.enemy ? { order: "opsFirst" } : {};
+            if (use === "place") return play("place", { ...order, points: randomPoints(st, side, ops, rng), print: true });
+            if (use === "campaign") return play("campaign", { ...order, ...attack(st, side, u.campaign.targets, rng), print: true });
+            return play("politics", { ...order, ...politicsPayload(side, pickOne(u.politics.targets, rng)), print: true });
+          });
+          if (u.pair && u.pair.length && (u.place || u.campaign)) opts.push(() => {
+            const pair = pickOne(u.pair, rng);
+            const { use, ...rest } = randomOps(st, side, E.opsOf(st, side, pair) + E.E_SPEC.print, ["place", "campaign"], rng);
+            return play(use, { pair, ...rest, print: true });
+          });
+        }
+        // 激進土改: a 扶植 whose first point is a village of `L.radical` it can reach.
+        if (u.place && L.radical && L.radical.length) {
+          const vs = radicalLit(st, side, u.place.ops, L.radical);
+          if (vs.length) opts.push(() => {
+            const v = pickOne(vs, rng);
+            return play("place", { ...(u.enemy ? { order: "opsFirst" } : {}), points: randomPoints(st, side, u.place.ops, rng, undefined, v), radical: v });
+          });
+        }
       }
       if (L.aid) {
         const a = L.aid, aid = (use, rest) => ({ type: "play", side, card: a.id, use, ...rest });
         if (a.place) opts.push(() => aid("place", { points: randomPoints(st, side, a.ops, rng, a.id) }));
         if (a.campaign) opts.push(() => aid("campaign", attack(st, side, a.campaign.targets, rng)));
         if (a.lobby) opts.push(() => aid("lobby", { target: pickOne(a.lobby.targets, rng).id }));
+        // Mechanism E (#35): 蘇援's 扶植 may be a 激進 too.
+        if (a.place && L.radical && L.radical.length) {
+          const vs = radicalLit(st, side, a.ops, L.radical, a.id);
+          if (vs.length) opts.push(() => { const v = pickOne(vs, rng); return aid("place", { points: randomPoints(st, side, a.ops, rng, a.id, v), radical: v }); });
+        }
       }
+      // Mechanism E (#35): 平抑, 美援 as a whole card (`L.peg` exists only under the option).
+      if (L.peg) opts.push(() => ({ type: "play", side, card: "american_aid", use: "peg" }));
       return opts.length ? pickOne(opts, rng)() : null;
     }
     default: return null;

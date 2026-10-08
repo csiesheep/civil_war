@@ -65,6 +65,8 @@
 //     (`dMarkers`) and the 結算's 孤城 (`supplyAttritionD`).
 //   - #33 D's numbers as options, none a default (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`,
 //     `dFreeBar`, `dSettle`, `dIntegrateMax`; read where D reads the number, see at DPOWERS).
+//   - #35 mechanism E as the option `mechanismE` (not a default): 通膨 (印鈔 `print`, 平抑 `use: "peg"`),
+//     左傾 (激進 `radical`, 還鄉團 `returnHome`), 中間派 (`st.mechE`, `E_SPEC`; see at E_SPEC).
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -155,10 +157,15 @@ export function eraLimits(st, turn = st.turn) {
   const t = Math.max(1, turn);
   if (st.options.rounds === "symmetric") {
     const s = SYMMETRIC_ERAS.filter((e) => t >= e.from).pop();
-    return { hand: [s.hand, s.hand], rounds: [s.rounds, s.rounds] };
+    return eHandCut(st, t, { hand: [s.hand, s.hand], rounds: [s.rounds, s.rounds] });
   }
   const e = eraOf(t), o = tune(st, "eraRounds") && st.options.eraRounds[e.id];
-  return { hand: (o && o.hand ? o.hand : e.hand).slice(), rounds: (o && o.rounds ? o.rounds : e.rounds).slice() };
+  return eHandCut(st, t, { hand: (o && o.hand ? o.hand : e.hand).slice(), rounds: (o && o.rounds ? o.rounds : e.rounds).slice() });
+}
+// #35, mechanism E: from the turn after 通膨 reached 8, the Nationalists' hand is one smaller, for good.
+function eHandCut(st, t, limits) {
+  if (st.mechE && st.mechE.handCutFrom != null && t >= st.mechE.handCutFrom) limits.hand[KMT] -= 1;
+  return limits;
 }
 // 時局 (mechanism F, rulebook 三): eight, in a fixed order, one per turn, face up
 // from the start. What each does is read from the turn number (`situationOf`)
@@ -466,6 +473,161 @@ export function pointsOf(st, side, id) { return infOf(st, id)[side] + (side === 
 function loyalGray(st, side, id) {
   return side === KMT && !!st.gray && st.gray[id] > 0 && st.attitude[POWER_OF[id]] === "loyal";
 }
+// #35, mechanism E (印鈔與土改; owner's mechanisms note E, hand-copied in tests/acceptance.test.js group
+// 15 with orchestrator 裁決 #35 and owner 裁決 #34: 「E 和民生並存,先做成選項」), the option `mechanismE`.
+// NOT a key of DEFAULT_OPTIONS: an absent or false option plays as before E, byte for byte -- the state has
+// no `mechE` then and the three readings answer 0. 民生 and the 72 cards are as they were.
+//   - 通膨 (the Nationalists', 0 to 10). 印鈔: `print: true` with a hand card's ops spent on 扶植, an attack
+//     or 政工 (an enemy card too, its event as always; with an event first, in the ops chosen after it):
+//     the ops +E_SPEC.print, inflation +1 (`printRefusal`, `doOps`). Never an event, 變法, a headline or
+//     an aid card. 平抑: 美援 played as `use: "peg"`: no ops, inflation −E_SPEC.peg, not below 0; when the
+//     aid card may be used at all (`canPeg`). Thresholds, each the first time it is reached (`inflate`):
+//     3 民心 1 toward the Communists; 6 民心 2 toward them and the centrists a step their way; 8 the
+//     Nationalists' hand one smaller from the next turn's refill on, for good (`eraLimits`); 10 the
+//     Nationalists lose at once (reason "inflation").
+//   - 左傾 (the Communists', 0 to 6). 激進土改: `radical: <village>` on a 扶植 (a hand card's or 蘇援's) whose
+//     points include that village, where they already have red: each op spent there is E_SPEC.radical red
+//     (orchestrator 裁決 #35, the note's letter: a point costing 2 ops there, the village the Nationalists'
+//     control, is 4 red; the cap holds, the rest is lost) (`radicalRed`), leftism +1, then the Nationalists put 1 blue in a space next
+//     to it where it fits (pending tag "returnHome"; reach and supply not read). Once a turn
+//     (`radicalRefusal`). Thresholds (`radicalize`): 2 the centrists a step toward the Nationalists and 4
+//     民心 2 toward them, each the first time; 6 every time: −1 red in every village the Communists
+//     control, then leftism back to E_SPEC.leftismReset.
+//   - 中間派 (−2 親國 2 … +2 親共 2): at the 結算 民心 moves that many toward its side (`endTurnChecks`,
+//     P10's bounds as any 民心); 停戰's first attack moves it a step away from the attacker (`truceBroken`).
+//   - Not in this version: the E effects of 金圓券, 糾偏, 學潮, 取締民盟 and 政協.
+// The state: `st.mechE` = { inflation, leftism, centrists, reached: { inflation: [n…], leftism: [n…] },
+// handCutFrom (the first turn of 8's smaller hand, or null), radicalTurn (the turn of the last 激進) }.
+export const E_SPEC = { print: 2, peg: 2, radical: 2, inflation: [3, 6, 8, 10], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+const mechE = (st) => !!(st.options && st.options.mechanismE);
+const PRINT_USES = ["place", "campaign", "politics"];
+const INFLATION_MAX = E_SPEC.inflation[E_SPEC.inflation.length - 1], LEFTISM_MAX = E_SPEC.leftism[E_SPEC.leftism.length - 1];
+function newMechE() { return { inflation: 0, leftism: 0, centrists: 0, reached: { inflation: [], leftism: [] }, handCutFrom: null, radicalTurn: null }; }
+export function inflationOf(st) { return st.mechE ? st.mechE.inflation : 0; }
+export function leftismOf(st) { return st.mechE ? st.mechE.leftism : 0; }
+export function centristsOf(st) { return st.mechE ? st.mechE.centrists : 0; }
+// For laying out a position (the acceptance rigs, the tutorial): the thresholds at or below n are marked
+// reached (none already reached is unmarked), and no threshold's effect is applied (8's smaller hand included).
+function eTrack(st, what, n, lo, hi) {
+  if (!mechE(st)) fail(`${what}: mechanism E is off`);
+  if (!Number.isInteger(n) || n < lo || n > hi) fail(`${what}: ${n} (${lo} to ${hi})`);
+  return st.mechE || (st.mechE = newMechE());
+}
+function markReached(list, spec, n) { for (const t of spec) if (t <= n && !list.includes(t)) list.push(t); }
+export function setInflation(st, n) { const m = eTrack(st, "setInflation", n, 0, INFLATION_MAX); m.inflation = n; markReached(m.reached.inflation, E_SPEC.inflation, n); }
+export function setLeftism(st, n) { const m = eTrack(st, "setLeftism", n, 0, LEFTISM_MAX); m.leftism = n; markReached(m.reached.leftism, E_SPEC.leftism, n); }
+export function setCentrists(st, n) { eTrack(st, "setCentrists", n, E_SPEC.centrists[0], E_SPEC.centrists[1]).centrists = n; }
+function moveCentrists(st, d, why) {
+  const m = st.mechE, from = m.centrists, to = Math.max(E_SPEC.centrists[0], Math.min(E_SPEC.centrists[1], from + d));
+  if (to === from || st.winner != null) return;
+  m.centrists = to;
+  log(st, { type: "centrists", from, to, why });
+}
+// Inflation by `d` (print +1, peg −E_SPEC.peg), then every threshold reached for the first time, lowest first.
+function inflate(st, d, why) {
+  const m = st.mechE, from = m.inflation, to = Math.max(0, Math.min(INFLATION_MAX, from + d));
+  m.inflation = to;
+  log(st, { type: "inflation", from, to, why });
+  E_SPEC.inflation.forEach((t, i) => {
+    if (st.winner != null || to < t || m.reached.inflation.includes(t)) return;
+    m.reached.inflation.push(t);
+    log(st, { type: "eThreshold", track: "inflation", n: t });
+    if (i === 0) vp(st, CCP, 1); // 3: 民心 1 toward the Communists
+    else if (i === 1) { vp(st, CCP, 2); moveCentrists(st, 1, "inflation"); } // 6: 民心 2, the centrists a step
+    else if (i === 2) m.handCutFrom = st.turn + 1; // 8: the hand one smaller from the next refill
+    else win(st, CCP, "inflation"); // 10: the Nationalists collapse
+  });
+}
+// Leftism +1 (a 激進), then its thresholds: 2 and 4 the first time only, 6 every time (it walks back to 3).
+function radicalize(st) {
+  const m = st.mechE, from = m.leftism;
+  m.leftism = Math.min(LEFTISM_MAX, from + 1);
+  log(st, { type: "leftism", from, to: m.leftism, why: "radical" });
+  const [two, four, six] = E_SPEC.leftism;
+  for (const t of [two, four]) {
+    if (st.winner != null || m.leftism < t || m.reached.leftism.includes(t)) continue;
+    m.reached.leftism.push(t);
+    log(st, { type: "eThreshold", track: "leftism", n: t });
+    if (t === two) moveCentrists(st, -1, "leftism"); // 2: the centrists a step toward the Nationalists
+    else vp(st, KMT, 2); // 4: 民心 2 toward the Nationalists
+  }
+  if (st.winner != null || m.leftism < six) return;
+  // 6: −1 in every village the Communists control (read once, before any is taken), leftism back to 3.
+  const villages = SPACES.filter((s) => s.kind === "village" && controller(st, s.id) === CCP).map((s) => s.id);
+  const lost = {};
+  for (const id of villages) lost[id] = remove(st, CCP, id, 1);
+  m.leftism = E_SPEC.leftismReset;
+  log(st, { type: "eThreshold", track: "leftism", n: six, lost, to: m.leftism });
+  checkMarkers(st);
+}
+// Why `side` may not print money for these ops, or null.
+function printRefusal(st, side, card, use) {
+  if (!mechE(st)) return "print: mechanism E is off (印鈔)";
+  if (side !== KMT) return "print: only the Nationalists print money";
+  if (isAid(card)) return "print: not with an aid card";
+  if (!PRINT_USES.includes(use)) return "print: only for 扶植, an attack or 政工";
+  return null;
+}
+// Whether `side` may print money with `card`'s ops (a 扶植, an attack or 政工 with it).
+export function canPrint(st, side, card) { return !!CARD[card] && !CARD[card].scoring && !printRefusal(st, side, card, "place"); }
+// Whether `side` may peg now: under E, the Nationalists, 美援 usable as an aid card is (once a turn,
+// support ≥ 1), and no named card (細作) or owed discard (頓兵堅城) claims the round.
+export function canPeg(st, side) {
+  if (!mechE(st) || side !== KMT || !aidAvailable(st, side) || forcedCard(st, side)) return false;
+  return !st.effects.some((e) => e.kind === "bog" && e.who === side && st.hands[side].some((x) => CARD[x].ops >= 2));
+}
+// The villages `side` may name for 激進 now (with red, below the cap, not used this turn); a 扶植 must
+// still reach one with its points. Empty without the option or for the Nationalists.
+export function radicalOptions(st, side) {
+  if (!mechE(st) || side !== CCP || st.mechE.radicalTurn === st.turn) return [];
+  return SPACES.filter((s) => s.kind === "village" && infOf(st, s.id)[CCP] > 0 && infOf(st, s.id)[CCP] < capOf(st, s.id)).map((s) => s.id);
+}
+// The red a 激進's point puts in its village: E_SPEC.radical for every op it costs (1 → 2, 2 → 4).
+function radicalRed(cost) { return E_SPEC.radical * cost; }
+function radicalRefusal(st, side, choice) {
+  if (!mechE(st)) return "radical: mechanism E is off (激進土改)";
+  if (side !== CCP) return "radical: only the Communists";
+  if (choice.use !== "place") return "radical: a 扶植 only";
+  const v = choice.radical;
+  if (!SPACE[v]) return `radical: unknown space ${v}`;
+  if (SPACE[v].kind !== "village") return `radical: ${v} is not a village`;
+  if (infOf(st, v)[CCP] <= 0) return `radical: no red at ${v} yet`;
+  if (!Array.isArray(choice.points) || !choice.points.includes(v)) return `radical: ${v} is not among the points`;
+  if (st.mechE.radicalTurn === st.turn) return "radical: once a turn";
+  return null;
+}
+// After a 激進's points: once a turn, leftism, then the Nationalists' 還鄉團 (the plan step after this one).
+function radicalAfter(st, v) {
+  st.mechE.radicalTurn = st.turn;
+  log(st, { type: "radical", side: CCP, space: v });
+  radicalize(st);
+  if (st.winner != null) return;
+  st.plan.splice(1, 0, { do: "returnHome", side: KMT, from: v, choices: [] });
+}
+// 還鄉團: 1 blue in a space next to the village, where it fits (not read: reach, supply, a siege).
+function returnHomeStep(st, step) {
+  const options = adjOf(st, step.from).filter((id) => pointsOf(st, KMT, id) < capOf(st, id) && !sovietHeld(st, id));
+  if (!options.length) { log(st, { type: "returnHome", side: KMT, from: step.from, space: null }); return true; }
+  if (!step.choices.length) return ask(st, step, { kind: "points", tag: "returnHome", n: 1, min: 1, options, side: KMT, from: step.from });
+  const [id] = step.choices.shift();
+  place(st, KMT, id, 1);
+  log(st, { type: "returnHome", side: KMT, from: step.from, space: id });
+  checkMarkers(st);
+  return true;
+}
+// 平抑: 美援 as a whole card for inflation −E_SPEC.peg, in place of its ops (play's aid branch has read
+// the side, the option, once a turn and the support).
+function pegPlay(st, side, c, bogCards) {
+  if (c !== AID[KMT].id) fail("peg: only 美援 pegs (平抑)");
+  if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
+  if (forcedCard(st, side)) fail("you must play the named card");
+  st.aidUsed[side] = true;
+  log(st, { type: "play", side, card: c, use: "peg" });
+  log(st, { type: "peg", side });
+  inflate(st, -E_SPEC.peg, "peg");
+  st.plan.unshift({ do: "endAction" });
+  return run(st);
+}
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -722,14 +884,16 @@ export function reachFrom(st, side) {
 //   美援 -- a 孤城 is open while no point so far is in a village; a village is
 //     open while no point so far went into a 孤城 by the airlift.
 // `left` is the ops left without the 蘇援's +1.
-export function placeTargets(st, side, ops, points = [], card) {
+// `radical` (#35): the village of a 激進 among `points`, whose points are read as `radicalRed` red each.
+export function placeTargets(st, side, ops, points = [], card, radical) {
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
   const trial = clone(st); trial.log = [];
   let spent = 0, jumped = null, airlifted = false;
   for (const id of points) {
     if (jump && jumped == null && SPACE[id].kind === "village" && !canPlaceAt(trial, side, id, reach)) jumped = id;
     if (placeBarred(trial, side)(id)) airlifted = true;
-    spent += placeCost(trial, side, id); place(trial, side, id, 1);
+    const cost = placeCost(trial, side, id);
+    spent += cost; place(trial, side, id, radical != null && id === radical ? radicalRed(cost) : 1);
   }
   const left = ops - spent;
   const soviet = card === "soviet_aid" && points.every(inNortheast);
@@ -1624,6 +1788,8 @@ function truceBroken(st, side) {
   log(st, { type: "truceBroken", side });
   vp(st, other(side), 2);
   if (side === KMT) moveSupport(st, KMT, -1);
+  // #35, mechanism E: the centrists a step away from the side that struck first.
+  if (mechE(st) && st.winner == null) moveCentrists(st, side === KMT ? 1 : -1, "truce");
 }
 // One side's modifier for a realignment roll on `id` (#130): +1 per neighbour
 // it controls, +1 if it has more influence there than the other side, +1 if
@@ -1739,7 +1905,8 @@ export function lobby(st, side, target, ops) {
 // Northeast has one op more than `ops`; 美援 with every point in a city may put
 // a point into a 孤城 (`airliftOk`). Nothing else changes: reach, cap, cost,
 // 受降's Northeast cities.
-export function placePoints(st, side, points, ops, card) {
+// `radical` (#35, mechanism E): the village of a 激進; each point there is `radicalRed` of its cost (the cap holds).
+export function placePoints(st, side, points, ops, card, radical) {
   if (probe.place) probe.place(st, side, points);
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
   ops += aidBonus(card, { use: "place", points });
@@ -1755,11 +1922,11 @@ export function placePoints(st, side, points, ops, card) {
     if (pointsOf(st, side, id) >= capOf(st, id)) fail(`place: ${id} is at the cap`);
     if (sovietHeld(st, id)) fail(`place: the Soviets hold ${id} this turn (受降)`);
     if (placeBarred(st, side)(id) && !(airlift && airliftOk(st, id))) fail(`place: ${id} is cut off from supply`);
-    place(st, side, id, 1);
+    place(st, side, id, radical != null && id === radical ? radicalRed(cost) : 1);
     spent += cost;
   }
   if (jumped) st.situationUsed = { ...st.situationUsed, jump: true };
-  log(st, { type: "place", side, points, spent, ...(jumped ? { jump: jumped } : {}) });
+  log(st, { type: "place", side, points, spent, ...(jumped ? { jump: jumped } : {}), ...(radical != null ? { radical } : {}) });
   checkMarkers(st);
   return spent;
 }
@@ -1804,7 +1971,8 @@ export function discardCard(st, side, cardId, { noEvent = true } = {}) {
 }
 export function eraOf(turn) { return ERAS.filter((e) => turn >= e.from).pop(); }
 // A side with an empty hand still acts while its aid card is usable (#4).
-export function hasCards(st, side) { return st.hands[side].length > 0 || aidUsable(st, side); }
+// #35: under E 美援 may always peg (`canPeg`), so the Nationalists act while it is there.
+export function hasCards(st, side) { return st.hands[side].length > 0 || aidUsable(st, side) || canPeg(st, side); }
 // 細作 (xizuo, 67) names a card the other side must play on its next action
 // round (`st.forced[side]`, cards.js). The obligation LAPSES when that card is
 // no longer in that side's hand -- orchestrator's ruling (#55), flagged to the
@@ -1833,7 +2001,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-05-3"; // #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))))
+export const RULES_VERSION = "2026-10-07"; // #35: mechanism E as the option `mechanismE` (通膨 / 印鈔 / 平抑, 左傾 / 激進土改 / 還鄉團, 中間派; `E_SPEC`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05-3" was #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -1878,6 +2046,8 @@ function startGame(seed, options) {
     st.talks = {}; st.grayLast = {};
     if (st.options.dSettle === "twice") st.dIsoLast = [];
   }
+  // #35, mechanism E: the three tracks, only with the option.
+  if (mechE(st)) st.mechE = newMechE();
   if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   // CIVIL WAR: the first era's deck is drawn from; the other two wait in
@@ -2009,7 +2179,9 @@ function exec(st, step) {
             if (pol.length) { allowed.push("politics"); o.politicsTargets = pol; }
           }
           if (!allowed.length) { log(st, { type: "opsLost", side: step.side, ops: step.ops }); return true; }
-          return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops" });
+          // #35: under E the ask says whether these ops may be printed and where a 激進 could go.
+          const e = mechE(st) ? { canPrint: canPrint(st, step.side, step.card), radical: radicalOptions(st, step.side) } : {};
+          return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops", ...e });
         }
         choice = step.choices[0];
         if (step.playSeq) { const e = st.log.find((l) => l.i === step.playSeq && l.type === "play"); if (e) e.use = choice.use; }
@@ -2027,6 +2199,7 @@ function exec(st, step) {
     case "siege": return siegeStep(st, step);
     case "sweep": return sweepStep(st, step);
     case "grayHit": return grayHitStep(st, step);
+    case "returnHome": return returnHomeStep(st, step);
     case "endAction": return endAction(st), true;
     case "beginAction": return beginAction(st), true;
     case "endTurn": {
@@ -2343,6 +2516,13 @@ function endTurnChecks(st) {
     const ctl = controller(st, "luoyi");
     if (ctl != null) vp(st, ctl, st.options.luoyi);
   }
+  // #35, mechanism E: 民心 moves toward the side the centrists lean to, by as many steps.
+  if (mechE(st) && st.mechE.centrists) {
+    const c = st.mechE.centrists;
+    log(st, { type: "centristsSettle", n: c });
+    vp(st, c > 0 ? CCP : KMT, Math.abs(c));
+    if (st.winner != null) return;
+  }
   // #8, 金圓券: 民心 owed at this turn's 結算 (`turnEndVp`, `until: "turn"`), paid
   // here, once, before 「本回合的效果結束」 takes the effect away.
   for (const e of st.effects.filter((x) => x.kind === "turnEndVp")) {
@@ -2373,11 +2553,28 @@ function finishCard(st, step) {
 // board is a refusal too, not a TypeError from three calls down (#16).
 function doOps(st, side, card, ops, choice) {
   if (!choice || typeof choice !== "object") fail("ops: no choice");
+  // #35, mechanism E, 印鈔: declared with the ops. Checked; the ops with the extra points dry-run (an illegal
+  // payload is refused even when the inflation would end the game); then the inflation and its thresholds
+  // (10 ends the game before the ops are spent); then the ops.
+  if (choice.print) {
+    const why = printRefusal(st, side, card, choice.use);
+    if (why) fail(why);
+    const plain = { ...choice };
+    delete plain.print;
+    ops += E_SPEC.print;
+    validateOps(st, side, card, ops, plain);
+    log(st, { type: "print", side, card, ops });
+    inflate(st, 1, "print");
+    if (st.winner != null) return;
+    choice = plain;
+  }
+  if (choice.radical != null) { const why = radicalRefusal(st, side, choice); if (why) fail(why); }
   if (choice.use === "place") {
     if (!Array.isArray(choice.points)) fail("place: points must be a list");
     for (const id of choice.points) if (!SPACE[id]) fail(`place: unknown space ${id}`);
     // `placePoints` reads the aid card itself (蘇援's +1, 美援's airlift).
-    placePoints(st, side, choice.points, ops, isAid(card) ? card : undefined);
+    placePoints(st, side, choice.points, ops, isAid(card) ? card : undefined, choice.radical);
+    if (choice.radical != null && st.winner == null) radicalAfter(st, choice.radical);
   } else if (choice.use === "campaign") {
     if (!SPACE[choice.target]) fail(`campaign: unknown space ${choice.target}`);
     ops += aidBonus(card, choice);
@@ -2539,11 +2736,13 @@ function play(st, action) {
     if (!st.options.aid) fail("no aid cards in this game");
     if (st.aidUsed && st.aidUsed[side]) fail("the aid card is used already this turn");
     if (!aidAvailable(st, side)) fail("the aid card: support is 0");
+    // #35, mechanism E: 平抑, 美援 as a whole card for inflation.
+    if (use === "peg" && mechE(st)) return pegPlay(st, side, c, bogCards);
     if (!aidUsable(st, side)) fail("the aid card has nothing it could do now");
     if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
     if (forcedCard(st, side)) fail("you must play the named card");
     if (!["place", "campaign", "lobby"].includes(use)) fail("the aid card: place, campaign or lobby only");
-    const ops = opsOf(st, side, c), payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}) };
+    const ops = opsOf(st, side, c), payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...eExtras(action) };
     validateOps(st, side, c, ops, payload);
     st.aidUsed[side] = true;
     steps.push({ do: "ops", side, card: c, ops, payload }, { do: "endAction" });
@@ -2555,6 +2754,8 @@ function play(st, action) {
   }
   if (!h.includes(c)) fail("card not in hand");
   const card = CARD[c];
+  // #35: 印鈔 and 激進 ride on ops only (not an event, 變法, a scoring card or a 頓兵堅城 discard).
+  if ((action.print || action.radical != null) && !["place", "campaign", "lobby", "politics"].includes(use)) fail("print / radical: only with ops");
   // 頓兵堅城 (dunbing, 69) and 細作 (xizuo, 67) both claim this action round.
   // orchestrator's ruling (#57), flagged to the owner: the bog comes first and
   // 細作 carries. While a discard is owed AND possible, the round IS the
@@ -2591,7 +2792,7 @@ function play(st, action) {
     steps.push({ do: "reform", side }, { do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
   } else if (["place", "campaign", "lobby"].includes(use) || (use === "politics" && mechD(st))) {
     // #31: 政工 is the ops' fifth use (`doOps`): an enemy card's event goes with it as with the others.
-    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...(use === "politics" ? { power: action.power } : {}) };
+    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...(use === "politics" ? { power: action.power } : {}), ...eExtras(action) };
     const enemy = card.side != null && card.side !== side;
     const paired = c === MARSHALL && action.pair;
     // The player chooses whether an enemy card's ops or its event comes first
@@ -2601,6 +2802,8 @@ function play(st, action) {
     if (enemy && !paired && action.order !== "opsFirst" && action.order !== "eventFirst") {
       fail("an enemy card needs an order: opsFirst or eventFirst");
     }
+    // #35: with the event first the ops are chosen after it, and 印鈔 / 激進 with them (in the ops choice).
+    if (enemy && !paired && action.order === "eventFirst" && (action.print || action.radical != null)) fail("print / radical: with the event first, say it with the ops chosen after the event");
     if (paired) {
       // 馬歇爾調處 (Zongheng's 說客): the paired enemy card's ops, no event, both
       // discarded. Not while 美國支持 is 0: the card is then 1 op alone (#6).
@@ -2637,6 +2840,8 @@ function play(st, action) {
   st.plan.unshift(...steps);
   return run(st);
 }
+// #35: a play's 印鈔 and 激進 go into its ops payload, and only when the play names them.
+function eExtras(action) { return { ...(action.print != null ? { print: action.print } : {}), ...(action.radical != null ? { radical: action.radical } : {}) }; }
 // Validate ops without mutating: replay the placement on a throwaway copy.
 function validateOps(st, side, card, ops, payload) {
   const trial = clone(st);
@@ -2689,6 +2894,8 @@ export function legal(st, side) {
       reform: reformUsesLeft(st, side) > 0 && card.ops >= reformThreshold(st, side),
       enemy: card.side != null && card.side !== side,
     };
+    // #35: under E the Nationalists may print money with any card's ops (`canPrint`).
+    if (mechE(st) && side === KMT) uses.print = canPrint(st, side, c);
     if (c === MARSHALL) uses.pair = marshallPairs(st) ? h.filter((x) => CARD[x].side === other(side)) : [];
     // #31: 政工 -- the Nationalists' spaces to 整編, the Communists' powers to 統戰 with this card's ops.
     if (mechD(st)) {
@@ -2706,7 +2913,9 @@ export function legal(st, side) {
     const u = aidUses(st, side);
     if (u.place || u.campaign || u.lobby) aid = u;
   }
-  return { kind: "action", cards, aid, forced };
+  // #35: under E, 平抑 (`canPeg`) and the villages a 激進 may name (`radicalOptions`).
+  const e = mechE(st) ? { peg: canPeg(st, side), radical: radicalOptions(st, side) } : {};
+  return { kind: "action", cards, aid, forced, ...e };
 }
 
 // ---------- the per-seat view ----------
