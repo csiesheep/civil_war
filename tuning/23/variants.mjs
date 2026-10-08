@@ -599,3 +599,41 @@ md("MD-sui2vp", "易幟給共軍的民心:綏 2", "沒有調防就沒有北平:�
 mdc("MD-S3", "MD-sui4bar + MD-jinL + MD-twice + MD-seal3", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3"]);
 mdc("MD-S3v", "MD-S3 + MD-sui2vp", ["MD-sui4", "MD-bar", "MD-jinL", "MD-twice", "MD-seal3", "MD-sui2vp"]);
 md("MD-thr-1", "統戰門檻:綏 2、晉 3、桂 2、馬 3、滇 2(各少 1,滇已是 2 不再降)", "地下黨的工作早就在做(傅作義身邊的傅冬菊、程潛與陳明仁的聯絡):談判不必等到大牌", { dThreshold: { sui: 2, jin: 3, gui: 2, ma: 3, dian: 2 } });
+
+// ---- #37: E's numbers (owner 裁決 #37: 「調一輪 E 的數字」). Every `ME-…` is laid over the variant E
+// ({ mechanismE: true }) and uses only #37's options (engine.js, `eSpecOf`); a later part's key wins. `what` is
+// the rulebook sentence, `why` its reason (the owner's note E, or history).
+const ME = {};
+const me = (name, what, why, options) => { ME[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismE: true, ...options } }; };
+const mec = (name, what, parts) => {
+  const options = { mechanismE: true };
+  for (const p of parts) Object.assign(options, ME[p].options);
+  VARIANTS[name] = { what, why: parts.join(" + "), parts, options };
+};
+// Today's inflation thresholds, written out (engine.js E_INFLATION), for the variants that change one of them.
+export const E_INFLATION_TODAY = [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }];
+me("ME-cap1", "國軍每回合最多印鈔 1 次",
+  "法幣的增發是逐年加速,不是一開始就印滿:發行額 1945 年底約 1 兆元、1946 年底約 3.7 兆、1947 年底約 33 兆、1948 年 8 月約 660 兆;每半年能墊給軍費的錢有限", { ePrintPerTurn: 1 });
+me("ME-cap2", "國軍每回合最多印鈔 2 次", "同 ME-cap1,上限放寬一點", { ePrintPerTurn: 2 });
+me("ME-ops1", "印鈔:這張牌的行動點 +1",
+  "物價漲得比發行還快:同樣的增發換到的軍需一年比一年少(1947 年法幣發行多了約九倍,上海物價漲了十幾倍)", { ePrintOps: 1 });
+me("ME-step2", "印鈔:通膨 +2", "每次增發都推高預期,通膨自己會加速(1947 年 2 月黃金風潮、1948 年夏法幣一日數價)", { ePrintStep: 2 });
+me("ME-pain", "通膨到 3:民心往共軍 2;到 6:民心往共軍 3、中間派往共軍一格;到 8:下一回合起國軍手牌少兩張;到 10:國軍崩潰",
+  "城市的人心在通膨一開始就丟了:1946 年起上海罷工,1947 年 5 月搶米風潮與「反飢餓、反內戰」學運;筆記的例子「3 就民心 2」",
+  { eInflation: [{ at: 3, vp: 2 }, { at: 6, vp: 3, centrists: 1 }, { at: 8, hand: 2 }, { at: 10, lose: true }] });
+me("ME-early", "通膨到 2:民心往共軍 1;到 4:民心往共軍 2、中間派往共軍一格;到 6:下一回合起國軍手牌少一張;到 8:國軍崩潰",
+  "門檻更早(筆記的例子「門檻更早」):法幣 1948 年 8 月就崩了,金圓券只撐九個月", { eInflation: [{ at: 2, vp: 1 }, { at: 4, vp: 2, centrists: 1 }, { at: 6, hand: 1 }, { at: 8, lose: true }] });
+me("ME-peg1", "平抑:通膨 −1",
+  "拋售黃金平抑只撐了一年:1947 年 2 月黃金風潮,央行一年拋售了三百多萬兩黃金,物價照漲", { ePeg: 1 });
+me("ME-rad3", "激進:那個鄉每點行動點放 3 紅",
+  "1947 年 10 月《中國土地法大綱》平分土地,翻身的農民參軍、支前(淮海戰役的民工五百多萬)", { eRadical: 3 });
+me("ME-cvp2", "結算:中間派每偏一格,民心往那一方移 2",
+  "中間派(民盟、工商界、學生)左右的是城市的輿論:1947 年 10 月民盟被取締之後整批倒向共軍", { eCentristsVp: 2 });
+// The second round (tuning/37/report.txt): only the cap (ME-cap1) keeps 印鈔 a trade-off (goal 2), but the 民心
+// curve still does not cross by turn 6 (46 / 50); ME-ops1 and ME-step2 move the curve the most. Lay the levers that
+// move the curve over the cap.
+mec("ME-cap1+ops1", "ME-cap1 + ME-ops1", ["ME-cap1", "ME-ops1"]);
+mec("ME-cap1+pain", "ME-cap1 + ME-pain", ["ME-cap1", "ME-pain"]);
+mec("ME-cap1+early", "ME-cap1 + ME-early", ["ME-cap1", "ME-early"]);
+mec("ME-cap1+ops1+pain", "ME-cap1 + ME-ops1 + ME-pain", ["ME-cap1", "ME-ops1", "ME-pain"]);
+mec("ME-cap1+ops1+early", "ME-cap1 + ME-ops1 + ME-early", ["ME-cap1", "ME-ops1", "ME-early"]);

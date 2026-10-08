@@ -151,7 +151,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 function newE() {
   return {
     print: 0, peg: 0, radical: 0, byTurn: {}, threshold: {}, atTurnEnd: {}, settle: {}, settleToCcp: 0, settleToKmt: 0,
-    centristsMoved: {}, returnHome: {}, lastTurnTo9: 0, collapse: 0,
+    centristsMoved: {}, returnHome: {}, lastTurnTo9: 0, collapse: 0, reach: {},
   };
 }
 function readLogE(X, l, turns) {
@@ -164,6 +164,8 @@ function readLogE(X, l, turns) {
   else if (l.type === "centrists") bump(X.centristsMoved, l.why, l.to - l.from);
   else if (l.type === "returnHome") bump(X.returnHome, l.space ?? "none");
   else if (l.type === "inflation" && l.why === "print" && l.to === 9 && l.t === turns) X.lastTurnTo9 = 1;
+  // #37: the turn inflation first stood at n or more (n = 1 …), whatever moved it (a threshold's place may move).
+  if (l.type === "inflation") for (let n = 1; n <= l.to; n++) if (X.reach[n] === undefined) X.reach[n] = l.t;
 }
 function turnEndE(X, s) {
   const e = slot(X.atTurnEnd, s.turn, () => ({ centrists: {}, inflation: {}, leftism: {} }));
@@ -340,9 +342,15 @@ export function moreStats(list) {
       const { games, d, e, ...rest } = more;
       // #36: E's sums, and per game: how many 印鈔 / 平抑 / 激進, the end's inflation and leftism (in `e.end`).
       if (e) {
-        m.e = addSums(m.e, e);
+        // #37: `reach` (the turn inflation first stood at n or more) is per game only: ePerGame.reach[n][turn | "none"].
+        const { reach, ...eSums } = e;
+        m.e = addSums(m.e, eSums);
         const per = (m.ePerGame ??= { print: {}, peg: {}, radical: {} });
         bump(per.print, e.print); bump(per.peg, e.peg); bump(per.radical, e.radical);
+        if (reach) {
+          per.reach ??= {};
+          for (let n = 1; n <= 10; n++) bump(slot(per.reach, n, () => ({})), reach[n] ?? "none");
+        }
       }
       m = addSums(m, { ...rest, decided: games });
       bump(m.siegesPerGame, more.sieges);
