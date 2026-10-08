@@ -557,7 +557,9 @@ section("B7 機制 E:印鈔與激進的價格(選項 mechanismE)");
 //   - `B.ePrice(st, side)`:這一方自己的軌(國軍通膨、共軍左傾)再走一格的價格(評估的分數,越大越貴)。怎麼攤是 BE 的事;
 //     這裡只驗方向:通膨 9(下一格就崩潰)比通膨 0 貴得多。
 //   - 評估看 E:同一個盤面,通膨越高國軍越差;左傾越高共軍越差;中間派偏向誰誰好。
-//   - 最後一回合國軍最後一個行動:通膨 7 時要印(8 的手牌 −1 已經沒有下一回合);通膨 9 時永遠不印(10 = 當場輸)。
+//   - 最後一回合國軍的倒數第二個行動:通膨 7、8 時要印(8 的手牌 −1 已經沒有下一回合;筆記「印到 9」);通膨 9 時永遠不印(10 = 當場輸)。
+//     (#36:第一版放在全局最後一個行動,BE 指出那裡國軍怎麼下都贏、17 個選項都是 1000 分,bot 只是在平手裡亂選;
+//     倒數第二個行動印不印才會改變結果。筆記說的是「最後一回合」,不是最後一個行動。)
 // E 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
 const MEX = { mechanismE: true };
 const eBotTodo = () => TODO || (E.E_SPEC === undefined ? "TODO: 引擎還沒有機制 E(#35)" : typeof B.ePrice !== "function" ? "TODO: bots.js 還沒有 ePrice(還不懂機制 E)" : null);
@@ -606,15 +608,15 @@ check("評估看 E:通膨越高國軍越差;左傾越高共軍越差;中間派�
   );
 });
 
-check("最後一回合國軍最後一個行動(turns: 7):通膨 7 時印鈔(至少 16 / 20);通膨 9 時一次都不印", () => {
+check("最後一回合國軍的倒數第二個行動(turns: 7):通膨 7、8 時印鈔(各至少 16 / 20);通膨 9 時一次都不印", () => {
   const t = eBotTodo(); if (t) return t;
   // 選項 turns: 7 讓第 7 回合是最後一回合(第 8 回合一開始有和談的決定,走不到行動回合);決戰期國軍有 7 個行動回合,
-  // 第 7 個是全局最後一個行動。國軍手上一張 2 點牌。
-  const at = (n) => { const st = atRoundE(7, 7, KMT, [["score_north"], ["score_east", "kunming_incident"]], { ...MEX, turns: 7 }); E.setInflation(st, n); return st; };
+  // 第 6 個是倒數第二個(共軍沒有牌,國軍接著還有第 7 個)。國軍手上兩張 2 點牌。
+  const at = (n) => { const st = atRoundE(7, 6, KMT, [["score_north"], ["score_east", "kunming_incident", "takeover_officials"]], { ...MEX, turns: 7 }); E.setInflation(st, n); return st; };
   const ask = (st) => Array.from({ length: 20 }, (_, i) => B.decide(E.view(st, KMT), KMT, "normal", E.makeRng(900 + i)));
-  const seven = ask(at(7)), nine = ask(at(9));
-  const p7 = seven.filter(printed).length, p9 = nine.filter(printed).length;
-  return all(ok(p7 >= 16, `通膨 7:20 次裡印鈔 ${p7} 次(至少 16)`), eq(p9, 0, "通膨 9:20 次裡印鈔的次數"), ok(true, `通膨 7 印 ${p7} / 20;通膨 9 印 0`));
+  const p7 = ask(at(7)).filter(printed).length, p8 = ask(at(8)).filter(printed).length, p9 = ask(at(9)).filter(printed).length;
+  return all(ok(p7 >= 16, `通膨 7:20 次裡印鈔 ${p7} 次(至少 16)`), ok(p8 >= 16, `通膨 8:20 次裡印鈔 ${p8} 次(至少 16;筆記「印到 9」)`), eq(p9, 0, "通膨 9:20 次裡印鈔的次數"),
+    ok(true, `通膨 7 印 ${p7} / 20;8 印 ${p8} / 20;9 印 0`));
 });
 
 check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍印過鈔、共軍激進過", () => {
