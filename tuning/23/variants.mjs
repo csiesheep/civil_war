@@ -20,6 +20,8 @@ export const VARIANTS = {
   Boff: { what: "機制 B 關掉(#28 之前的預設規則)", why: "#28 證明 { mechanismB: false } 照舊是原本的規則", options: { mechanismB: false } },
   // #32: mechanism D's core (#31, not a default) on, the bots taught D (#32); measured against the default rules.
   D: { what: "機制 D(實力派的態度:灰、整編、統戰、易幟 / 整編完成)開著", why: "M2b 第 2 批(#31 引擎、#32 bot 與模擬)", options: { mechanismD: true } },
+  // #36: mechanism E (#35, not a default) on, the bots taught E (#36); measured against the default rules.
+  E: { what: "機制 E(印鈔與土改:通膨、左傾、中間派)開著", why: "M2b 第 3 批(#35 引擎、#36 bot 與模擬)", options: { mechanismE: true } },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {

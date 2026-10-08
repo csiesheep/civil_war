@@ -25,6 +25,9 @@
 //     side holding as many scoring cards as it has rounds left must play one
 //     now (`actionsLeft`). The simulation does not show the loss when the other
 //     side still acts after this side's last round, so the evaluation counts.
+//   - mechanism E (#36, only under the option `mechanismE`): 印鈔 and 激進 are priced by the thresholds of
+//     the side's own track spread over the steps to them (`ePrice`), the evaluation charges the walked part
+//     and values the centrists, and 印鈔 / 激進 / 平抑 are candidates (see "mechanism E" below).
 //
 // The bot never catches the engine's refusal of its own candidates: a candidate
 // the engine refuses while the bot thinks is a bug of the candidate lists, and
@@ -535,7 +538,9 @@ function dropSuicideIntegrate(st, side, list) {
 //     the Communists control (W_E.villageRed each, W_E.villageCtl more where the red is exactly what holds
 //     it), then back to 3: the segment of 6 starts at the reset (3).
 const mechE = (st) => !!(st.options && st.options.mechanismE);
-export const W_E = { card: 1.0, print: 1.5, villageRed: 0.5, villageCtl: 1.0 };
+// W_E.print: what the bot's own evaluation gives 2 more ops at a moment the Nationalists may print, plus the price
+// paid (tuning/36/print-worth.mjs: 177 decisions of 12 E games, mean 3.3, median 1.9); W_E.card: a card dealt.
+export const W_E = { card: 1.0, print: 3, villageRed: 0.5, villageCtl: 1.0 };
 const E_LOSS = 1000;
 const INFL = E.E_SPEC.inflation, LEFT = E.E_SPEC.leftism, INFL_LOSS = INFL[INFL.length - 1];
 // The 結算 still to come: this turn's, then the turns after it, discounted as every "turns to come" here.
