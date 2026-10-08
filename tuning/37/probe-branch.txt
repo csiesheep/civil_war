@@ -1,0 +1,35 @@
+ok   ePrintOps 1:2 點牌印鈔放 3 點,南京/上海/武漢 的藍各 +1: [1,1,1]
+ok   ePrintOps 1:2 點牌印鈔放 4 點被拒: true
+ok   ePrintOps 沒給:2 點牌印鈔放 4 點(今天的 +2),四處的藍各 +1: [1,1,1,1]
+ok   ePrintStep 2:通膨 2 印鈔 → 通膨 / 民心變動(跨過 3:往共軍 1): [4,1]
+ok   ePrintStep 沒給:通膨 2 印鈔 → 通膨 / 民心變動: [3,1]
+ok   ePrintPerTurn 1:同一回合第二次 [legal 可印?, 第二次印鈔的結果, 下一回合可印?]: [false,"refused",true]
+ok   ePrintPerTurn 2:同一回合第二次 [legal 可印?, 第二次印鈔之後的通膨, 下一回合可印?]: [true,2,true]
+ok   ePrintPerTurn 沒給:同一回合第二次 [legal 可印?, 第二次印鈔之後的通膨, 下一回合可印?]: [true,2,true]
+ok   eInflation 表:2 → 3 [民心變動, 中間派, 勝者, 方式]: [2,0,null,null]
+ok   eInflation 表:4 → 5 [民心變動, 中間派, 勝者, 方式]: [3,1,null,null]
+ok   eInflation 表:8 → 9 [民心變動, 中間派, 勝者, 方式]: [0,0,0,"inflation"]
+ok   eInflation 沒給:2 → 3 / 4 → 5 / 8 → 9 [民心變動, 中間派, 勝者, 方式]: [[1,0,null,null],[0,0,null,null],[0,0,null,null]]
+ok   eInflation 表:6 → 7 之後下一回合國軍手牌的變動: -2
+ok   eInflation 沒給:6 → 7 之後下一回合國軍手牌的變動: 0
+ok   eInflation 不是由低到高、或最後一格不是崩潰,被拒: [true,true]
+ok   ePeg 1:通膨 4 平抑之後: 3
+ok   ePeg 沒給:通膨 4 平抑之後: 2
+ok   eRadical 3:激進的鄉(每點 1)紅的變動 / 左傾: [3,1]
+ok   eRadical 沒給:同樣 紅的變動 / 左傾: [2,1]
+ok   eLeftism 表:2 → 3 [左傾, 中間派, 民心往國軍]: [3,-1,0]
+ok   eLeftism 表:4 → 5 [左傾, 中間派, 民心往國軍]: [5,0,3]
+ok   eLeftism 表:6 → 7 [左傾(回到 4), 中間派, 民心往國軍]: [4,0,0]
+ok   eLeftism 沒給:2 → 3 / 4 → 5 [左傾, 中間派, 民心往國軍]: [[3,0,0],[5,0,0]]
+ok   eCentristsVp 2:中間派親共 1,結算時民心往共軍: 2
+ok   eCentristsVp 沒給:同樣: 1
+ok   E 關掉時給了這些鍵:沒有 mechE,開局和沒給的一樣: [true,true]
+PROBE-37 ok 26 / red 0
+ok   ePrice 國軍 通膨 1(今天的門檻): 0.333
+ok   ePrice 國軍 通膨 1(門檻 2 / 4 / 6 / 8): 0.5
+ok   ePrice 國軍 通膨 8,ePrintStep 2(印了就是 10): 1000
+ok   ePrice 國軍 通膨 8,今天(印了是 9)< 1000: true
+ok   ePrice 國軍 通膨 7,崩潰在 8: 1000
+ok   ePrintPerTurn 1:同一回合第二個行動回合,6 個 rng 裡印鈔的次數: 0
+ok   ePrintPerTurn 沒給:同樣的局面,6 個 rng 裡有印鈔(> 0): true
+PROBE-37-BOT ok 7 / red 0

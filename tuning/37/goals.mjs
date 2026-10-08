@@ -45,7 +45,7 @@ export function readBatch(name, file) {
   const prints = (e.print || 0) / n, radicals = (e.radical || 0) / n, pegs = (e.peg || 0) / n;
   return {
     name, file, n, errors, ccp, targets, tline, curve: curve.trim(), curvePass, reasons: sum.reasons, endTurns: sum.endTurns,
-    at3, g2med, reach8, reached, late, g2late, source, prints, radicals, pegs,
+    at3, g2med, reach8, reach: per.reach || null, reached, late, g2late, source, prints, radicals, pegs,
     collapse: e.collapse || 0, settleToCcp: e.settleToCcp || 0, settleToKmt: e.settleToKmt || 0, centristsMoved: e.centristsMoved || {},
     endC: (e.end || {}).centrists || {}, endI: (e.end || {}).inflation || {}, endL: (e.end || {}).leftism || {},
     returnHome: e.returnHome || {}, perPrint: per.print || {}, perRadical: per.radical || {}, perPeg: per.peg || {},
@@ -67,6 +67,7 @@ export function block(b) {
   L.push(`G1 十項 ${b.targets ?? "?"} / 10、民心曲線 ${b.curvePass ? "通過" : "失敗"}、共軍 ${f1(b.ccp)}(≥ 8 含曲線、35–65%:${yn(b.pass.g1)})`);
   L.push(`G2 第 3 回合末通膨的中位數 ${b.g2med}(分佈 ${dist(b.at3)});通膨到 8 的 ${b.reached} 局(${f1(pct(b.reached, b.n))})裡第 5 回合以後到的 ${b.late}(${f1(b.g2late)})(讀 ${b.source})(中位 ≤ 5 且過半:${yn(b.pass.g2)})`);
   L.push(`   通膨第一次到 8 的回合 ${dist(b.reach8)}`);
+  if (b.reach) L.push(`   通膨第一次到 n 的回合:${[3, 4, 5, 6, 7].map((n) => `${n} [${dist(b.reach[n])}]`).join(";")}`);
   L.push(`G3 每局 印鈔 ${f2(b.prints)}、激進 ${f2(b.radicals)}、平抑 ${f2(b.pegs)}(印鈔 ≥ 2、激進 ≥ 1:${yn(b.pass.g3)})`);
   L.push(`   每局印鈔次數 ${dist(b.perPrint)}`);
   L.push(`   每局激進次數 ${dist(b.perRadical)}`);
