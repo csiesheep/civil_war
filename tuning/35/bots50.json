@@ -10,7 +10,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 14509,
+   "ms": 21328,
    "e": {
     "print": 0,
     "peg": 0,
@@ -48,7 +48,7 @@
    "winner": 0,
    "reason": "final",
    "turn": 8,
-   "ms": 32433,
+   "ms": 42592,
    "e": {
     "print": 0,
     "peg": 0,
@@ -95,7 +95,7 @@
    "winner": 0,
    "reason": "final",
    "turn": 8,
-   "ms": 32337,
+   "ms": 42318,
    "e": {
     "print": 0,
     "peg": 0,
@@ -142,7 +142,7 @@
    "winner": 0,
    "reason": "unification",
    "turn": 8,
-   "ms": 15520,
+   "ms": 23117,
    "e": {
     "print": 0,
     "peg": 0,
@@ -186,7 +186,7 @@
    "winner": 1,
    "reason": "mandate",
    "turn": 8,
-   "ms": 42267,
+   "ms": 59175,
    "e": {
     "print": 0,
     "peg": 0,
@@ -230,7 +230,7 @@
    "winner": 1,
    "reason": "final",
    "turn": 8,
-   "ms": 15015,
+   "ms": 17847,
    "e": {
     "print": 0,
     "peg": 0,
@@ -277,7 +277,7 @@
    "winner": 1,
    "reason": "homeFall",
    "turn": 7,
-   "ms": 23019,
+   "ms": 33221,
    "e": {
     "print": 0,
     "peg": 0,
@@ -318,7 +318,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24330,
+   "ms": 33597,
    "e": {
     "print": 0,
     "peg": 0,
@@ -365,7 +365,7 @@
    "winner": 0,
    "reason": "final",
    "turn": 8,
-   "ms": 24888,
+   "ms": 33750,
    "e": {
     "print": 0,
     "peg": 0,
@@ -412,7 +412,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 16315,
+   "ms": 21170,
    "e": {
     "print": 0,
     "peg": 0,
@@ -450,7 +450,7 @@
    "winner": 0,
    "reason": "unification",
    "turn": 8,
-   "ms": 22869,
+   "ms": 32752,
    "e": {
     "print": 0,
     "peg": 0,
@@ -494,7 +494,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 7,
-   "ms": 17684,
+   "ms": 23345,
    "e": {
     "print": 0,
     "peg": 0,
@@ -535,7 +535,7 @@
    "winner": 1,
    "reason": "final",
    "turn": 8,
-   "ms": 23748,
+   "ms": 33426,
    "e": {
     "print": 0,
     "peg": 0,
@@ -582,7 +582,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 7,
-   "ms": 14451,
+   "ms": 17939,
    "e": {
     "print": 0,
     "peg": 0,
@@ -623,7 +623,7 @@
    "winner": 1,
    "reason": "final",
    "turn": 8,
-   "ms": 32605,
+   "ms": 44566,
    "e": {
     "print": 0,
     "peg": 0,
@@ -670,7 +670,7 @@
    "winner": 0,
    "reason": "emperor",
    "turn": 8,
-   "ms": 18964,
+   "ms": 25393,
    "e": {
     "print": 0,
     "peg": 0,
@@ -714,7 +714,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 7,
-   "ms": 20202,
+   "ms": 29243,
    "e": {
     "print": 0,
     "peg": 0,
@@ -755,7 +755,7 @@
    "winner": 0,
    "reason": "unification",
    "turn": 8,
-   "ms": 24862,
+   "ms": 33685,
    "e": {
     "print": 0,
     "peg": 0,
@@ -799,7 +799,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 32131,
+   "ms": 45835,
    "e": {
     "print": 0,
     "peg": 0,
@@ -846,7 +846,7 @@
    "winner": 0,
    "reason": "unification",
    "turn": 8,
-   "ms": 21316,
+   "ms": 26652,
    "e": {
     "print": 0,
     "peg": 0,
@@ -890,7 +890,7 @@
    "winner": 0,
    "reason": "final",
    "turn": 8,
-   "ms": 31443,
+   "ms": 45859,
    "e": {
     "print": 0,
     "peg": 0,
@@ -937,7 +937,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 11490,
+   "ms": 15538,
    "e": {
     "print": 0,
     "peg": 0,
@@ -975,7 +975,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 5,
-   "ms": 13068,
+   "ms": 17421,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1010,7 +1010,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 27667,
+   "ms": 37958,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1057,7 +1057,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 27075,
+   "ms": 36458,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1101,7 +1101,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 7,
-   "ms": 17435,
+   "ms": 23781,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1142,7 +1142,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 31972,
+   "ms": 47734,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1189,7 +1189,7 @@
    "winner": 0,
    "reason": "unification",
    "turn": 8,
-   "ms": 18237,
+   "ms": 22231,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1233,7 +1233,7 @@
    "winner": 1,
    "reason": "mandate",
    "turn": 8,
-   "ms": 29328,
+   "ms": 42320,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1280,7 +1280,7 @@
    "winner": 1,
    "reason": "homeFall",
    "turn": 8,
-   "ms": 25032,
+   "ms": 31287,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1324,7 +1324,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 14159,
+   "ms": 21116,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1362,7 +1362,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 5,
-   "ms": 19529,
+   "ms": 25916,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1397,7 +1397,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 32462,
+   "ms": 43783,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1444,7 +1444,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24509,
+   "ms": 31567,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1488,7 +1488,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24181,
+   "ms": 36774,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1535,7 +1535,7 @@
    "winner": 1,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24434,
+   "ms": 31541,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1582,7 +1582,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 25980,
+   "ms": 35846,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1629,7 +1629,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 12661,
+   "ms": 16374,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1667,7 +1667,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 7,
-   "ms": 20021,
+   "ms": 27087,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1708,7 +1708,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24093,
+   "ms": 32499,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1752,7 +1752,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 32647,
+   "ms": 49073,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1799,7 +1799,7 @@
    "winner": 0,
    "reason": "final",
    "turn": 8,
-   "ms": 16262,
+   "ms": 19230,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1846,7 +1846,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 5,
-   "ms": 14416,
+   "ms": 19227,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1881,7 +1881,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 28606,
+   "ms": 39794,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1928,7 +1928,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 24759,
+   "ms": 35880,
    "e": {
     "print": 0,
     "peg": 0,
@@ -1975,7 +1975,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 6,
-   "ms": 19614,
+   "ms": 25939,
    "e": {
     "print": 0,
     "peg": 0,
@@ -2013,7 +2013,7 @@
    "winner": 1,
    "reason": "homeFall",
    "turn": 7,
-   "ms": 25682,
+   "ms": 35757,
    "e": {
     "print": 0,
     "peg": 0,
@@ -2054,7 +2054,7 @@
    "winner": 1,
    "reason": "tie",
    "turn": 8,
-   "ms": 17644,
+   "ms": 24457,
    "e": {
     "print": 0,
     "peg": 0,
@@ -2101,7 +2101,7 @@
    "winner": 1,
    "reason": "alliance",
    "turn": 5,
-   "ms": 13666,
+   "ms": 19569,
    "e": {
     "print": 0,
     "peg": 0,
@@ -2136,7 +2136,7 @@
    "winner": 0,
    "reason": "mandate",
    "turn": 8,
-   "ms": 30648,
+   "ms": 41759,
    "e": {
     "print": 0,
     "peg": 0,
