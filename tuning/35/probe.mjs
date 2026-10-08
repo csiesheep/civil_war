@@ -72,7 +72,11 @@ function rig({ options = { mechanismE: true }, ccp = [], kmt = [], edits = {}, s
   const S = rig({ kmt: ["kunming_incident", "takeover_officials"] });
   const go = (print) => { let a = act(S, KMT, "kunming_incident", "campaign", { target: "jizhong", ...(print ? { print: true } : {}) }); if (a.pending && a.pending.tag === "sweep") a = choose(a, "stand"); return a; };
   const y = go(true), n = go(false);
-  check("印鈔用在進剿(B):X = 2 + 2", [["印鈔 冀中 紅/藍", "0/2", rb(y, "jizhong")], ["沒印 冀中 紅/藍", "0/0", rb(n, "jizhong")], ["印鈔之後 通膨", 1, E.inflationOf(y)], ["沒印 通膨", 0, E.inflationOf(n)]]);
+  // B off: the old 奇襲, the same numbers (remove min(X, 紅), the rest placed blue), no answer asked.
+  const S0 = rig({ kmt: ["kunming_incident", "takeover_officials"], options: { mechanismE: true, mechanismB: false } });
+  const y0 = act(S0, KMT, "kunming_incident", "campaign", { target: "jizhong", print: true });
+  check("印鈔用在進剿(B):X = 2 + 2;B 關掉時的舊奇襲也一樣", [["印鈔 冀中 紅/藍", "0/2", rb(y, "jizhong")], ["沒印 冀中 紅/藍", "0/0", rb(n, "jizhong")], ["印鈔之後 通膨", 1, E.inflationOf(y)], ["沒印 通膨", 0, E.inflationOf(n)],
+    ["B 關掉、印鈔 冀中 紅/藍", "0/2", rb(y0, "jizhong")], ["B 關掉時沒有待決定", null, y0.pending && y0.pending.tag], ["B 關掉、印鈔之後 通膨", 1, E.inflationOf(y0)]]);
 }
 
 // 3. 印鈔 refused: the Communists; an aid card (美援 扶植); a lobby; and allowed with 馬歇爾調處's pair: 馬歇爾調處
@@ -98,6 +102,16 @@ function rig({ options = { mechanismE: true }, ccp = [], kmt = [], edits = {}, s
   check("蘇援的扶植可以激進;還鄉團不能放進蘇軍佔領的長春", [
     ["輪到誰", CCP, S.actor], ["北滿、四平 紅/藍", "5/0 1/0", `${rb(a, "beiman")} ${rb(a, "siping")}`], ["通膨/左傾/中間派", "0/1/0", tracks(a)],
     ["待決定", "returnHome", p.tag], ["還鄉團可放的據點", ["siping"], p.options], ["st.aidUsed", [true, false], a.aidUsed],
+  ]);
+}
+
+// 4b. 激進 needs red already there. 四平 (紅 0) is next to 北滿 (紅 1), so the Communists reach it: 高樹勛起義 2
+//     into 四平 ×2 with radical 四平 is refused (no red yet); the same play without it is legal (四平 0 → 2).
+{
+  const S = rig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  check("激進的鄉要已有紅:四平(紅 0)被拒絕,同樣的扶植不激進可以", [
+    ["四平激進被拒絕", true, thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["siping", "siping"], radical: "siping" })) != null],
+    ["不激進 四平 紅/藍", "2/0", rb(act(S, CCP, "gao_shuxun", "place", { points: ["siping", "siping"] }), "siping")],
   ]);
 }
 
