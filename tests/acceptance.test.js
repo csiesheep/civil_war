@@ -3689,10 +3689,11 @@ check("勝利照今天:整編完成 5 個國軍贏;易幟 3 個共軍贏", () =>
 //     事件、變法、標題、外援牌都不能印。一次行動一次,所以「每個行動回合最多一次」自然成立。
 //   - 門檻在第一次到達時發生(通膨 3 / 6 / 8 / 10、左傾 2 / 4);左傾 6 每次到達都發生(它退回 3,本來就是循環)。
 //     8:從下一回合補牌起國軍手牌上限 −1,之後一直如此。10:國軍立即敗北,reason "inflation"。
+//     (#35:「當回合就生效」和「下一回合起」在對局裡分不出來——補牌只在回合開始、任何人能印鈔之前——所以沒有檢查。)
 //   - 外援平抑:美援的第三種用法 `use: "peg"`:不得行動點,通膨 −2(不低於 0);可用的時機和美援一樣(一回合一次、支持度 ≥ 1)。
 //     只有國軍(蘇援不能平抑)。
-//   - 激進土改:共軍的扶植帶 `radical: <鄉>`;那個鄉要已有紅、而且在這次扶植的點裡;放在那裡的每一點行動點放 2 點紅
-//     (受上限,放不下的消失);左傾 +1;然後國軍在那個鄉的一個相鄰據點放 1 點藍(國軍選;放得進去的據點,不看相鄰範圍
+//   - 激進土改:共軍的扶植帶 `radical: <鄉>`;那個鄉要已有紅、而且在這次扶植的點裡;花在那個鄉的每 1 點行動點放 2 點紅
+//     (照筆記的字面:國軍控制的鄉一點要 2 行動點,所以一點變 4 點紅;受上限,放不下的消失;#35 裁決);左傾 +1;然後國軍在那個鄉的一個相鄰據點放 1 點藍(國軍選;放得進去的據點,不看相鄰範圍
 //     與補給)。每回合最多一次。外援牌的扶植也可以激進。
 //   - 中間派:-2(親國 2)到 +2(親共 2);回合結算時,民心往標記偏向的一方移那個格數(照 P10 的上限)。
 //     時局「停戰」先動手的一方:中間派往另一方移一格(和民心的罰則一起)。
@@ -3813,6 +3814,7 @@ check("激進土改:放在有紅的鄉的每 1 點變 2 點紅,左傾 +1;國軍�
   const t = eTodo(); if (t) return t;
   // 冀魯豫紅 3(S 3,上限 5)、冀中紅 2(上限 4)。共軍高樹勛起義(2 點)放冀魯豫 1、冀中 1,激進冀魯豫:冀魯豫 +2、冀中 +1。
   const S = eRig({ ccp: ["gao_shuxun", "shangdang_campaign"], kmt: ["kunming_incident", "takeover_officials"] });
+  const S0 = eRig({ edits: { dabieshan: { r: 0 } }, ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
   const a = act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" });
   const p = pendingIs(a, KMT, "points", "激進之後"); if (p !== true) return p;
   const b = choose(a, ["jinan"]);
@@ -3824,8 +3826,21 @@ check("激進土改:放在有紅的鄉的每 1 點變 2 點紅,左傾 +1;國軍�
     eq(thrown(() => act(c, CCP, "shangdang_campaign", "place", { points: ["taihang", "jizhong"], radical: "taihang" })) != null, true, "同一回合第二次激進沒有被拒絕"),
     eq(thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["jinan", "jizhong"], radical: "jinan" })) != null, true, "在城(濟南)激進沒有被拒絕"),
     eq(thrown(() => act(S, CCP, "gao_shuxun", "place", { points: ["jizhong", "jizhong"], radical: "jiluyu" })) != null, true, "激進的鄉不在這次的點裡,沒有被拒絕"),
+    // #35 (the BE's probe: no check refused a village with no red yet): 大別山 set to red 0 (S0), next to 淮海's red.
+    eq(thrown(() => act(S0, CCP, "gao_shuxun", "place", { points: ["dabieshan", "jizhong"], radical: "dabieshan" })) != null, true, "在沒有紅的鄉(大別山紅 0)激進沒有被拒絕"),
     ok(true, "冀魯豫 3→5、冀中 2→3、左傾 1;國軍在濟南放 1;同一回合第二次、在城、不在點裡都被拒絕"),
   );
+});
+
+check("激進在國軍控制的鄉:花在那裡的每 1 點行動點放 2 點紅(一點要 2 行動點 → 4 點紅,受上限)", () => {
+  const t = eTodo(); if (t) return t;
+  // 淮海 S 2、上限 4:紅 1 藍 4(國軍控制:4 ≥ 1 + 2)。共軍 2 點牌放 1 點(要 2 行動點),激進:2 × 2 = 4 點紅,上限只放得下 3 → 紅 4。
+  // 讀成「每放一點變兩點」的話是紅 3。
+  const S = eRig({ edits: { huaihai: { r: 1, b: 4 } }, ccp: ["gao_shuxun"], kmt: ["kunming_incident"] });
+  const pre = all(eq(E.controller(S, "huaihai"), KMT, "淮海的控制者"));
+  if (pre !== true) return pre;
+  const a = act(S, CCP, "gao_shuxun", "place", { points: ["huaihai"], radical: "huaihai" });
+  return all(eq(rb(a, "huaihai"), "4/4", "激進之後 淮海 紅/藍"), eq(E.leftismOf(a), 1, "左傾"), ok(true, "淮海 1/4 → 4/4(2 行動點 × 2,上限 4)"));
 });
 
 check("左傾門檻:2 中間派往國軍一格;4 民心往國軍 2;6 共軍控制的每個鄉 −1、左傾退回 3", () => {
@@ -3836,11 +3851,14 @@ check("左傾門檻:2 中間派往國軍一格;4 民心往國軍 2;6 共軍控�
     return { S, a };
   };
   const two = go(1), four = go(3), six = go(5);
+  // #35: 4 only the first time. The setter marks what it passes: set 4 then 3 = at 3 with 4 already reached.
+  const again = (() => { const S = eRig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"] }); E.setLeftism(S, 4); E.setLeftism(S, 3); return { S, a: act(S, CCP, "gao_shuxun", "place", { points: ["jiluyu", "jizhong"], radical: "jiluyu" }) }; })();
   // 左傾到 6 的時候(還鄉團之前):共軍控制的鄉是冀中 3(放了 1)、太行 4、冀魯豫 5(激進之後)、陝北 4,各 −1。
   const v = (st) => ["jizhong", "taihang", "jiluyu", "shanbei"].map((id) => E.infOf(st, id)[CCP]).join(",");
   return all(
     eq(tracks(two.a), "0/2/-1", "1→2:通膨/左傾/中間派"),
     eq(tracks(four.a), "0/4/0", "3→4:通膨/左傾/中間派"), eq(four.a.mandate - four.S.mandate, -2, "3→4:民心的變動(往國軍)"),
+    eq(E.leftismOf(again.a), 4, "4 已經到過、再從 3 到 4:左傾"), eq(again.a.mandate - again.S.mandate, 0, "4 已經到過、再從 3 到 4:民心的變動"),
     eq(E.leftismOf(six.a), 3, "5→6 之後的左傾(退回 3)"), eq(v(six.a), "2,3,4,3", "5→6 之後 冀中、太行、冀魯豫、陝北 的紅"),
     ok(true, "左傾 2:中間派親國 1;4:民心 −2;6:冀中 3→2、太行 4→3、冀魯豫 5→4、陝北 4→3,左傾 6→3"),
   );
