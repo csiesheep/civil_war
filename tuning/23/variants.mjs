@@ -629,3 +629,11 @@ me("ME-rad3", "激進:那個鄉每點行動點放 3 紅",
   "1947 年 10 月《中國土地法大綱》平分土地,翻身的農民參軍、支前(淮海戰役的民工五百多萬)", { eRadical: 3 });
 me("ME-cvp2", "結算:中間派每偏一格,民心往那一方移 2",
   "中間派(民盟、工商界、學生)左右的是城市的輿論:1947 年 10 月民盟被取締之後整批倒向共軍", { eCentristsVp: 2 });
+// The second round (tuning/37/report.txt): only the cap (ME-cap1) keeps 印鈔 a trade-off (goal 2), but the 民心
+// curve still does not cross by turn 6 (46 / 50); ME-ops1 and ME-step2 move the curve the most. Lay the levers that
+// move the curve over the cap.
+mec("ME-cap1+ops1", "ME-cap1 + ME-ops1", ["ME-cap1", "ME-ops1"]);
+mec("ME-cap1+pain", "ME-cap1 + ME-pain", ["ME-cap1", "ME-pain"]);
+mec("ME-cap1+early", "ME-cap1 + ME-early", ["ME-cap1", "ME-early"]);
+mec("ME-cap1+ops1+pain", "ME-cap1 + ME-ops1 + ME-pain", ["ME-cap1", "ME-ops1", "ME-pain"]);
+mec("ME-cap1+ops1+early", "ME-cap1 + ME-ops1 + ME-early", ["ME-cap1", "ME-ops1", "ME-early"]);
