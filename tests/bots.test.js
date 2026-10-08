@@ -619,12 +619,15 @@ check("最後一回合國軍的倒數第二個行動(turns: 7):通膨 7、8 時�
     ok(true, `通膨 7 印 ${p7} / 20;8 印 ${p8} / 20;9 印 0`));
 });
 
-check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍印過鈔、共軍激進過", () => {
+check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍印過鈔、共軍激進過;沒有一局是國軍自己印到崩潰", () => {
   const t = eBotTodo(); if (t) return t;
   const r = BE7();
   const c = all(clean(r, "普通對普通(E)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
   const s = r.ms / r.games / 1000, p = r.eActs ? r.eActs.print : 0, rad = r.eActs ? r.eActs.radical : 0;
+  // #36 (the BE: a bot blind to the collapse ended both of its games by inflation and this check stayed green).
+  const collapsed = r.reasons.inflation || 0;
   return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(p >= 1, `國軍印鈔 ${p} 次(${r.games} 局裡至少 1 次)`), ok(rad >= 1, `共軍激進 ${rad} 次(至少 1 次)`),
+    eq(collapsed, 0, "以通膨崩潰結束的局數(國軍自己印到 10)"),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};印鈔 ${p}、激進 ${rad}、平抑 ${r.eActs ? r.eActs.peg : 0};每局 ${s.toFixed(1)} 秒`));
 });
 
