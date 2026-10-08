@@ -42,10 +42,18 @@ export function readBatch(name, file) {
   const reached = Object.entries(reach8).filter(([k]) => k !== "none").reduce((a, [, v]) => a + v, 0);
   const late = Object.entries(reach8).filter(([k]) => k !== "none" && Number(k) >= 5).reduce((a, [, v]) => a + v, 0);
   const g2med = median(at3), g2late = pct(late, reached);
+  // The thresholds this batch played (the variant's eInflation, else today's): the hand cut's and the collapse's
+  // places, the turn the hand cut was first reached (reach), and the collapses with their turns (the collapse's
+  // threshold is logged before the game ends) (orchestrator #37: report these apart for the early thresholds).
+  const vo = (state.meta && state.meta.variantOptions) || {};
+  const T = vo.eInflation || [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }];
+  const handAt = (T.find((x) => x.hand) || {}).at ?? null, loseAt = T[T.length - 1].at;
+  const handReach = handAt != null && per.reach ? per.reach[handAt] || {} : (e.threshold || {})[`inflation:${handAt}`] || {};
+  const collapseTurns = (e.threshold || {})[`inflation:${loseAt}`] || {};
   const prints = (e.print || 0) / n, radicals = (e.radical || 0) / n, pegs = (e.peg || 0) / n;
   return {
     name, file, n, errors, ccp, targets, tline, curve: curve.trim(), curvePass, reasons: sum.reasons, endTurns: sum.endTurns,
-    at3, g2med, reach8, reach: per.reach || null, reached, late, g2late, source, prints, radicals, pegs,
+    at3, g2med, reach8, reach: per.reach || null, handAt, loseAt, handReach, collapseTurns, reached, late, g2late, source, prints, radicals, pegs,
     collapse: e.collapse || 0, settleToCcp: e.settleToCcp || 0, settleToKmt: e.settleToKmt || 0, centristsMoved: e.centristsMoved || {},
     endC: (e.end || {}).centrists || {}, endI: (e.end || {}).inflation || {}, endL: (e.end || {}).leftism || {},
     returnHome: e.returnHome || {}, perPrint: per.print || {}, perRadical: per.radical || {}, perPeg: per.peg || {},
@@ -67,6 +75,11 @@ export function block(b) {
   L.push(`G1 十項 ${b.targets ?? "?"} / 10、民心曲線 ${b.curvePass ? "通過" : "失敗"}、共軍 ${f1(b.ccp)}(≥ 8 含曲線、35–65%:${yn(b.pass.g1)})`);
   L.push(`G2 第 3 回合末通膨的中位數 ${b.g2med}(分佈 ${dist(b.at3)});通膨到 8 的 ${b.reached} 局(${f1(pct(b.reached, b.n))})裡第 5 回合以後到的 ${b.late}(${f1(b.g2late)})(讀 ${b.source})(中位 ≤ 5 且過半:${yn(b.pass.g2)})`);
   L.push(`   通膨第一次到 8 的回合 ${dist(b.reach8)}`);
+  {
+    const got = Object.entries(b.handReach).filter(([k]) => k !== "none").reduce((a, [, v]) => a + v, 0);
+    const late = Object.entries(b.handReach).filter(([k]) => k !== "none" && Number(k) >= 5).reduce((a, [, v]) => a + v, 0);
+    L.push(`   這一批的門檻:少牌在 ${b.handAt}、崩潰在 ${b.loseAt}。少牌門檻第一次到的回合 ${dist(b.handReach) || "–"}(到的 ${got} 局裡第 5 回合以後 ${late},${f1(pct(late, got))});崩潰 ${b.collapse} 局,回合 ${dist(b.collapseTurns) || "–"}`);
+  }
   if (b.reach) L.push(`   通膨第一次到 n 的回合:${[3, 4, 5, 6, 7].map((n) => `${n} [${dist(b.reach[n])}]`).join(";")}`);
   L.push(`G3 每局 印鈔 ${f2(b.prints)}、激進 ${f2(b.radicals)}、平抑 ${f2(b.pegs)}(印鈔 ≥ 2、激進 ≥ 1:${yn(b.pass.g3)})`);
   L.push(`   每局印鈔次數 ${dist(b.perPrint)}`);
