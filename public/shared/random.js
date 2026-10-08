@@ -48,7 +48,7 @@ function roomFor(st, p, id, counts) {
 // A 扶植 of `ops`: one point at a time on a space `placeTargets` lights, until
 // none is lit. `card` is the aid card's id when the ops are an aid card's.
 // `radical` (#35, mechanism E): the village of a 激進, its first point (the caller has
-// checked that `placeTargets` lights it); the rest are read with its points doubled.
+// checked that `placeTargets` lights it); the rest are read with its points there as the engine places them.
 export function randomPoints(st, side, ops, rng, card, radical) {
   const points = radical != null ? [radical] : [];
   for (;;) {

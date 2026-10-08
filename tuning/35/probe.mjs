@@ -115,6 +115,16 @@ function rig({ options = { mechanismE: true }, ccp = [], kmt = [], edits = {}, s
   ]);
 }
 
+// 4c. placeTargets reads a 激進's points as the engine places them (orchestrator 裁決 #35: 2 red per op spent).
+//     淮海 紅 1 藍 4 (S 2, the Nationalists control it: a point costs 2): after one point there with radical 淮海
+//     it holds 1 + 4 → 4 (the cap), so with 4 ops a second point is not lit; read without the radical it is
+//     1 + 1 = 2 and lit. The spent ops are 2 either way.
+{
+  const S = rig({ ccp: ["gao_shuxun"], kmt: ["kunming_incident"], edits: { huaihai: [1, 4] } });
+  const r = E.placeTargets(S, CCP, 4, ["huaihai"], undefined, "huaihai"), p = E.placeTargets(S, CCP, 4, ["huaihai"]);
+  check("placeTargets 照引擎的激進算:國軍控制的淮海一點 4 紅,到上限就不再亮", [["激進 淮海還亮嗎", false, r.lit.has("huaihai")], ["不激進 淮海還亮嗎", true, p.lit.has("huaihai")], ["花掉的行動點", [2, 2], [r.spent, p.spent]]]);
+}
+
 // 5. 左傾 6 a second time. 冀魯豫 3 → 激進 (高樹勛起義 2: 冀魯豫 1, 冀中 1) at leftism 5 → 6: the Communists'
 //    villages (冀中 3, 太行 4, 冀魯豫 5, 陝北 4) −1 each, leftism 3. Then three more 激進, each as in a new turn
 //    (the once-a-turn mark reset by hand, the CCP to act again with 上黨戰役 2, its 還鄉團 into a city so that no

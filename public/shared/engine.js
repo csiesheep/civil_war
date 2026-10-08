@@ -486,8 +486,9 @@ function loyalGray(st, side, id) {
 //     Nationalists' hand one smaller from the next turn's refill on, for good (`eraLimits`); 10 the
 //     Nationalists lose at once (reason "inflation").
 //   - 左傾 (the Communists', 0 to 6). 激進土改: `radical: <village>` on a 扶植 (a hand card's or 蘇援's) whose
-//     points include that village, where they already have red: each point placed there is E_SPEC.radical
-//     red (the cap holds; the rest is lost), leftism +1, then the Nationalists put 1 blue in a space next
+//     points include that village, where they already have red: each op spent there is E_SPEC.radical red
+//     (orchestrator 裁決 #35, the note's letter: a point costing 2 ops there, the village the Nationalists'
+//     control, is 4 red; the cap holds, the rest is lost) (`radicalRed`), leftism +1, then the Nationalists put 1 blue in a space next
 //     to it where it fits (pending tag "returnHome"; reach and supply not read). Once a turn
 //     (`radicalRefusal`). Thresholds (`radicalize`): 2 the centrists a step toward the Nationalists and 4
 //     民心 2 toward them, each the first time; 6 every time: −1 red in every village the Communists
@@ -581,6 +582,8 @@ export function radicalOptions(st, side) {
   if (!mechE(st) || side !== CCP || st.mechE.radicalTurn === st.turn) return [];
   return SPACES.filter((s) => s.kind === "village" && infOf(st, s.id)[CCP] > 0 && infOf(st, s.id)[CCP] < capOf(st, s.id)).map((s) => s.id);
 }
+// The red a 激進's point puts in its village: E_SPEC.radical for every op it costs (1 → 2, 2 → 4).
+function radicalRed(cost) { return E_SPEC.radical * cost; }
 function radicalRefusal(st, side, choice) {
   if (!mechE(st)) return "radical: mechanism E is off (激進土改)";
   if (side !== CCP) return "radical: only the Communists";
@@ -881,7 +884,7 @@ export function reachFrom(st, side) {
 //   美援 -- a 孤城 is open while no point so far is in a village; a village is
 //     open while no point so far went into a 孤城 by the airlift.
 // `left` is the ops left without the 蘇援's +1.
-// `radical` (#35): the village of a 激進 among `points`, whose points are read as E_SPEC.radical red each.
+// `radical` (#35): the village of a 激進 among `points`, whose points are read as `radicalRed` red each.
 export function placeTargets(st, side, ops, points = [], card, radical) {
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
   const trial = clone(st); trial.log = [];
@@ -889,7 +892,8 @@ export function placeTargets(st, side, ops, points = [], card, radical) {
   for (const id of points) {
     if (jump && jumped == null && SPACE[id].kind === "village" && !canPlaceAt(trial, side, id, reach)) jumped = id;
     if (placeBarred(trial, side)(id)) airlifted = true;
-    spent += placeCost(trial, side, id); place(trial, side, id, radical != null && id === radical ? E_SPEC.radical : 1);
+    const cost = placeCost(trial, side, id);
+    spent += cost; place(trial, side, id, radical != null && id === radical ? radicalRed(cost) : 1);
   }
   const left = ops - spent;
   const soviet = card === "soviet_aid" && points.every(inNortheast);
@@ -1901,7 +1905,7 @@ export function lobby(st, side, target, ops) {
 // Northeast has one op more than `ops`; 美援 with every point in a city may put
 // a point into a 孤城 (`airliftOk`). Nothing else changes: reach, cap, cost,
 // 受降's Northeast cities.
-// `radical` (#35, mechanism E): the village of a 激進; each point there is E_SPEC.radical red (the cap holds).
+// `radical` (#35, mechanism E): the village of a 激進; each point there is `radicalRed` of its cost (the cap holds).
 export function placePoints(st, side, points, ops, card, radical) {
   if (probe.place) probe.place(st, side, points);
   const reach = reachFrom(st, side), jump = jumpOpen(st, side);
@@ -1918,7 +1922,7 @@ export function placePoints(st, side, points, ops, card, radical) {
     if (pointsOf(st, side, id) >= capOf(st, id)) fail(`place: ${id} is at the cap`);
     if (sovietHeld(st, id)) fail(`place: the Soviets hold ${id} this turn (受降)`);
     if (placeBarred(st, side)(id) && !(airlift && airliftOk(st, id))) fail(`place: ${id} is cut off from supply`);
-    place(st, side, id, radical != null && id === radical ? E_SPEC.radical : 1);
+    place(st, side, id, radical != null && id === radical ? radicalRed(cost) : 1);
     spent += cost;
   }
   if (jumped) st.situationUsed = { ...st.situationUsed, jump: true };
