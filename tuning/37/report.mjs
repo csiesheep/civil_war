@@ -16,7 +16,9 @@ const pct = (k, n) => (n ? `${((100 * k) / n).toFixed(1)}%` : "–");
 
 P("== A. 不給新選項 = 今天的 E(E 開、--seed=1、300 局;tuning/37/same.mjs)");
 const same = spawnSync(process.execPath, ["tuning/37/same.mjs", `${R}/same/Eon-branch-s1-300.txt.state.json`, `${R}/same/Eon-main-s1-300.txt.state.json`], { encoding: "utf8" });
-P(`分支 vs origin/main 02d7a39:${(same.stdout || same.stderr).trim()}(exit ${same.status})`);
+P(`分支 943d0fb vs origin/main 02d7a39:${(same.stdout || same.stderr).trim()}(exit ${same.status})`);
+const head = spawnSync(process.execPath, ["tuning/37/same.mjs", `${R}/same/Eon-head-s1-300.txt.state.json`, `${R}/same/Eon-main-s1-300.txt.state.json`], { encoding: "utf8" });
+P(`分支 3ae3515(交付的程式:RULES_VERSION 與註解之後;引擎、bot、sim 之後沒有再動)vs origin/main 02d7a39:${(head.stdout || head.stderr).trim()}(exit ${head.status})`);
 const red = spawnSync(process.execPath, ["tuning/37/same.mjs", `${R}/same/Eon-main-s1-300.txt.state.json`, `${R}/screen/ME-cap1-s1-300.txt.state.json`], { encoding: "utf8" });
 P(`(比對腳本會紅:origin/main 的 E vs ME-cap1 → ${(red.stdout || red.stderr).trim()},exit ${red.status})`);
 P();
