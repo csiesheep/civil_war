@@ -3707,8 +3707,14 @@ check("勝利照今天:整編完成 5 個國軍贏;易幟 3 個共軍贏", () =>
 //   共軍激進:扶植的 play 帶 `radical: <鄉>`;還鄉團:pending { who: KMT, kind: "points", tag: "returnHome", n: 1, options: [據點] }。
 section("15 機制 E:印鈔、通膨、激進土改、左傾、中間派(選項 mechanismE)");
 
+// #38(owner 裁決 #37,2026-10-08,原文「採用這組,E 仍是選項(建議)」):E 的數字改成 #37 的 ME-cap1+ops1+early。
+// 筆記(Projects/civil_war/civil_war - mechanisms.md,E 節,2026-10-08 改過,手抄):
+//   印鈔:這張牌行動點 +1,通膨 +1。每回合最多一次。
+//   通膨門檻(第一次到達時發生):2 民心往共軍移 1;4 民心往共軍移 2、中間派往共軍移一格;6 下回合起國軍手牌上限 −1;8 崩潰,國軍立即敗北。
+//   平抑 −2、激進 ×2、左傾 2 / 4 / 6(退回 3)、中間派 −2 到 +2:沒有動。
 const ME = { mechanismE: true };
-const E_SPEC = { print: 2, peg: 2, radical: 2, inflation: [3, 6, 8, 10], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+const E_SPEC = { print: 1, printPerTurn: 1, peg: 2, radical: 2, inflation: [2, 4, 6, 8], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+const sortKeys = (o) => (o && typeof o === "object" && !Array.isArray(o) ? Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]])) : o);
 const eTodo = () => (E.E_SPEC === undefined ? "TODO: E.E_SPEC 還沒有;mechanismE 這個選項還沒有接進引擎" : null);
 // A turn-1 action state under E: today's opening (group 3's rig), the hands dealt (the Communists hold only a scoring
 // card unless `ccp` says, so the Nationalists act first), each side's spare keeping the turn from walking out,
@@ -3723,10 +3729,12 @@ function eRig({ edits = {}, ccp = [], kmt = [], inflation = 0, leftism = 0, cent
   return s;
 }
 const tracks = (st) => `${E.inflationOf(st)}/${E.leftismOf(st)}/${E.centristsOf(st)}`; // "通膨/左傾/中間派"
+// 昆明事變(2 點)印鈔成 3 點:南京藍 4(上限 6)放 2、上海藍 3(上限 5)放 1。
+const PRINT3 = ["nanjing", "nanjing", "shanghai"];
 
-check("常數:印鈔 +2、平抑 −2、激進 ×2、通膨門檻 3 / 6 / 8 / 10、左傾門檻 2 / 4 / 6(退回 3)、中間派 −2 到 +2;mechanismE 不是預設", () => {
+check("常數:印鈔 +1、每回合最多一次、平抑 −2、激進 ×2、通膨門檻 2 / 4 / 6 / 8、左傾門檻 2 / 4 / 6(退回 3)、中間派 −2 到 +2;mechanismE 不是預設", () => {
   const t = eTodo(); if (t) return t;
-  return all(eq(J(E.E_SPEC), J(E_SPEC), "E.E_SPEC"), eq(E.DEFAULT_OPTIONS.mechanismE, undefined, "mechanismE 不是預設"), ok(true, "照筆記;預設關"));
+  return all(eq(J(sortKeys(E.E_SPEC)), J(sortKeys(E_SPEC)), "E.E_SPEC(鍵排序後)"), eq(E.DEFAULT_OPTIONS.mechanismE, undefined, "mechanismE 不是預設"), ok(true, "照筆記(2026-10-08);預設關"));
 });
 
 check("開局:通膨 0、左傾 0、中間派中立;選項關掉時三個都讀 0", () => {
@@ -3735,64 +3743,95 @@ check("開局:通膨 0、左傾 0、中間派中立;選項關掉時三個都讀 
   return all(eq(tracks(on), "0/0/0", "開著時 通膨/左傾/中間派"), eq(tracks(off), "0/0/0", "關掉時 通膨/左傾/中間派"), ok(true, "都從 0 開始"));
 });
 
-check("印鈔:2 點牌當 4 點扶植,通膨 +1;事件、變法不能印;選項關掉時不能印", () => {
+check("印鈔:2 點牌當 3 點扶植,通膨 +1;印成 4 點、事件、變法不能;選項關掉時不能印", () => {
   const t = eTodo(); if (t) return t;
-  // 南京藍 4(上限 6)、上海藍 3(上限 5):各放 2。沒有印鈔時 2 點牌放 4 點要被拒絕。
   const S = eRig({ kmt: ["kunming_incident", "takeover_officials"] });
-  const pts = ["nanjing", "nanjing", "shanghai", "shanghai"];
-  const a = act(S, KMT, "kunming_incident", "place", { points: pts, print: true });
+  const a = act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true });
   const off = eRig({ kmt: ["kunming_incident", "takeover_officials"], options: {} });
   return all(
     eq(S.actor, KMT, "輪到誰"),
-    eq(`${rb(a, "nanjing")} ${rb(a, "shanghai")}`, "0/6 0/5", "印鈔扶植之後 南京、上海 紅/藍"), eq(tracks(a), "1/0/0", "印鈔之後 通膨/左傾/中間派"),
-    eq(thrown(() => act(S, KMT, "kunming_incident", "place", { points: pts })) != null, true, "沒有印鈔,2 點牌放 4 點沒有被拒絕"),
+    eq(`${rb(a, "nanjing")} ${rb(a, "shanghai")}`, "0/6 0/4", "印鈔扶植之後 南京、上海 紅/藍"), eq(tracks(a), "1/0/0", "印鈔之後 通膨/左傾/中間派"),
+    eq(thrown(() => act(S, KMT, "kunming_incident", "place", { points: PRINT3 })) != null, true, "沒有印鈔,2 點牌放 3 點沒有被拒絕"),
+    eq(thrown(() => act(S, KMT, "kunming_incident", "place", { points: [...PRINT3, "shanghai"], print: true })) != null, true, "印鈔的 2 點牌放 4 點(+2 是舊的數字)沒有被拒絕"),
     eq(thrown(() => act(S, KMT, "kunming_incident", "event", { print: true })) != null, true, "事件印鈔沒有被拒絕"),
     eq(thrown(() => act(S, KMT, "takeover_officials", "reform", { print: true })) != null, true, "變法印鈔沒有被拒絕"),
-    eq(thrown(() => act(off, KMT, "kunming_incident", "place", { points: pts, print: true })) != null, true, "選項關掉時印鈔沒有被拒絕"),
-    ok(true, "昆明事變 2 + 2 點:南京 4→6、上海 3→5,通膨 0→1;沒印、事件、變法、選項關掉都被拒絕"),
+    eq(thrown(() => act(off, KMT, "kunming_incident", "place", { points: PRINT3, print: true })) != null, true, "選項關掉時印鈔沒有被拒絕"),
+    ok(true, "昆明事變 2 + 1 點:南京 4→6、上海 3→4,通膨 0→1;沒印放 3 點、印了放 4 點、事件、變法、選項關掉都被拒絕"),
   );
 });
 
-check("通膨門檻只在第一次到達時發生:3 民心往共軍 1;退回再印到 3 沒事", () => {
+check("印鈔每回合最多一次:同一回合第二次印鈔被拒絕(不印照常可以);下一回合又可以印", () => {
   const t = eTodo(); if (t) return t;
-  const S = eRig({ kmt: ["kunming_incident", "takeover_officials", "sino_soviet_treaty"], inflation: 2 });
-  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
-  const back = E.clone(a); E.setInflation(back, 2); back.mandate = 0;
-  const b = act(back, KMT, "takeover_officials", "place", { points: ["wuhan", "guangzhou", "guilin", "kunming"], print: true });
-  return all(eq(E.inflationOf(a), 3, "印鈔之後的通膨"), eq(a.mandate - S.mandate, 1, "第一次到 3:民心的變動(往共軍)"),
-    eq(E.inflationOf(b), 3, "退回 2 再印之後的通膨"), eq(b.mandate - back.mandate, 0, "第二次到 3:民心的變動"),
-    ok(true, "2→3:民心 +1;擺回 2 再印到 3:不再發生"));
+  // 共軍沒有牌,國軍第 1 回合接著有第二個行動回合。
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials", "sino_soviet_treaty"] });
+  const a = act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true });
+  const pre = all(eq(a.turn, 1, "印過一次之後的回合"), eq(a.actor, KMT, "印過一次之後輪到誰"), eq(a.pending, null, "印過一次之後的待決定"));
+  if (pre !== true) return pre;
+  const plain = act(a, KMT, "takeover_officials", "place", { points: ["wuhan", "guangzhou"] });
+  // 下一回合:從印過鈔的這個盤面(st.mechE 照舊)走進第 2 回合的行動回合(和 enter 同一種走法,手牌照給)。
+  const s = E.clone(a);
+  s.round = 0; s.effects = []; s.era = E.eraOf(2).id; s.draw = []; s.discard = []; s.later = {}; s.pending = null;
+  deal(s, CCP, ["score_north"]); deal(s, KMT, ["score_east", "return_to_nanjing", "kunming_incident"]);
+  s.phase = "action"; s.plan = [{ do: "startTurn" }];
+  let n = E.run(s);
+  if (n.pending && n.pending.who === KMT) n = choose(n, ["shenyang", "shenyang", "jinzhou", "jinzhou"]);
+  n = toAction(n); n.mandate = 0;
+  const pre2 = all(eq(n.turn, 2, "走完之後的回合"), eq(n.actor, KMT, "第 2 回合輪到誰"), eq(E.inflationOf(n), 1, "第 2 回合開始的通膨"));
+  if (pre2 !== true) return pre2;
+  const b = act(n, KMT, "kunming_incident", "place", { points: ["wuhan", "guangzhou", "guilin"], print: true }); // 南京已經滿了
+  return all(
+    eq(thrown(() => act(a, KMT, "takeover_officials", "place", { points: ["wuhan", "guangzhou", "guilin"], print: true })) != null, true, "同一回合第二次印鈔沒有被拒絕"),
+    eq(`${total(plain, KMT) - total(a, KMT)} ${E.inflationOf(plain)}`, "2 1", "同一回合第二張牌不印:藍多了幾點、通膨"),
+    eq(E.inflationOf(b), 2, "第 2 回合印鈔之後的通膨"),
+    ok(true, "第 1 回合第二次印被拒絕、不印照常放;第 2 回合又可以印,通膨 1→2"),
+  );
 });
 
-check("通膨 6:民心往共軍 2、中間派往共軍一格", () => {
+check("通膨門檻只在第一次到達時發生:2 民心往共軍 1;退回再印到 2 沒事", () => {
   const t = eTodo(); if (t) return t;
-  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: 5 });
-  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
-  return all(eq(tracks(a), "6/0/1", "印鈔之後 通膨/左傾/中間派"), eq(a.mandate - S.mandate, 2, "民心的變動(往共軍)"), ok(true, "5→6:民心 +2、中間派中立→親共 1"));
+  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: 1 });
+  const a = act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true });
+  // 擺法讀「經過的門檻都算到過」(#35):先擺 2 再擺回 1 = 在 1、2 已經到過。
+  const back = eRig({ kmt: ["kunming_incident", "takeover_officials"] }); E.setInflation(back, 2); E.setInflation(back, 1);
+  const b = act(back, KMT, "kunming_incident", "place", { points: PRINT3, print: true });
+  return all(eq(E.inflationOf(a), 2, "印鈔之後的通膨"), eq(a.mandate - S.mandate, 1, "第一次到 2:民心的變動(往共軍)"),
+    eq(E.inflationOf(b), 2, "2 到過、從 1 再印之後的通膨"), eq(b.mandate - back.mandate, 0, "第二次到 2:民心的變動"),
+    ok(true, "1→2:民心 +1;2 到過再從 1 印到 2:不再發生"));
 });
 
-check("通膨 8:下一回合補牌起國軍手牌上限 −1(對照:通膨 7 時照常)", () => {
+check("通膨 4:民心往共軍 2、中間派往共軍一格(對照:通膨 3 時沒事)", () => {
+  const t = eTodo(); if (t) return t;
+  const go = (from) => { const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: from }); return { S, a: act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true }) }; };
+  const hit = go(3), ctl = go(2);
+  return all(eq(tracks(hit.a), "4/0/1", "3→4 之後 通膨/左傾/中間派"), eq(hit.a.mandate - hit.S.mandate, 2, "3→4:民心的變動(往共軍)"),
+    eq(tracks(ctl.a), "3/0/0", "對照 2→3 之後 通膨/左傾/中間派"), eq(ctl.a.mandate - ctl.S.mandate, 0, "對照 2→3:民心的變動"),
+    ok(true, "3→4:民心 +2、中間派中立→親共 1;2→3:沒事"));
+});
+
+check("通膨 6:下一回合補牌起國軍手牌上限 −1(對照:通膨 5 時照常)", () => {
   const t = eTodo(); if (t) return t;
   const go = (from) => {
     const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: from });
-    const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
+    const a = act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true });
     let s = atSettle(a);
     if (s.pending && s.pending.who === KMT && s.pending.kind === "points") s = choose(s, ["shenyang", "shenyang", "jinzhou", "jinzhou"]);
     return { a, s };
   };
-  const hit = go(7), ctl = go(6);
+  const hit = go(5), ctl = go(4);
   return all(
-    eq(E.inflationOf(hit.a), 8, "印鈔之後的通膨"), eq(hit.s.turn, 2, "結算之後的回合"), eq(hit.s.phase, "headline", "補完牌之後的 phase"),
-    eq(lens(ctl.s), "[8,9]", "對照(通膨 7):第 2 回合補完牌的手牌"), eq(lens(hit.s), "[8,8]", "通膨 8:第 2 回合補完牌的手牌"),
-    ok(true, "通膨 7:第 2 回合 [8,9];通膨 8:國軍少 1 張,[8,8]"),
+    eq(E.inflationOf(hit.a), 6, "印鈔之後的通膨"), eq(hit.s.turn, 2, "結算之後的回合"), eq(hit.s.phase, "headline", "補完牌之後的 phase"),
+    eq(lens(ctl.s), "[8,9]", "對照(通膨 5):第 2 回合補完牌的手牌"), eq(lens(hit.s), "[8,8]", "通膨 6:第 2 回合補完牌的手牌"),
+    ok(true, "通膨 5:第 2 回合 [8,9];通膨 6:國軍少 1 張,[8,8]"),
   );
 });
 
-check("通膨 10:國軍立即敗北", () => {
+check("通膨 8:國軍立即敗北(對照:通膨 7 時沒事)", () => {
   const t = eTodo(); if (t) return t;
-  const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: 9 });
-  const a = act(S, KMT, "kunming_incident", "place", { points: ["nanjing", "nanjing", "shanghai", "shanghai"], print: true });
-  return all(eq(E.inflationOf(a), 10, "印鈔之後的通膨"), eq(a.winner, CCP, "勝者"), eq(a.reason, "inflation", "結束的方式"), ok(true, "9→10:國軍崩潰,共軍勝"));
+  const go = (from) => { const S = eRig({ kmt: ["kunming_incident", "takeover_officials"], inflation: from }); return act(S, KMT, "kunming_incident", "place", { points: PRINT3, print: true }); };
+  const hit = go(7), ctl = go(6);
+  return all(eq(E.inflationOf(hit), 8, "印鈔之後的通膨"), eq(hit.winner, CCP, "勝者"), eq(hit.reason, "inflation", "結束的方式"),
+    eq(`${E.inflationOf(ctl)} ${ctl.winner ?? "沒有"}`, "7 沒有", "對照 6→7:通膨與勝者"),
+    ok(true, "7→8:國軍崩潰,共軍勝;6→7:沒事"));
 });
 
 check("外援平抑:美援整張換通膨 −2,不得行動點;支持度 0 不能;蘇援不能平抑", () => {
