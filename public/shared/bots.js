@@ -28,6 +28,7 @@
 //   - mechanism E (#36, only under the option `mechanismE`): 印鈔 and 激進 are priced by the thresholds of
 //     the side's own track spread over the steps to them (`ePrice`), the evaluation charges the walked part
 //     and values the centrists, and 印鈔 / 激進 / 平抑 are candidates (see "mechanism E" below).
+//     #37: every number of E is read from `E.eSpecOf` (E's options; today's E when none is given). No weight moved.
 //
 // The bot never catches the engine's refusal of its own candidates: a candidate
 // the engine refuses while the bot thinks is a bug of the candidate lists, and
