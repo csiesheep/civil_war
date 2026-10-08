@@ -542,7 +542,11 @@ const mechE = (st) => !!(st.options && st.options.mechanismE);
 // paid (tuning/36/print-worth.mjs: 177 decisions of 12 E games, mean 3.3, median 1.9); W_E.card: a card dealt.
 export const W_E = { card: 1.0, print: 3, villageRed: 0.5, villageCtl: 1.0 };
 const E_LOSS = 1000;
-const INFL = E.E_SPEC.inflation, LEFT = E.E_SPEC.leftism, INFL_LOSS = INFL[INFL.length - 1];
+// #37: every number of E is read from `E.eSpecOf(st)` (today's E_SPEC unless the game's options carry #37's keys),
+// so the prices follow the thresholds where an option puts them; with no such key each line reads as before.
+// The thresholds are entries { at, vp, centrists, hand, lose } (通膨) and { at, centrists, vp } … { at, villages,
+// reset } (左傾, the last one every time).
+const clampC = (sp, c) => Math.max(sp.centrists[0], Math.min(sp.centrists[1], c));
 // The 結算 still to come: this turn's, then the turns after it, discounted as every "turns to come" here.
 function eSettlements(st) {
   if (st.winner != null) return 0;
@@ -550,103 +554,116 @@ function eSettlements(st) {
   return (turn <= turns ? 1 : 0) + discountedTurns(turn, turns);
 }
 // The share of a print still to be used after this moment: the turns to come, and the Nationalists' own
-// action rounds left this turn (`now`: the state of a decision, whose own action is not "later").
+// action rounds left this turn (`now`: the state of a decision, whose own action is not "later"). #37: with
+// `ePrintPerTurn` the rounds of this turn are the prints still allowed this turn, out of that many.
 function ePrintRoom(st, now) {
   const turn = Math.max(1, st.turn), turns = st.options.turns;
+  const own = now && st.phase === "action" && !st.pending && st.actor === KMT;
   let acts = actionsLeft(st, KMT);
-  if (now && st.phase === "action" && !st.pending && st.actor === KMT) acts = Math.max(0, acts - 1);
-  const R = Array.isArray(st.rounds) ? Math.max(1, st.rounds[KMT]) : 7;
+  if (own) acts = Math.max(0, acts - 1);
+  let R = Array.isArray(st.rounds) ? Math.max(1, st.rounds[KMT]) : 7;
+  const cap = E.eSpecOf(st).printPerTurn;
+  if (cap != null) {
+    const m = st.mechE, used = m && m.printTurn === st.turn ? m.printN : 0;
+    acts = Math.min(acts, Math.max(0, cap - used - (own ? 1 : 0)));
+    R = Math.min(R, cap);
+  }
   return Math.min(1, discountedTurns(turn, turns) + acts / R);
 }
-// The red the Communists stand to lose at 左傾 6: −1 in every village they control.
+// The red the Communists stand to lose at 左傾's last threshold: −villages in every village they control.
 function eVillagesAtStake(st) {
+  const sp = E.eSpecOf(st), n = sp.leftism[sp.leftism.length - 1].villages;
   let v = 0;
   for (const s of SPACES) {
     if (s.kind !== "village" || E.controller(st, s.id) !== CCP) continue;
     const [q, c] = E.infOf(st, s.id);
-    const after = { ...st, inf: { ...st.inf, [s.id]: [q - 1, c] } };
-    v += W_E.villageRed + (E.controller(after, s.id) !== CCP ? W_E.villageCtl : 0);
+    const after = { ...st, inf: { ...st.inf, [s.id]: [Math.max(0, q - n), c] } };
+    v += n * W_E.villageRed + (E.controller(after, s.id) !== CCP ? W_E.villageCtl : 0);
   }
   return v;
 }
-// C_t: what threshold t of `side`'s track costs that side, read now.
-function eThresholdCost(st, side, t, now) {
-  const c = E.centristsOf(st), [lo, hi] = E.E_SPEC.centrists;
+// C_t: what threshold `e` of `side`'s track costs that side, read now. 通膨: its 民心, the steps it moves the
+// centrists toward the Communists (each worth the 結算 still to come), the cards it cuts at every refill after
+// this turn (W_E.card each); the collapse: the steps from the threshold before it priced as the prints the
+// Nationalists could still use (W_E.print a print, times the time left). 左傾 (but its last): its 民心 and the
+// steps it moves the centrists toward the Nationalists; the last: the villages at stake.
+function eThresholdCost(st, side, e, now) {
+  const sp = E.eSpecOf(st), c = E.centristsOf(st), S = (n) => (n ? n * eSettlements(st) : 0);
   if (side === KMT) {
-    if (t === INFL[0]) return 1;
-    if (t === INFL[1]) return 2 + (c < hi ? eSettlements(st) : 0);
-    if (t === INFL[2]) return W_E.card * discountedTurns(Math.max(1, st.turn), st.options.turns);
-    return 2 * W_E.print * ePrintRoom(st, now);
+    if (e.lose) return ((e.at - eSegStart(st, side, e)) / sp.printStep) * W_E.print * ePrintRoom(st, now);
+    return (e.vp || 0) + S(e.centrists ? clampC(sp, c + e.centrists) - c : 0) + (e.hand ? e.hand * W_E.card * discountedTurns(Math.max(1, st.turn), st.options.turns) : 0);
   }
-  if (t === LEFT[0]) return c > lo ? eSettlements(st) : 0;
-  if (t === LEFT[1]) return 2;
-  return eVillagesAtStake(st);
+  if (e === sp.leftism[sp.leftism.length - 1]) return eVillagesAtStake(st);
+  return (e.vp || 0) + S(e.centrists ? c - clampC(sp, c + e.centrists) : 0);
 }
-function eSegStart(side, t) {
-  if (side === CCP && t === LEFT[2]) return E.E_SPEC.leftismReset;
-  const list = side === KMT ? INFL : LEFT, i = list.indexOf(t);
-  return i > 0 ? list[i - 1] : 0;
+function eSegStart(st, side, e) {
+  const sp = E.eSpecOf(st), list = side === KMT ? sp.inflation : sp.leftism, i = list.indexOf(e);
+  if (side === CCP && i === list.length - 1) return sp.leftismReset;
+  return i > 0 ? list[i - 1].at : 0;
 }
-// The next threshold of `side`'s track still to come (左傾 6 comes every time), or null.
-function eNext(m, side) {
-  if (side === KMT) return INFL.find((t) => !m.reached.inflation.includes(t)) ?? null;
-  return LEFT.find((t) => t === LEFT[2] || !m.reached.leftism.includes(t)) ?? null;
+// The next threshold of `side`'s track still to come (左傾's last comes every time), or null.
+function eNext(st, m, side) {
+  const sp = E.eSpecOf(st);
+  if (side === KMT) return sp.inflation.find((e) => !m.reached.inflation.includes(e.at)) ?? null;
+  const last = sp.leftism[sp.leftism.length - 1];
+  return sp.leftism.find((e) => e === last || !m.reached.leftism.includes(e.at)) ?? null;
 }
 // The part of the next threshold's cost that `side`'s track has walked (negative below the segment's start,
 // after a 平抑, down to −C_t).
 export function eTrackCost(st, side, now = false) {
   const m = st.mechE;
   if (!m) return 0;
-  const t = eNext(m, side);
-  if (t == null) return 0;
-  const n = side === KMT ? m.inflation : m.leftism, a = eSegStart(side, t);
-  return eThresholdCost(st, side, t, now) * Math.max(-1, Math.min(1, (n - a) / (t - a)));
+  const e = eNext(st, m, side);
+  if (e == null) return 0;
+  const n = side === KMT ? m.inflation : m.leftism, a = eSegStart(st, side, e), t = e.at;
+  return eThresholdCost(st, side, e, now) * Math.max(-1, Math.min(1, (n - a) / (t - a)));
 }
-// 8's smaller hand at every refill after this turn (the engine's `handCutFrom`; a threshold marked reached
+// The smaller hand at every refill after this turn (the engine's `handCutFrom`; a threshold marked reached
 // without its effect, as `E.setInflation` lays it out, from the next turn).
 function eHandCut(st) {
-  const m = st.mechE;
-  if (!m || (m.handCutFrom == null && !m.reached.inflation.includes(INFL[2]))) return 0;
+  const m = st.mechE, h = E.eSpecOf(st).hand;
+  if (!m || !h || (m.handCutFrom == null && !m.reached.inflation.includes(h.at))) return 0;
   const turn = Math.max(1, st.turn), from = Math.max(turn + 1, m.handCutFrom ?? turn + 1);
   let v = 0;
   for (let t = from; t <= st.options.turns; t++) v += GAMMA ** (t - turn);
-  return W_E.card * v;
+  return h.hand * W_E.card * v;
 }
-function eCentrists(st) { return E.centristsOf(st) * eSettlements(st); }
+function eCentrists(st) { return E.centristsOf(st) * E.eSpecOf(st).centristsVp * eSettlements(st); }
 // E's part of the evaluation, from the Communists' point of view.
 function eValue(st) { return eTrackCost(st, KMT) + eHandCut(st) - eTrackCost(st, CCP) + eCentrists(st); }
 // What one more step of `side`'s own track costs `side` now (the orchestrator's 裁決 #36: 「這一方自己的軌再
 // 走一格的價格」): the change of its part of the evaluation, and the effects of a threshold it crosses.
+// (#37: a 印鈔 is `ePrintStep` steps of 通膨, priced as one move.)
 export function ePrice(st, side) {
   if (!mechE(st) || !st.mechE) return 0;
-  const m = st.mechE, sign = side === KMT ? 1 : -1;
-  if (side === KMT && m.inflation + 1 >= INFL_LOSS) return E_LOSS;
+  const sp = E.eSpecOf(st), m = st.mechE, sign = side === KMT ? 1 : -1;
+  if (side === KMT && m.inflation + sp.printStep >= sp.inflationMax) return E_LOSS;
   const own = (s) => eTrackCost(s, side, true) + (side === KMT ? eHandCut(s) : 0) + sign * eCentrists(s);
-  const n = side === KMT ? m.inflation + 1 : m.leftism + 1;
+  const n = side === KMT ? m.inflation + sp.printStep : m.leftism + 1;
   const reached = { inflation: m.reached.inflation.slice(), leftism: m.reached.leftism.slice() };
   let mandate = 0, centrists = m.centrists, level = n;
-  const [lo, hi] = E.E_SPEC.centrists;
   if (side === KMT) {
-    for (const [i, t] of INFL.entries()) {
-      if (n < t || reached.inflation.includes(t)) continue;
-      reached.inflation.push(t);
-      if (i === 0) mandate += 1;
-      else if (i === 1) { mandate += 2; centrists = Math.min(hi, centrists + 1); }
+    for (const e of sp.inflation) {
+      if (n < e.at || reached.inflation.includes(e.at)) continue;
+      reached.inflation.push(e.at);
+      if (e.vp) mandate += e.vp;
+      if (e.centrists) centrists = clampC(sp, centrists + e.centrists);
     }
   } else {
-    for (const t of [LEFT[0], LEFT[1]]) {
-      if (n < t || reached.leftism.includes(t)) continue;
-      reached.leftism.push(t);
-      if (t === LEFT[0]) centrists = Math.max(lo, centrists - 1);
-      else mandate += 2;
+    const last = sp.leftism[sp.leftism.length - 1];
+    for (const e of sp.leftism.slice(0, -1)) {
+      if (n < e.at || reached.leftism.includes(e.at)) continue;
+      reached.leftism.push(e.at);
+      if (e.centrists) centrists = clampC(sp, centrists + e.centrists);
+      if (e.vp) mandate += e.vp;
     }
-    if (n >= LEFT[2]) { mandate += eVillagesAtStake(st); level = E.E_SPEC.leftismReset; }
+    if (n >= last.at) { mandate += eVillagesAtStake(st); level = sp.leftismReset; }
   }
   const after = { ...st, mechE: { ...m, reached, centrists, ...(side === KMT ? { inflation: level } : { leftism: level }) } };
   return mandate + own(after) - own(st);
 }
-// May the Nationalists print now without losing on the spot (通膨 10)?
-const printable = (st, side) => mechE(st) && side === KMT && E.inflationOf(st) + 1 < INFL_LOSS;
+// May the Nationalists print now without losing on the spot (通膨 at the collapse)?
+const printable = (st, side) => mechE(st) && side === KMT && E.inflationOf(st) + E.eSpecOf(st).printStep < E.eSpecOf(st).inflationMax;
 // A step that costs nothing (the last turn below 8; 8 to 9 at the game's last action): the print dominates
 // the same play without it, which is then not offered.
 const freePrint = (st, side) => printable(st, side) && ePrice(st, side) <= 1e-9;
@@ -661,7 +678,7 @@ function radicalChoices(st, side, villages) {
   for (const v of villages) {
     if (!lit.has(v)) continue;
     const a = s.inf[v] || (s.inf[v] = [0, 0]), start = a[side], cost = E.placeCost(s, side, v);
-    a[side] = Math.min(E.capOf(s, v), start + E.E_SPEC.radical * cost);
+    a[side] = Math.min(E.capOf(s, v), start + E.eSpecOf(s).radical * cost); // #37: eRadical
     scored.push({ v, r: (evaluate(s, side) - base) / cost });
     a[side] = start;
   }
@@ -847,7 +864,8 @@ function bestPoints(st, p, who, rng) {
 export function greedyPlacement(st, side, ops, card, restrict = null, radical = null) {
   const s = E.clone(st); s.log = [];
   const points = [];
-  const redFor = (a, id, c) => { a[side] = Math.min(E.capOf(s, id), a[side] + E.E_SPEC.radical * c); };
+  const RAD = E.eSpecOf(st).radical; // #37: eRadical
+  const redFor = (a, id, c) => { a[side] = Math.min(E.capOf(s, id), a[side] + RAD * c); };
   if (radical != null) {
     if ((restrict && !restrict(radical)) || !E.placeTargets(st, side, ops, [], card, radical).lit.has(radical)) return [];
     redFor(s.inf[radical] || (s.inf[radical] = [0, 0]), radical, E.placeCost(s, side, radical));
@@ -963,7 +981,7 @@ function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null) {
   const o = E.opsOptions(st, who, aid);
   const cands = [], sieges = new Set();
   const print = !!(ask && ask.canPrint) && printable(st, who), plain = !(print && freePrint(st, who));
-  const PR = E.E_SPEC.print;
+  const PR = E.eSpecOf(st).print; // #37: ePrintOps
   if (allowed.includes("place")) {
     if (plain) {
       const points = greedyPlacement(st, who, ops, aid); if (points.length) cands.push({ use: "place", points });
@@ -1232,7 +1250,7 @@ function actionCandidates(st, side, L, sieges = null) {
   // card once more with the ops + E_SPEC.print and `print: true`; a free step (`freePrint`) offers only those.
   // The Communists' 激進 (`L.radical`, under E only): a 扶植 that starts in one of the best villages
   // (`radicalChoices`), per number of ops.
-  const PR = E.E_SPEC.print;
+  const PR = E.eSpecOf(st).print; // #37: ePrintOps
   const canPrint = printable(st, side), freeStep = canPrint && freePrint(st, side);
   const rads = side === CCP && L.radical && L.radical.length && mechE(st) ? radicalChoices(st, side, L.radical) : [];
   for (const c of L.cards) {
