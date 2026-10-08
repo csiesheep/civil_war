@@ -26,7 +26,7 @@ const secs = (b) => b.cell.ms / 1000 / (b.sum.games + (b.cell.errors || []).leng
 
 // ---- 1. the games
 P("== 1. 局數、勝率、結束方式、結束回合、每局秒數(cell full,普通對普通)");
-P("(同一個種子的 E 關與 E 開並排跑:各 14 個 job,同一台機器同一段時間)");
+P("(同一個種子的 E 關與 E 開並排跑:各 13 個 job(runall.sh 26),同一台機器同一段時間)");
 table(["", ...names], [
   ["打完 / 出錯", ...BATCHES.map((b) => `${b.sum.games} / ${(b.cell.errors || []).length}`)],
   ["共軍勝率", ...BATCHES.map((b) => pct(b.sum.wins[0], b.sum.games))],
