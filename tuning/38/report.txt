@@ -1,0 +1,95 @@
+#38 機制 E 的數字照 owner 採用的那組(#37 的 ME-cap1+ops1+early)—— BE 報告
+==========================================================================
+
+分支 be/38-e-numbers(從 origin/orch/38-acceptance 6d88f5e 開)。RULES_VERSION "2026-10-08" → "2026-10-08-2":
+`mechanismE: true` 玩的東西變了;預設(E 關)不變。E 仍是選項,不是 DEFAULT_OPTIONS 的鍵。
+出處:owner 裁決 #37(2026-10-08,原文「採用這組,E 仍是選項(建議)」),筆記 civil_war - mechanisms.md 的 E 節(2026-10-08 改過)。
+
+一、改了什麼
+----------
+public/shared/engine.js
+- E_SPEC = { print: 1, printPerTurn: 1, peg: 2, radical: 2, inflation: [2, 4, 6, 8], leftism: [2, 4, 6], leftismReset: 3,
+  centrists: [-2, 2] }(就是 brief 的八個鍵;註解寫出處與 #35 / #36 的舊值)。
+- 預設的通膨門檻表 E_INFLATION = [{at:2,vp:1},{at:4,vp:2,centrists:1},{at:6,hand:1},{at:8,lose:true}](#37 的 ME-early)。
+- eSpecBuild:沒給 ePrintOps → E_SPEC.print(1);沒給 ePrintPerTurn → E_SPEC.printPerTurn(1)。
+  「沒有每回合上限」寫成 `ePrintPerTurn: null`(明寫的 null;JSON 來回保得住);0 照舊被拒絕(整數、至少 1)。
+  上限是 null 時 st.mechE.printTurn / printN 不出現,和 #35 / #36 的狀態一樣。
+- eSpecOf 的語意不變:沒有任何 E 鍵 → E_DEFAULT;有 → 給了的蓋過新的預設(只是底換了)。
+- 載入時的自我檢查加了 print、printPerTurn、peg、radical:E_DEFAULT 和 E_SPEC 對不上就丟錯
+  (證偽:只把 E_INFLATION 的最後一格改回 10,import 就丟 "E_INFLATION / E_LEFTISM / the defaults do not match E_SPEC")。
+- 註解:E 節的 0 到 10、+E_SPEC.print、3 / 6 / 8 / 10、「8 的手牌」「10 結束」都改成新的數字;#37 選項說明的
+  ePrintPerTurn 寫出預設 1 與 null;eHandCut、inflate、printRefusal、doOps 的註解;檔頭加 #38 一行。
+public/shared/random.js
+- 隨機玩家印鈔時的點數從 E.E_SPEC.print 改讀 E.eSpecOf(st).print(三處)與一行註解。新的預設下數字一樣(1);
+  給 ePrintOps 時才不同(#37 起隨機玩家在 ePrintOps 選項下會出不合法的點數,今天的 fuzz 不跑那些選項,所以沒有被抓到)。
+  E 關掉時不讀:fuzz 動作數仍是 298709。
+public/shared/bots.js
+- 只有註解(E 的價格那一段寫新的門檻;「免費的一步」那一行)。權重 W_E、GAMMA、任何程式碼都沒動。
+tuning/23/variants.mjs
+- 新變體 `E-35` = { mechanismE: true, ePrintOps: 2, ePrintPerTurn: null, eInflation: [{at:3,vp:1},{at:6,vp:2,centrists:1},
+  {at:8,hand:1},{at:10,lose:true}] }:#35 / #36 的 E。
+- `E` 的註解:#38 起它就是 #37 的 ME-cap1+ops1+early。ME-* 那一段的註解:它們現在疊在新的 E 上,意思變了
+  (例如 ME-cap2 現在是 ops1 + early + 每回合 2 次;ME-cap1+ops1+early 就是 `E`);它們的選項沒改。
+- 沒有人 import 的 export E_INFLATION_TODAY 改名 E_INFLATION_35(它已經不是「今天的」)。
+tuning/38/runs/:三個身分比對的模擬輸出與狀態檔。
+tests/sim.js 沒有動。
+
+二、判決(交付的程式)
+-------------------
+- VERDICT 通過 211 / 失敗 0 / 尚未實作 0(改之前,6d88f5e 上:204 / 7 / 0,紅的正是常數、印鈔、每回合最多一次、門檻 2、4、6、8 那 7 條)
+- BOTS-VERDICT 通過 33 / 失敗 0 / 尚未實作 0(改之前 31 / 2 / 0:評估那一條「35.40 → 31.43 → 33.92」、最後一回合那一條「通膨 7:20 次裡這一回合有印的次數: 期望 0,實際 20」)
+- FUZZ-VERDICT 局數 2000 / 結束 2000 / 報錯或卡住 0 / 重播 200 局、不一致 0 / 動作 298709
+- FUZZ-CELLS-VERDICT 控制組 8 個 / 有問題的 0 個 / 每個 300 局(其中一個是「E 機制 E 開」,跑的是新的 E 與改過的 random.js)
+- SIM-VERDICT 通過 7 / 失敗 0 / 尚未實作 0
+- ART-VERDICT 通過 14 / 失敗 0 / 尚未實作 0
+
+三、三個身分比對(都在 18501cc 上跑:引擎、random、bot 註解、變體都已是交付的樣子,之後只加了這份報告;--jobs=28;每一個先拿一對已知不同的檔讓比對紅一次)
+------------------------------------------------------------------------------------------------
+(1) E 關、--seed=1、1000 局 vs tuning/28/runs/default-s1.txt.state.json
+    先紅:tuning/28/same.mjs 本次 default vs tuning/28/runs/Boff-s1 → DIFFER sum.aheadByTurn.1.ccp: 176 vs 178(exit 1)
+    比對:tuning/28/same.mjs → SAME games 1000: 270 columns of sum (union of keys), errors 0, 60 columns of more(exit 0)
+          tuning/37/same.mjs → SAME games 1000: 270 leaves of sum (union of keys), errors 0; more: 60 leaves(exit 0)
+(2) E 開、不給其他選項(變體 `E`)、--seed=1、1000 局 vs tuning/37/runs/final/ME-cap1+ops1+early-s1-1000.txt.state.json
+    先紅:tuning/37/same.mjs 本次 E vs ME-cap1+ops1+pain-s1-1000 → DIFFER sum.aheadByTurn.1.ccp: 168 vs 166(exit 1)
+    比對:tuning/37/same.mjs → SAME games 1000: 274 leaves of sum (union of keys), errors 0; more (keys both have,
+          ePerGame.reach left out): 287 leaves(exit 0)
+(3) `E-35`、--seed=1、300 局 vs tuning/37/runs/same/Eon-main-s1-300.txt.state.json
+    先紅:tuning/37/same.mjs 本次 E-35 vs tuning/37/runs/screen/ME-cap1-s1-300 → DIFFER sum.aheadByTurn.1.ccp: 45 vs 39(exit 1)
+    比對:tuning/37/same.mjs → SAME games 300: 254 leaves of sum (union of keys), errors 0; more: 274 leaves(exit 0)
+
+讀數(只是確認比對的檔案是對的那一批,不是平衡的主張):
+- E(新)s1 1000 局:共軍勝 588、國軍勝 412(58.8%,和 #37 報告 ME-cap1+ops1+early 的 seed 1 一樣);沒有一局以通膨崩潰結束;錯誤 0。
+- E 關 s1 1000 局:共軍勝 602、國軍勝 398;錯誤 0。
+- E-35 s1 300 局:共軍勝 130、國軍勝 170;錯誤 0。
+owner 看的表沿用 #37 的九批(三個候選 × 三批種子),沒有重跑。
+
+四、證偽(§五 1;一次一個缺陷,各自還原、`git status` 乾淨、engine.js 裡 FALSIFY 0 處)
+-----------------------------------------------------------------------------------
+期望值是驗收(orchestrator 從筆記手抄)的,不是從引擎讀的。
+(a) 印鈔改回 +2(E_SPEC.print 1 → 2):VERDICT 209 / 2 / 0
+    失敗 · 常數 … · E.E_SPEC(鍵排序後): 期望 "{…"print":1,"printPerTurn":1,…}",實際 "{…"print":2,"printPerTurn":1,…}"
+    失敗 · 印鈔:2 點牌當 3 點扶植,通膨 +1;印成 4 點、事件、變法不能;選項關掉時不能印 · 印鈔的 2 點牌放 4 點(+2 是舊的數字)沒有被拒絕: 期望 true,實際 false
+    (門檻那幾條沒紅:它們用 3 點的印鈔扶植,+2 底下少放一點也合法。)
+(b) 拿掉每回合的上限(printRefusal 的上限那一行改成 `if (false && …)`;E_SPEC 不動):VERDICT 210 / 1 / 0
+    失敗 · 印鈔每回合最多一次:同一回合第二次印鈔被拒絕(不印照常可以);下一回合又可以印 · 同一回合第二次印鈔沒有被拒絕: 期望 true,實際 false
+(c) 崩潰挪回 10(E_INFLATION 最後一格 at 8 → 10,E_SPEC.inflation 的 8 → 10 一起改,否則載入時的自我檢查先丟錯):VERDICT 209 / 2 / 0
+    失敗 · 常數 … · E.E_SPEC(鍵排序後): 期望 "{…"inflation":[2,4,6,8],…}",實際 "{…"inflation":[2,4,6,10],…}"
+    失敗 · 通膨 8:國軍立即敗北(對照:通膨 7 時沒事) · 勝者: 期望 0,實際 null
+(d) 只改 E_INFLATION 的最後一格(E_SPEC 不動):import engine.js 丟 "E_INFLATION / E_LEFTISM / the defaults do not match E_SPEC"。
+
+五、沒有驗到的
+------------
+- bot 在新的 E 下的行為只靠 B7 與身分比對(2)(新的 E 和 #37 的選項玩出同樣的 1000 局);bot 沒有改。
+- `ePrintPerTurn: null` 的 JSON 來回:sim 的子行程收到的選項是 JSON(E-35 的 300 局和 #37 的 Eon-main 一樣,所以 null 有到引擎);
+  頁面沒有接這個選項,沒驗。
+- random.js 在 ePrintOps 選項下的點數:改了但沒有任何 harness 跑 ePrintOps 選項下的隨機對局(fuzz 只跑 mechanismE: true)。
+- 困難 / 簡單等級、D 與 E 同時開:沒有量。畫面:E 沒有 UI。
+- 「舊的 E」只比對了 seed 1 的 300 局(brief 的要求);#37 的三批 1000 局(E 那一列)沒有用 E-35 重跑。
+
+六、B7 的讀數(交付的程式)
+------------------------
+- ePrice:通膨 0 的價格 0.5;通膨 7 的價格 1000(下一格崩潰 = E_LOSS)。
+- 評估:國軍(通膨 0 → 5 → 7)35.40 → 33.92 → 29.44;共軍(左傾 0 → 3 → 5)-35.40 → -36.40 → -38.06;共軍(中間派 親國 2 → 中立 → 親共 2)-43.30 → -35.40 → -27.49。
+- 最後一回合從倒數第二個行動下完:通膨 5 印 20 / 20;6 印 20 / 20;7 印 0 / 20。
+- E 開 20 局(種子 11001 起):共軍勝 7、國軍勝 13;結束方式 {"alliance":9,"final":4,"mandate":4,"unification":2,"emperor":1}(沒有 inflation);印鈔 112、激進 56、平抑 1;每局 13.7 秒。
+  (20 局的勝率只是 harness 的讀數,不是平衡的說法;平衡看 #37 的三批 1000 局。)
