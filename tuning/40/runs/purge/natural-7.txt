@@ -1,0 +1,1 @@
+PURGE {"games":5,"rounds":[{"seed":9039,"turn":6,"gap":-4.77,"named":["nanjing","nanjing"],"p":[0.4,0.4],"prior":0.4,"truth":[0.5,0.5],"card":"national_assembly","ops":2}],"chosen":0,"markersOnBoard":0}

@@ -409,6 +409,13 @@ function finishBoardValue(st, side, vq, T, turn, turns) {
     if (T) T("mechE", e);
   }
 
+  // Mechanism C (#40): the markers' worth (`cValue`); nothing without the option.
+  if (mechC(st)) {
+    const c = cValue(st);
+    vq += c;
+    if (T) T("mechC", c);
+  }
+
   let spread = 0;
   for (const s of SPACES) {
     const [q, c] = E.infOf(st, s.id), ctl = E.controller(st, s.id);
@@ -688,6 +695,294 @@ function radicalChoices(st, side, villages) {
   return scored.sort((x, y) => y.r - x.r).slice(0, RADICAL_TRY).map((x) => x.v);
 }
 
+// ---------- mechanism C (#40): 內線 -- the belief, 肅諜's expected value, 佈線 ----------
+// Read only under the option `mechanismC`: without it the state has no `moles`, nothing below runs, no number
+// of the evaluation moves and no random number is drawn for it.
+// The owner's note (C, 「bot」, hand-copied at the head of tests/bots.test.js B8) and orchestrator 裁決 #40:
+//   - The Nationalists hold a belief per marker, "real" with a probability (`moleBelief`, from their view only).
+//     The prior: every marker in play (on a city or in the Communists' hand) alike, R real among N, R = 5 − the
+//     pool's real − the real turned up. Revised down each time the Communists were asked (洩密 / 倒戈) and said no
+//     (the engine's public `moleNo` entry, #40): a "no" is a likelihood, C_W.q of the question if a real marker
+//     was among those asked about, 1 if none was. The posterior is exact under the count R (`molePosterior`).
+//   - 肅諜's value = the benefit of a real caught × p − the price of a fake (抓錯) × (1 − p): played out by the
+//     engine on the guess per outcome and weighted by the posterior (`purgeValue`).
+//   - The Communists plant fakes where the Nationalists fear most (their capital, a city whose fall cuts others
+//     off), reals where they mean to attack (a city they can reach now, the capital), and how many of each is
+//     drawn from their hand as it is (the ratio plus the noise of the draw), so it cannot be read (`plantPayload`).
+//   - The evaluation values the markers (`cValue`, the Communists' point of view): what a real one can still do
+//     where it is (洩密 on any 圍點打援 for the capital, 倒戈 / 洩密 where they can attack, 和平易手 on a 孤城), a
+//     fake's decoy, the hand's. So turning a real one up (洩密, 倒戈, 和平易手) has a price the bot weighs.
+const mechC = (st) => !!(st.options && st.options.mechanismC);
+// The numbers (tuning/40/report.txt, 「C 的數字」). A marker's worth is per turn left in the game (this one
+// included): what turning a real one up gained, per turn it stood there, where the bots' own C games asked
+// (tuning/40/probe-gains.mjs, 240 games: the capital 洩密 on any 圍點打援, a city the Communists can attack
+// 洩密 / 倒戈, a 孤城 洩密 / 倒戈; 和平易手 was never the best play there, so it adds nothing). A fake does nothing
+// by itself (its worth is what the Nationalists pay to find it, measured afterwards); a marker in the hand only
+// once planted. `q`: how often the Communists say no to 洩密 / 倒戈 with a real marker there.
+export const C_W = {
+  real: 0.1, capital: 0.4, open: 0.2, isolated: 0.1, fake: 0.05, handReal: 0.1, handFake: 0,
+  q: { leak: 0.9, defect: 0.4 },
+};
+const turnsLeft = (st) => Math.max(1, st.options.turns - Math.max(1, st.turn) + 1);
+const binom = (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return r; };
+const ccpNext = (st, id) => E.adjOf(st, id).some((a) => E.controller(st, a) === CCP);
+// What a real marker on `id` is worth to the Communists (`iso`: the 孤城 now, a Set).
+function realWorth(st, id, cap, iso) {
+  return turnsLeft(st) * (C_W.real + (id === cap ? C_W.capital : 0) + (ccpNext(st, id) ? C_W.open : 0) + (iso.has(id) ? C_W.isolated : 0));
+}
+// The markers' worth to the Communists, read with their truth (a guess, or the Communists' own state).
+function cValue(st) {
+  const m = st.moles;
+  if (!m) return 0;
+  const left = turnsLeft(st);
+  let v = m.hand ? left * (m.hand[0] * C_W.handReal + m.hand[1] * C_W.handFake) : 0;
+  const ids = Object.keys(m.at);
+  if (!ids.length) return v;
+  const cap = E.homeCapital(st, KMT), iso = new Set(E.isolatedCities(st));
+  for (const id of ids) {
+    let r = null;
+    for (const x of m.at[id]) {
+      if (x === true) v += r ?? (r = realWorth(st, id, cap, iso));
+      else if (x === false) v += left * C_W.fake;
+    }
+  }
+  return v;
+}
+
+// The Nationalists' bookkeeping of the markers, from their view: the markers on the board in groups (a group:
+// planted together on one city, so alike to them), the "no"s as events over groups, the fakes they know are in
+// the hand. Replays the log's C entries; then the counts are made those of the view (a position laid out by
+// hand has markers no entry put there: they are a group with no history).
+function moleTrack(view) {
+  const m = view.moles;
+  let groups = [], events = [], knownFake = 0;
+  const on = (id) => groups.filter((g) => g.at === id);
+  const declines = (g) => events.reduce((t, e) => t + (e.set.has(g) ? 1 : 0), 0);
+  const drop = (g) => { groups = groups.filter((x) => x !== g); events = events.filter((e) => !e.set.has(g)); };
+  // A real one turned up: from the group most likely to hold one (fewest "no"s, the newest on a tie). A "no"
+  // over that group was said with a real marker among those asked: its likelihood is a constant, it goes.
+  const real = (id) => {
+    const gs = on(id);
+    if (!gs.length) return;
+    const g = gs.reduce((a, b) => (declines(b) <= declines(a) ? b : a));
+    events = events.filter((e) => !e.set.has(g));
+    if (--g.n <= 0) groups = groups.filter((x) => x !== g);
+  };
+  // A fake turned up (肅諜): from the group most likely to hold one (most "no"s, the oldest on a tie). The "no"s
+  // stand: "a real among those asked" is "a real among the others". It goes to the hand.
+  const fake = (id) => {
+    const gs = on(id);
+    if (gs.length) {
+      const g = gs.reduce((a, b) => (declines(b) > declines(a) ? b : a));
+      if (--g.n <= 0) { groups = groups.filter((x) => x !== g); for (const e of events) e.set.delete(g); events = events.filter((e) => e.set.size); }
+    }
+    knownFake++;
+  };
+  const sync = (id, n) => {
+    const gs = on(id), t = gs.reduce((s, g) => s + g.n, 0);
+    if (t === n) return;
+    if (t < n) { groups.push({ at: id, n: n - t }); return; }
+    for (const g of gs) drop(g);
+    if (n > 0) groups.push({ at: id, n });
+  };
+  for (const l of view.log || []) {
+    switch (l.type) {
+      case "plant": {
+        const count = {};
+        for (const id of l.at || []) count[id] = (count[id] || 0) + 1;
+        for (const [id, n] of Object.entries(count)) groups.push({ at: id, n });
+        knownFake = 0; // which of the hand went down is not known: the known fakes are forgotten
+        break;
+      }
+      case "molesHome": for (const g of on(l.space)) drop(g); break;
+      case "leak": real(l.space); break;
+      case "defect": real(l.target); break;
+      case "handover": real(l.space); break;
+      case "purge": for (const f of l.flipped || []) (f.real ? real : fake)(f.at); break;
+      case "moleNo": {
+        for (const [id, n] of Object.entries(l.at || {})) sync(id, n);
+        const set = new Set(Object.keys(l.at || {}).flatMap(on));
+        if (set.size) events.push({ q: C_W.q[l.tag] ?? 1, set });
+        break;
+      }
+      default: break;
+    }
+  }
+  for (const id of new Set([...groups.map((g) => g.at), ...Object.keys(m.at)])) sync(id, (m.at[id] || []).length);
+  return { groups, events, knownFake: Math.min(knownFake, m.handCount || 0) };
+}
+// The posterior over how many real markers each group (and the hand) holds, given exactly R real in play.
+// { groups, hand, R, N, configs: [{ k: [per group], kh, w }], total, p: [per group], belief: { city: [p, …] } }.
+const postMemo = new WeakMap();
+export function molePosterior(view) {
+  if (!view || !view.moles || view.moles.hand != null) return null;
+  if (postMemo.has(view)) return postMemo.get(view);
+  const m = view.moles, tr = moleTrack(view), gs = tr.groups, h = m.handCount || 0, f = tr.knownFake;
+  const N = gs.reduce((s, g) => s + g.n, 0) + h;
+  const R = Math.max(0, Math.min(N, E.C_SPEC.markers[0] - m.pool[0] - m.out));
+  const ev = tr.events.map((e) => ({ q: e.q, idx: [...e.set].map((g) => gs.indexOf(g)).filter((i) => i >= 0) }));
+  const configs = [], k = new Array(gs.length).fill(0);
+  let total = 0;
+  const walk = (j, left, w) => {
+    if (j === gs.length) {
+      let wt = w * binom(h - f, left);
+      if (!wt) return;
+      for (const e of ev) if (e.idx.some((i) => k[i] > 0)) wt *= e.q;
+      if (!(wt > 0)) return;
+      configs.push({ k: k.slice(), kh: left, w: wt }); total += wt;
+      return;
+    }
+    for (let x = 0; x <= Math.min(gs[j].n, left); x++) { k[j] = x; walk(j + 1, left - x, w * binom(gs[j].n, x)); }
+    k[j] = 0;
+  };
+  walk(0, R, 1);
+  const p = gs.map((g, j) => (total > 0 ? configs.reduce((t, c) => t + c.w * c.k[j], 0) / (total * g.n) : N ? R / N : 0));
+  const belief = {};
+  for (const id of Object.keys(m.at)) belief[id] = gs.flatMap((g, j) => (g.at === id ? new Array(g.n).fill(p[j]) : []));
+  const out = { groups: gs, hand: h, knownFake: f, R, N, configs, total, p, belief };
+  postMemo.set(view, out);
+  return out;
+}
+// The Nationalists' belief (orchestrator 裁決 #40): { <city>: [p, …] }, one p per marker on the city, from
+// `E.view(st, 國軍)` only. {} without C (or for a view that sees the truth).
+export function moleBelief(view) {
+  const post = molePosterior(view);
+  return post ? post.belief : {};
+}
+// A truth for the markers the view hides, drawn from the posterior (the guess, `determinize`).
+function drawMoles(m, post, rng) {
+  let c = null;
+  if (post.total > 0) {
+    let u = rng.next() * post.total;
+    for (const x of post.configs) { u -= x.w; if (u < 0) { c = x; break; } }
+    c ||= post.configs[post.configs.length - 1];
+  }
+  const at = {};
+  post.groups.forEach((g, j) => {
+    const real = c ? c.k[j] : 0;
+    (at[g.at] ||= []).push(...Array.from({ length: g.n }, (_, i) => i < real));
+  });
+  for (const id of Object.keys(m.at)) m.at[id] = at[id] || m.at[id].map(() => false);
+  const kh = c ? c.kh : 0;
+  m.hand = [kh, (m.handCount || 0) - kh];
+  delete m.handCount;
+}
+// The joint law of how many real markers a 肅諜 naming `count` ({ city: markers named }) turns up per city:
+// [{ f: [per city of `ids`], w }], the weights summing to 1. A city named for fewer markers than it holds: the
+// engine draws which, so the count is hypergeometric given the city's real ones.
+function purgeOutcomes(post, ids, count) {
+  const law = new Map();
+  for (const c of post.configs) {
+    let parts = [{ f: [], w: c.w / post.total }];
+    for (const id of ids) {
+      let n = 0, k = 0;
+      post.groups.forEach((g, j) => { if (g.at === id) { n += g.n; k += c.k[j]; } });
+      const j = Math.min(count[id], n), next = [];
+      for (const p of parts) for (let x = 0; x <= j; x++) {
+        const hw = (binom(k, x) * binom(n - k, j - x)) / binom(n, j);
+        if (hw > 0) next.push({ f: [...p.f, x], w: p.w * hw });
+      }
+      parts = next;
+    }
+    for (const p of parts) { const key = p.f.join(","); law.set(key, (law.get(key) || 0) + p.w); }
+  }
+  return [...law.entries()].map(([key, w]) => ({ f: key.split(",").map(Number), w }));
+}
+// 肅諜's expected value for the Nationalists on the guess `st`: per outcome, the named markers made that outcome
+// (the ones not named are set aside while the engine plays it, so its draw cannot pick them), played out and
+// evaluated; the markers' worth that the outcome itself changed on the guess is put back (`cValue`), so every
+// outcome is read against the same guess.
+function purgeValue(st, action, post, rng) {
+  const list = action.type === "play" ? action.purge : action.choice.purge;
+  const count = {};
+  for (const id of list) count[id] = (count[id] || 0) + 1;
+  if (!(post.total > 0)) return evaluate(simulate(st, action, rng), KMT);
+  const ids = Object.keys(count), base = cValue(st);
+  let v = 0;
+  for (const o of purgeOutcomes(post, ids, count)) {
+    const at = { ...st.moles.at }, rest = {};
+    ids.forEach((id, i) => {
+      const l = st.moles.at[id], j = Math.min(count[id], l.length);
+      at[id] = Array.from({ length: j }, (_, x) => x < o.f[i]);
+      rest[id] = l.slice(j);
+    });
+    const g = { ...st, moles: { ...st.moles, hand: st.moles.hand.slice(), at } };
+    const shift = cValue({ ...g, moles: { ...g.moles, at: { ...at, ...Object.fromEntries(ids.map((id) => [id, [...at[id], ...rest[id]]])) } } }) - base;
+    const s = simulate(g, action, rng);
+    if (s.moles && s.winner == null) for (const id of ids) if (rest[id].length) s.moles.at[id] = [...(s.moles.at[id] || []), ...rest[id]];
+    v += o.w * (evaluate(s, KMT) + shift);
+  }
+  return v;
+}
+// The 肅諜 lists for `ops` on `cities` (`E.moleOptions`): the k markers with the most p × worth, k = 1..ops.
+function purgeLists(st, cities, ops, post) {
+  if (!cities.length) return [];
+  const cap = E.homeCapital(st, KMT), iso = new Set(E.isolatedCities(st)), marks = [];
+  for (const id of cities) {
+    const ps = post && post.belief[id], n = E.molesAt(st, id).length;
+    const p = ps && ps.length ? ps.reduce((t, x) => t + x, 0) / ps.length : post && post.N ? post.R / post.N : 0.5;
+    for (let i = 0; i < n; i++) marks.push({ id, s: p * realWorth(st, id, cap, iso) });
+  }
+  marks.sort((a, b) => b.s - a.s || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const out = [];
+  for (let k = 1; k <= Math.min(ops, marks.length); k++) out.push(marks.slice(0, k).map((x) => x.id));
+  return out;
+}
+// How many cities with blue lose their supply if `id` falls (割點).
+function cutCount(st, id) {
+  const before = E.supplied(st), cap = E.homeCapital(st, KMT);
+  if (id === cap) return Infinity;
+  const open = (x) => x !== id && E.controller(st, x) !== CCP;
+  const queue = E.supplySources(st).filter(open), seen = new Set(queue);
+  while (queue.length) for (const a of E.adjOf(st, queue.shift())) if (!seen.has(a) && open(a)) { seen.add(a); queue.push(a); }
+  let n = 0;
+  for (const s of SPACES) if (s.id !== id && s.kind === "city" && before.has(s.id) && !seen.has(s.id) && E.pointsOf(st, KMT, s.id) > 0) n++;
+  return n;
+}
+// 佈線 with `ops` on `cities` (`E.moleOptions`): as many markers as the ops, the hand and the room allow; how many
+// real drawn from the hand as it is (without replacement); the real ones where a real one is worth most to the
+// Communists, the fakes where the Nationalists fear most (the capital, then the cities whose fall cuts most off,
+// then the worth of a real one there). null when nothing can go.
+function plantPayload(st, cities, ops, rng) {
+  const m = st.moles, room = {};
+  for (const id of cities) room[id] = E.C_SPEC.perCity - E.molesAt(st, id).length;
+  const n = Math.min(ops, m.hand[0] + m.hand[1], cities.reduce((t, id) => t + Math.max(0, room[id]), 0));
+  if (n <= 0) return null;
+  let real = 0, left = m.hand[0], all = m.hand[0] + m.hand[1];
+  for (let i = 0; i < n; i++) { if (rng.next() * all < left) { real++; left--; } all--; }
+  const cap = E.homeCapital(st, KMT), iso = new Set(E.isolatedCities(st));
+  const worth = Object.fromEntries(cities.map((id) => [id, realWorth(st, id, cap, iso)]));
+  const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const forReal = cities.slice().sort((a, b) => worth[b] - worth[a] || byName(a, b));
+  const fear = Object.fromEntries(cities.map((id) => [id, cutCount(st, id)]));
+  const forFake = cities.slice().sort((a, b) => fear[b] - fear[a] || worth[b] - worth[a] || byName(a, b));
+  const out = [];
+  const put = (order, isReal, k) => {
+    for (const id of order) while (k > 0 && room[id] > 0) { out.push({ at: id, real: isReal }); room[id]--; k--; }
+  };
+  put(forReal, true, real);
+  put(forFake, false, n - real);
+  return out.length ? out : null;
+}
+// C's 政工 as candidates for `side` with `ops` (`mo`: `E.moleOptions` or `legal().cards[].uses.moles`), as
+// payloads: one 佈線, every 和平易手, the 肅諜 lists.
+function moleChoices(st, side, mo, ops, rng, post) {
+  if (!mo) return [];
+  const out = [];
+  if (side === CCP) {
+    if (mo.plant.length && rng) { const plant = plantPayload(st, mo.plant, ops, rng); if (plant) out.push({ plant }); }
+    for (const t of mo.handover) out.push({ handover: t });
+  } else for (const purge of purgeLists(st, mo.purge, ops, post)) out.push({ purge });
+  return out;
+}
+// 洩密 / 倒戈, the Communists' answer: "no", or a place whose marker is real, the best by the evaluation (turning
+// a real one up costs its worth, `cValue`).
+function moleAnswer(st, p, who, rng) {
+  const ok = p.options.map((o) => o.id).filter((id) => id === "no" || id === "defect" ? true : E.molesAt(st, String(id).split(":")[1]).includes(true));
+  const legal = p.tag === "defect" && !E.molesAt(st, p.target).includes(true) ? ["no"] : ok;
+  return legal.length > 1 ? bestOf(st, who, legal, rng) : "no";
+}
+
 // ---------- the guess: a full state consistent with what this seat sees ----------
 // The decks are public (`E.ERA_DECKS`), so every card is either seen (this
 // hand, the discard and removed piles, a face-up headline, a card on its way
@@ -729,7 +1024,10 @@ export function determinize(view, side, rng) {
   for (const p of st.plan) if (p.do === "siege" && p.plan == null) p.plan = pickOne(E.SIEGE_PLANS, rng);
   // #39, mechanism C: markers whose truth the view hides get one at random, as many real as the public count
   // leaves in play (5 − the pool − the ones turned up), so the engine can play the position out.
-  if (st.moles && st.moles.hand == null) {
+  // #40: drawn from the Nationalists' posterior (`molePosterior`) instead.
+  const post = st.moles && st.moles.hand == null ? molePosterior(view) : null;
+  if (post) drawMoles(st.moles, post, rng);
+  else if (st.moles && st.moles.hand == null) {
     const m = st.moles, slots = [];
     for (const [id, l] of Object.entries(m.at)) l.forEach((_, i) => slots.push([id, i]));
     const n = slots.length + (m.handCount || 0), reals = Math.max(0, Math.min(n, E.C_SPEC.markers[0] - m.pool[0] - m.out));
@@ -991,7 +1289,9 @@ function winsNow(st, action) { return E.apply(st, action).winner === action.side
 // is the best its plan is drawn from the game's mix; `top.game` gets the game.
 // #36, mechanism E: `ask` is the ops question itself; under E it says whether these ops may be printed
 // (`canPrint`) and where a 激進 could go (`radical`), and the printed / radical versions are offered too.
-function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null) {
+// #40, mechanism C: `cx` ({ post }) is passed by the Nationalists' decision itself: a 肅諜 is then valued by its
+// expected value over the belief (`purgeValue`), never inside a simulation.
+function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null, cx = null) {
   const aid = card && E.isAid(card) ? card : undefined;
   const o = E.opsOptions(st, who, aid);
   const cands = [], sieges = new Set();
@@ -1040,15 +1340,24 @@ function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null) {
       if (!(cands.length && suicideIntegrate(st, who, c, ok))) cands.push(c);
     }
   }
+  // #40, mechanism C: 佈線 / 和平易手 / 肅諜 with these ops (an aid card's ops never go to 政工).
+  const purges = new Set();
+  if (allowed.includes("politics") && mechC(st) && !aid) {
+    for (const c of moleChoices(st, who, E.moleOptions(st, who, ops), ops, rng, cx && cx.post)) {
+      const x = { use: "politics", ...c }; cands.push(x);
+      if (x.purge && cx && cx.post) purges.add(x);
+    }
+  }
   // Nothing worth trying (no point affordable, no 遊說 that gains): an empty 扶植 spends nothing.
   if (!cands.length) return allowed.includes("place") ? { use: "place", points: [] } : allowed.includes("campaign") ? { use: "campaign", ...attacks(st, who, o.campaignTargets[0])[0] } : { use: "lobby", target: o.lobbyTargets[0].id };
-  if (!sieges.size) return bestOf(st, who, cands, rng);
+  if (!sieges.size && !purges.size) return bestOf(st, who, cands, rng);
   // bestOf's loop, with an attack on a city valued by its game (an answer to a pending: no noise).
   let best = null, bestV = -Infinity, bestG = null;
   for (const ch of cands) {
     const a = { type: "choose", side: who, choice: ch };
     let v, g = null;
     if (sieges.has(ch)) { g = siegeGame(st, who, a, rng, 0); v = g.game.value; }
+    else if (purges.has(ch)) v = purgeValue(st, a, cx.post, rng);
     else v = meanEval(st, a, who, rng, rollsFor(st, a));
     if (v > bestV) { bestV = v; best = ch; bestG = g; }
   }
@@ -1081,8 +1390,8 @@ export function answer(st, p, who, rng) {
     case "points": return p.tag === "withdraw" ? withdrawPoints(st, p) : bestPoints(st, p, who, rng);
     case "card": return bestOf(st, who, cardSets(p), rng);
     // 收手 (realign-own): go on while the next attempt gains on average.
-    // Mechanism C (#39): the bots do not turn markers up yet (the next issue): 洩密 / 倒戈 are "no".
-    case "option": if (p.tag === "leak" || p.tag === "defect") return "no";
+    // Mechanism C (#40): 洩密 / 倒戈 by the evaluation (`moleAnswer`; #39 answered "no").
+    case "option": if (p.tag === "leak" || p.tag === "defect") return moleAnswer(st, p, who, rng);
       if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
       return bestOf(st, who, p.options.map((o) => o.id), rng);
     case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card, null, p);
@@ -1249,7 +1558,9 @@ function dropSelfCollapse(st, side, list) {
 // `sieges` (#27, a Set) is passed by the decision itself, never inside a
 // simulation: an attack on a city that must name a plan is then ONE candidate
 // (its `siege` a placeholder, the plan is drawn from its game), put in the set.
-function actionCandidates(st, side, L, sieges = null) {
+// #40, mechanism C: `cx` ({ rng, post }) -- the draw of a 佈線's real ones, and the Nationalists' belief that
+// orders the 肅諜 lists (none inside a simulation: there the lists follow the worth of a real marker alone).
+function actionCandidates(st, side, L, sieges = null, cx = null) {
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   const out = [];
   const atk = (t) => (sieges && E.siegeNeeded(st, side, t) ? [{ target: t, siege: E.SIEGE_PLANS[0], [SIEGE_MARK]: true }] : attacks(st, side, t));
@@ -1302,6 +1613,8 @@ function actionCandidates(st, side, L, sieges = null) {
     // valued like any other play; the bots know nothing else of D yet (that is the next issue).
     if (u.politics && plain) for (const t of u.politics.targets) out.push({ type: "play", side, card: id, use: "politics", ...order, ...politicsPayload(side, t) });
     if (u.politics && pr) for (const t of E.politicsOptions(st, side, u.politics.ops + PR)) out.push({ type: "play", side, card: id, use: "politics", ...order, print: true, ...politicsPayload(side, t) });
+    // Mechanism C (#40; `uses.moles` exists only under the option): one 佈線, every 和平易手, the 肅諜 lists.
+    if (u.moles && plain) for (const c of moleChoices(st, side, u.moles, u.moles.ops, cx && cx.rng, cx && cx.post)) out.push({ type: "play", side, card: id, use: "politics", ...order, ...c });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) {
       const pair = u.pair.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));
@@ -1355,7 +1668,7 @@ function replyFrom(s, side, rng) {
   const L = E.legal(s, opp);
   if (L.kind !== "action") return evaluate(s, side);
   let worst = Infinity;
-  for (const b of actionCandidates(s, opp, L)) {
+  for (const b of actionCandidates(s, opp, L, null, mechC(s) ? { rng } : null)) {
     const v = meanEval(s, b, side, rng, rollsFor(s, b, DICE_K_REPLY));
     if (v < worst) worst = v;
   }
@@ -1403,7 +1716,8 @@ export function scoreCandidates(view, side, rng) {
   const st = determinize(view, side, rng);
   const L = E.legal(st, side);
   if (L.kind !== "action") return [];
-  return actionCandidates(st, side, L).map((a) => ({ a, v: evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
+  const cx = mechC(st) ? { rng, post: side === KMT ? molePosterior(view) : null } : null;
+  return actionCandidates(st, side, L, null, cx).map((a) => ({ a, v: a.purge && cx && cx.post ? purgeValue(st, a, cx.post, rng) : evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
 }
 
 // Zongheng #134: several plays can win on the one guess the bot scored; every
@@ -1443,10 +1757,13 @@ export function decide(view, side, level = "normal", rng) {
   const st = determinize(view, side, rng);
   const L = E.legal(st, side);
   const noise = NOISE[level] ?? 0.6;
+  // #40, mechanism C: the Nationalists' belief (their 肅諜 by its expected value); a 佈線 draws from `rng`.
+  const cx = mechC(st) ? { rng, post: side === KMT ? molePosterior(view) : null } : null;
   switch (L.kind) {
     case "pending": {
       const p = L.pending;
       if (p.tag === "siege" && side === KMT) return siegeAnswer(st, side, rng);
+      if (p.kind === "ops" && side === KMT && cx && cx.post) return { type: "choose", side, choice: bestOps(st, side, p.ops, p.allowed, rng, p.card, null, p, cx), why: p.kind };
       if (p.kind === "ops" && side === CCP && mechB(st)) {
         const top = {}, choice = bestOps(st, side, p.ops, p.allowed, rng, p.card, top, p);
         return { type: "choose", side, choice, ...(top.game ? { game: top.game } : {}), why: p.kind };
@@ -1456,12 +1773,12 @@ export function decide(view, side, level = "normal", rng) {
     case "headline": return L.cards.length ? { type: "headline", side, card: bestHeadline(view, side, L.cards, rng, level), why: "headline" } : null;
     case "action": {
       const sieges = new Set();
-      const cands = actionCandidates(st, side, L, sieges);
+      const cands = actionCandidates(st, side, L, sieges, cx);
       if (!cands.length) return null;
       const games = new Map();
       const scored = cands.map((a) => {
         if (sieges.has(a)) { const g = siegeGame(st, side, a, rng, noise); games.set(a, g); return { a, raw: g.raw, v: g.game.value }; }
-        const raw = evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) };
+        const raw = a.purge && cx && cx.post ? purgeValue(st, a, cx.post, rng) : evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) };
       });
       scored.sort((x, y) => y.v - x.v);
       // An attack on a city goes to the win check with the plan it would draw.

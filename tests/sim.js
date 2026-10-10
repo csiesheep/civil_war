@@ -67,6 +67,9 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   // #36, mechanism E (only with options.mechanismE: off E `more` has no `e` and nothing below runs).
   const X = options.mechanismE ? newE() : null;
   if (X) more.e = X;
+  // #40, mechanism C (only with options.mechanismC: off C `more` has no `c` and nothing below runs).
+  const C = options.mechanismC ? newC() : null;
+  if (C) more.c = C;
   // At the turn-end checks (probe.home, "turnEnd"): the besieged cities that supply still reaches, i.e.
   // a 孤城 only by the marker; the `attrition` entry that follows is read against them.
   let siegeOnly = new Set();
@@ -81,6 +84,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   const onTurnEnd = (s) => {
     rec.turnEnds.push({ turn: s.turn, mandate: s.mandate, isolated: E.isolatedCities(s).slice().sort(), support: [s.support[CCP], s.support[KMT]] });
     if (X) turnEndE(X, s);
+    if (C) turnEndC(C, s);
   };
   const lookIsolated = (s) => {
     for (const id of E.isolatedCities(s)) if (rec.firstIsolated[id] === undefined) rec.firstIsolated[id] = s.turn;
@@ -101,6 +105,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
       else if (l.type === "attrition") for (const [id, k] of Object.entries(l.losses)) if (siegeOnly.has(id)) more.besiegedLoss += k;
       if (D) readLogD(D, l);
       if (X) readLogE(X, l, s.options.turns);
+      if (C) readLogC(C, l);
     }
     if (s.logSeq) logSeen = s.logSeq;
   };
@@ -116,9 +121,11 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
     const side = who[rng.int(who.length)];
     if (st.pending && st.pending.tag === "siege") askedSiege(st, more);
     const talks = D && side === CCP ? talksLegal(st, seed, n) : null;
-    const d = B.decide(E.view(st, side), side, levels[side], rng);
+    const view = E.view(st, side);
+    const d = B.decide(view, side, levels[side], rng);
     if (!d) throw new Error(`seed ${seed}: no decision for side ${side} (turn ${st.turn}, phase ${st.phase})`);
     if (D) readDecisionD(D, st, side, d, talks);
+    if (C) readDecisionC(C, st, side, d, view);
     // #27: a 圍點打援 decision carries the bot's `game`; it is the bot's note, not part of the move.
     let a = d;
     if (d.game) {
@@ -134,7 +141,91 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   }
   if (D) endD(D, st);
   if (X) endE(X, st);
+  if (C) endC(C, st);
   return { st, rec, more };
+}
+
+// ---------------------------------------------------------------- mechanism C (#40)
+// Per game, read from the log, the decisions, the engine's turn-end probe and the final state; summed over games
+// by `moreStats` (which also keeps the per-game counts as distributions, `cPerGame`). Nothing here draws from the
+// game's rng: the belief is the bot's own reading of the Nationalists' view (`B.molePosterior`), which draws nothing.
+//   plant / plantAt[city]: the markers planted (real / fake), from the Communists' decisions; purge / purgeAt[city]:
+//     the 肅諜 played and what each turned up (log `purge`), `caught` the 肅諜 that turned up a fake (抓錯);
+//   leak / defect / handover: the real markers used (log); no.leak / no.defect: asked and said no (log `moleNo`);
+//   home: the markers sent back by a capture (log `molesHome`); gains[why]: the markers gained (log `moleGain`);
+//   legal: action rounds where a 佈線 / 肅諜 / 和平易手 was legal, and where it was played;
+//   byTurn[t]: plant, purge, leak, defect, handover;
+//   calib: each marker a 肅諜 turned up, the belief of the Nationalists' bot in it just before (the mean over the
+//     markers of that city: the engine draws which one) against what it was; `calibPrior` the same with the prior
+//     alone (R / N); bins of 0.1 (`bins[k]`: n, real, sum of p);
+//   board: at every turn's end, every marker on the board, the belief against the truth, the capital apart from the
+//     other cities (`board.capital`, `board.other`), with the prior beside it;
+//   end: where the markers are at the end (on the board real / fake, in the hand, out, in the pool).
+const cCal = () => ({ n: 0, real: 0, p: 0, brier: 0, brierPrior: 0, bins: {}, binsPrior: {} });
+function newC() {
+  return {
+    plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
+    leak: 0, defect: 0, handover: 0, no: { leak: 0, defect: 0 }, home: 0, gains: {},
+    legal: { plantRounds: 0, plantChosen: 0, purgeRounds: 0, purgeChosen: 0, handoverRounds: 0, handoverChosen: 0 },
+    byTurn: {}, calib: cCal(), board: { capital: cCal(), other: cCal() }, end: {}, reform4Turn: null, pend: null,
+  };
+}
+function calAdd(cal, p, prior, real) {
+  const r = real ? 1 : 0, k = Math.min(9, Math.floor(p * 10)), kp = Math.min(9, Math.floor(prior * 10));
+  cal.n++; cal.real += r; cal.p += p; cal.brier += (p - r) ** 2; cal.brierPrior += (prior - r) ** 2;
+  const b = slot(cal.bins, k, () => ({ n: 0, real: 0, p: 0 })); b.n++; b.real += r; b.p += p;
+  const bp = slot(cal.binsPrior, kp, () => ({ n: 0, real: 0, p: 0 })); bp.n++; bp.real += r; bp.p += prior;
+}
+const cPayload = (d) => (d.type === "play" ? d : d.type === "choose" && d.choice && typeof d.choice === "object" ? d.choice : {});
+const cityMean = (belief, id) => { const l = belief[id] || []; return l.length ? l.reduce((t, x) => t + x, 0) / l.length : null; };
+function readDecisionC(C, st, side, d, view) {
+  const pol = cPayload(d), t = slot(C.byTurn, st.turn, () => ({}));
+  if (st.phase === "action" && !st.pending) {
+    const L = E.legal(st, side), mo = L.kind === "action" ? L.cards.map((c) => c.uses.moles).filter(Boolean) : [];
+    if (side === CCP && mo.some((m) => m.plant.length)) { C.legal.plantRounds++; if (pol.plant) C.legal.plantChosen++; }
+    if (side === CCP && mo.some((m) => m.handover.length)) { C.legal.handoverRounds++; if (pol.handover) C.legal.handoverChosen++; }
+    if (side === KMT && mo.some((m) => m.purge.length)) { C.legal.purgeRounds++; if (pol.purge) C.legal.purgeChosen++; }
+  }
+  if (Array.isArray(pol.plant)) {
+    C.plant.plays++; bump(t, "plant");
+    for (const e of pol.plant) { const k = e.real ? "real" : "fake"; C.plant[k]++; bump(slot(C.plantAt, e.at, () => ({})), k); }
+  }
+  if (Array.isArray(pol.purge) && side === KMT) {
+    C.purge.plays++; bump(t, "purge");
+    const post = B.molePosterior(view), belief = B.moleBelief(view);
+    C.pend = { p: Object.fromEntries(pol.purge.map((id) => [id, cityMean(belief, id)])), prior: post && post.N ? post.R / post.N : 0 };
+  }
+}
+function readLogC(C, l) {
+  const t = slot(C.byTurn, l.t, () => ({}));
+  if (l.type === "purge") {
+    let fake = false;
+    for (const f of l.flipped || []) {
+      const k = f.real ? "real" : "fake";
+      C.purge[k]++; bump(slot(C.purgeAt, f.at, () => ({})), k);
+      if (!f.real) fake = true;
+      if (C.pend && C.pend.p[f.at] != null) calAdd(C.calib, C.pend.p[f.at], C.pend.prior, f.real);
+    }
+    if (fake) C.purge.caught++;
+    C.pend = null;
+  } else if (l.type === "leak" || l.type === "defect" || l.type === "handover") { C[l.type]++; bump(t, l.type); }
+  else if (l.type === "moleNo") C.no[l.tag]++;
+  else if (l.type === "molesHome") C.home += l.n;
+  else if (l.type === "moleGain") { bump(C.gains, l.why, l.n[0] + l.n[1]); if (l.why === "reform4") C.reform4Turn = l.t; }
+}
+function turnEndC(C, s) {
+  if (!s.moles) return;
+  const view = E.view(s, KMT), post = B.molePosterior(view), belief = B.moleBelief(view), cap = E.homeCapital(s, KMT);
+  const prior = post && post.N ? post.R / post.N : 0;
+  for (const [id, list] of Object.entries(s.moles.at)) {
+    const p = cityMean(belief, id);
+    if (p == null) continue;
+    for (const real of list) calAdd(C.board[id === cap ? "capital" : "other"], p, prior, real);
+  }
+}
+function endC(C, st) {
+  const m = st.moles, on = Object.values(m.at).flat();
+  C.end = { boardReal: on.filter((x) => x).length, boardFake: on.filter((x) => !x).length, handReal: m.hand[0], handFake: m.hand[1], out: m.out, poolReal: m.pool[0], poolFake: m.pool[1] };
 }
 
 // ---------------------------------------------------------------- mechanism E (#36)
@@ -339,7 +430,18 @@ export function moreStats(list) {
   let m = { siegesPerGame: {}, firstIsolatedGame: {}, isolatedAt3: {} };
   for (const { rec, more } of list) {
     if (more) {
-      const { games, d, e, ...rest } = more;
+      const { games, d, e, c, ...rest } = more;
+      // #40: C's sums, and per game: the plants (real / fake), the 肅諜 (plays, real / fake turned up), the real ones
+      // used (洩密 / 倒戈 / 和平易手), the turn of the box-4 gain ("none" if never).
+      if (c) {
+        const { reform4Turn, pend, ...cSums } = c;
+        m.c = addSums(m.c, cSums);
+        const per = (m.cPerGame ??= { plantReal: {}, plantFake: {}, purgePlays: {}, purgeReal: {}, purgeFake: {}, leak: {}, defect: {}, handover: {}, used: {}, reform4: {} });
+        bump(per.plantReal, c.plant.real); bump(per.plantFake, c.plant.fake); bump(per.purgePlays, c.purge.plays);
+        bump(per.purgeReal, c.purge.real); bump(per.purgeFake, c.purge.fake);
+        bump(per.leak, c.leak); bump(per.defect, c.defect); bump(per.handover, c.handover); bump(per.used, c.leak + c.defect + c.handover);
+        bump(per.reform4, reform4Turn ?? "none");
+      }
       // #36: E's sums, and per game: how many 印鈔 / 平抑 / 激進, the end's inflation and leftism (in `e.end`).
       if (e) {
         // #37: `reach` (the turn inflation first stood at n or more) is per game only: ePerGame.reach[n][turn | "none"].
