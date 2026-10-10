@@ -972,12 +972,25 @@ function cutCount(st, id) {
   for (const s of SPACES) if (s.id !== id && s.kind === "city" && before.has(s.id) && !seen.has(s.id) && E.pointsOf(st, KMT, s.id) > 0) n++;
   return n;
 }
+// The class of a city for 佈線 (orchestrator 裁決 #40, round 3; the first that holds): the Nationalists' capital,
+// a cut city (its fall leaves another city with blue out of supply, `cutCount`), a city the Communists can attack
+// (a 孤城, or next to a space they control), any other.
+export function moleClass(st, id) {
+  const cap = E.homeCapital(st, KMT);
+  if (id === cap) return "capital";
+  if (cutCount(st, id) > 0) return "cut";
+  return E.isolatedCities(st).includes(id) || ccpNext(st, id) ? "attack" : "other";
+}
+// How often a marker goes where the other kind would, and among how many of the first cities with room on its list
+// it is drawn (the note's 「比例加雜訊,不然會被讀出來」: no place is only real or only fake).
+export const PLANT_NOISE = 0.3, PLANT_SPREAD = 3;
 // 佈線 with `ops` on `cities` (`E.moleOptions`): as many markers as the ops, the hand and the room allow; how many
-// real drawn from the hand as it is (without replacement). The note: the fakes go first, where the Nationalists
-// fear most (the capital, then the cities whose fall cuts most off, then the worth of a real one there); the real
-// ones where the Communists mean to attack (a 孤城 or a city next to a space they control, the most worth first;
-// not the capital, which the note gives to the fakes), then anywhere by worth, the capital last. null when nothing
-// can go.
+// real drawn from the hand as it is (without replacement). Where each goes (the note, with orchestrator 裁決 #40,
+// round 3: the capital may hold real ones, rule 6; every kind of place mixes real and fake): the markers in a
+// random order, each to one of the first PLANT_SPREAD cities with room on its kind's list (drawn alike) -- the fakes' list where the Nationalists fear
+// most (the capital, then the cities whose fall cuts most off, then the worth of a real one there), the real ones'
+// list where the Communists mean to attack (the capital and the cities they can attack, by worth, then the rest by
+// worth) -- but with probability PLANT_NOISE on the other kind's list. null when nothing can go.
 function plantPayload(st, cities, ops, rng) {
   const m = st.moles, room = {};
   for (const id of cities) room[id] = E.C_SPEC.perCity - E.molesAt(st, id).length;
@@ -988,17 +1001,18 @@ function plantPayload(st, cities, ops, rng) {
   const cap = E.homeCapital(st, KMT), iso = new Set(E.isolatedCities(st));
   const worth = Object.fromEntries(cities.map((id) => [id, realWorth(st, id, cap, iso)]));
   const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-  const aim = Object.fromEntries(cities.map((id) => [id, id === cap ? -1 : iso.has(id) || ccpNext(st, id) ? 1 : 0]));
+  const aim = Object.fromEntries(cities.map((id) => [id, id === cap || iso.has(id) || ccpNext(st, id) ? 1 : 0]));
   const forReal = cities.slice().sort((a, b) => aim[b] - aim[a] || worth[b] - worth[a] || byName(a, b));
   const fear = Object.fromEntries(cities.map((id) => [id, cutCount(st, id)]));
   const forFake = cities.slice().sort((a, b) => fear[b] - fear[a] || worth[b] - worth[a] || byName(a, b));
+  const kinds = E.shuffle(rng, Array.from({ length: n }, (_, i) => i < real));
   const out = [];
-  const put = (order, isReal, k) => {
-    for (const id of order) while (k > 0 && room[id] > 0) { out.push({ at: id, real: isReal }); room[id]--; k--; }
-  };
-  put(forFake, false, n - real);
-  put(forReal, true, real);
-  return out.length ? out : null;
+  for (const isReal of kinds) {
+    const order = (rng.next() < PLANT_NOISE) !== isReal ? forReal : forFake;
+    const open = order.filter((x) => room[x] > 0).slice(0, PLANT_SPREAD), id = open[rng.int(open.length)];
+    out.push({ at: id, real: isReal }); room[id]--;
+  }
+  return out;
 }
 // C's 政工 as candidates for `side` with `ops` (`mo`: `E.moleOptions` or `legal().cards[].uses.moles`), as
 // payloads: one 佈線, every 和平易手, the 肅諜 lists.

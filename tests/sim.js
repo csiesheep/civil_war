@@ -149,7 +149,8 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 // Per game, read from the log, the decisions, the engine's turn-end probe and the final state; summed over games
 // by `moreStats` (which also keeps the per-game counts as distributions, `cPerGame`). Nothing here draws from the
 // game's rng: the belief is the bot's own reading of the Nationalists' view (`B.molePosterior`), which draws nothing.
-//   plant / plantAt[city]: the markers planted (real / fake), from the Communists' decisions; purge / purgeAt[city]:
+//   plant / plantAt[city] / plantClass[class]: the markers planted (real / fake), from the Communists' decisions, by
+//     city and by `B.moleClass` (capital / cut / attack / other, read before the play); purge / purgeAt[city]:
 //     the 肅諜 played and what each turned up (log `purge`), `caught` the 肅諜 that turned up a fake (抓錯);
 //   leak / defect / handover: the real markers used (log); no.leak / no.defect: asked and said no (log `moleNo`);
 //   asked[tag]: the questions put, by whether a real marker was among the places (real: and realNo, the "no"s
@@ -166,7 +167,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 const cCal = () => ({ n: 0, real: 0, p: 0, brier: 0, brierPrior: 0, bins: {}, binsPrior: {} });
 function newC() {
   return {
-    plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
+    plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, plantClass: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
     leak: 0, defect: 0, handover: 0, no: { leak: 0, defect: 0 }, home: 0, gains: {},
     asked: { leak: { real: 0, realNo: 0, none: 0 }, defect: { real: 0, realNo: 0, none: 0 } },
     legal: { plantRounds: 0, plantChosen: 0, purgeRounds: 0, purgeChosen: 0, handoverRounds: 0, handoverChosen: 0 },
@@ -197,7 +198,7 @@ function readDecisionC(C, st, side, d, view) {
   }
   if (Array.isArray(pol.plant)) {
     C.plant.plays++; bump(t, "plant");
-    for (const e of pol.plant) { const k = e.real ? "real" : "fake"; C.plant[k]++; bump(slot(C.plantAt, e.at, () => ({})), k); }
+    for (const e of pol.plant) { const k = e.real ? "real" : "fake"; C.plant[k]++; bump(slot(C.plantAt, e.at, () => ({})), k); bump(slot(C.plantClass, B.moleClass(st, e.at), () => ({})), k); }
   }
   if (Array.isArray(pol.purge) && side === KMT) {
     C.purge.plays++; bump(t, "purge");

@@ -69,6 +69,12 @@ line(`  局末標記在哪(${G} 局加總):城上 真 ${c.end.boardReal} 假 ${c
 const top = (o) => Object.entries(o).map(([id, x]) => [id, (x.real || 0) + (x.fake || 0), x]).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, , x]) => `${id} ${x.real || 0}/${x.fake || 0}`).join("、");
 line(`  佈線在哪些城(真 / 假,前 10):${top(c.plantAt)}`);
 line(`  肅諜翻到哪些城(真 / 假):${top(c.purgeAt)}`);
+const CLS = { capital: "首都", cut: "割點", attack: "打得到", other: "其他" };
+line("  佈線按類別(B.moleClass,佈下去那一刻;真 / 假、真的比例;orchestrator 裁決 #40 第三輪:佈 ≥ 20 個的類別要在 10%–90%):");
+for (const k of Object.keys(CLS)) {
+  const x = (c.plantClass || {})[k] || {}, r = x.real || 0, f = x.fake || 0, n = r + f;
+  line(`    ${CLS[k]}:真 ${r}、假 ${f}、真的比例 ${pct(r, n)}${n >= 20 ? (r / n >= 0.1 && r / n <= 0.9 ? "(≥ 20 個,在 10%–90% 之間)" : "(≥ 20 個,**不在 10%–90% 之間**)") : "(不到 20 個)"}`);
+}
 const bt = {};
 for (const [t, x] of Object.entries(c.byTurn)) if (Number(t) > 0) bt[t] = x;
 line(`  按回合:${Object.keys(bt).sort((a, b) => a - b).map((t) => `${t}:佈${bt[t].plant || 0}/肅${bt[t].purge || 0}/洩${bt[t].leak || 0}/倒${bt[t].defect || 0}/易${bt[t].handover || 0}`).join(" ")}`);
