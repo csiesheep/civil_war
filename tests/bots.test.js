@@ -42,7 +42,7 @@ function chunk(first, count, ccp, kmt, options = null) {
     const r = spawnSync(process.execPath, [here("./bots-chunk.js"), String(first), String(count), ccp, kmt, ...(options ? [JSON.stringify(options)] : [])], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     const line = (r.stdout || "").split("\n").find((l) => l.startsWith("BOTS "));
     if (line) return { ...JSON.parse(line.slice(5)), attempt };
-    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 }, attempt };
+    if (attempt === 2) return { count, ended: 0, actions: 0, ms: 0, errors: [{ seed: first, message: `the chunk died twice without a result (exit ${r.status}): ${(r.stderr || "").slice(-300)}` }], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, siege: null, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 }, cActs: null, attempt };
   }
 }
 const cache = new Map();
@@ -50,7 +50,7 @@ const cache = new Map();
 function play(first, n, ccp, kmt, options = null) {
   const key = `${first}/${n}/${ccp}/${kmt}/${JSON.stringify(options)}`;
   if (cache.has(key)) return cache.get(key);
-  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 },
+  const t = { games: 0, ended: 0, actions: 0, ms: 0, errors: [], reasons: {}, turns: {}, wins: [0, 0], pure: { asked: 0, differ: 0, mutated: 0 }, aid: { usable: [0, 0], used: [0, 0], usableStrong: 0, usedStrong: 0 }, turnEnd: {}, rerun: 0, politics: [0, 0], eActs: { print: 0, radical: 0, peg: 0 }, cActs: { plantReal: 0, plantFake: 0, leak: 0, defect: 0, handover: 0, purge: 0, purgePlays: 0 },
     siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } } };
   for (let f = first; f < first + n; f += CHUNK) {
     const c = chunk(f, Math.min(CHUNK, first + n - f), ccp, kmt, options);
@@ -63,6 +63,7 @@ function play(first, n, ccp, kmt, options = null) {
     if (c.attempt > 1) t.rerun++;
     if (c.politics) for (const s of [CCP, KMT]) t.politics[s] += c.politics[s];
     if (c.eActs) for (const k of ["print", "radical", "peg"]) t.eActs[k] += c.eActs[k];
+    if (c.cActs) for (const k of Object.keys(t.cActs)) t.cActs[k] += c.cActs[k] || 0;
     if (c.siege) {
       for (const s of ["ccp", "kmt"]) {
         const a = t.siege[s], b = c.siege[s];
@@ -645,6 +646,85 @@ check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;�
   return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(p >= 1, `國軍印鈔 ${p} 次(${r.games} 局裡至少 1 次)`), ok(rad >= 1, `共軍激進 ${rad} 次(至少 1 次)`),
     eq(collapsed, 0, "以通膨崩潰結束的局數(國軍自己印到 8)"),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};印鈔 ${p}、激進 ${rad}、平抑 ${r.eActs ? r.eActs.peg : 0};每局 ${s.toFixed(1)} 秒`));
+});
+
+section("B8 機制 C:國軍對標記的信念、佈線與肅諜(選項 mechanismC)");
+// #40。筆記(Projects/civil_war/civil_war - mechanisms.md,C 的「bot」一節,手抄):
+//   - 國軍 bot:每個標記一個「是真的」機率,先驗是共軍剩餘真標記數 ÷ 剩餘標記數;每次共軍在該用的時機沒用,就往下修。
+//     肅諜的期望值 = 抓到真的好處 × 機率 − 抓錯的代價。
+//   - 共軍 bot:佈線時假標記放在國軍最怕的地方(首都、割點上的城),真標記放在自己真的打算打的地方,比例加雜訊,不然會被讀出來。
+//   - last_train 的 bot 已經做過對暗牌的信念,做法可以搬。
+// 筆記「規則重量與試做順序」對這一批要看的:肅諜有沒有人用;假標記有沒有嚇到人。
+// orchestrator 裁決(#40):
+//   - `B.moleBelief(view)`:只從國軍看到的(`E.view(st, 國軍)`)算每座城上每個標記是真的機率,{ <城>: [p, …] }
+//     (和那座城上的標記一樣多個)。先驗 = 還在場上的真標記 ÷ 還在場上的標記(城上的加共軍手上的);
+//     還在場上的真標記 = 5 − 場外的真 − 出局的真(都在國軍的 view 裡)。
+//   - 共軍在一個該用的時機沒用(例如洩密問了、答 no),那座城上的標記要比沒有這段歷史的城低。怎麼修是 BE 的事;這裡只驗方向。
+//   - 真假不在國軍的 view 裡(第 16 組驗過),所以只讀 view 的 bot 不可能偷看。
+//   - 用的次數只要求「20 局裡至少一次」(#32 的教訓:不逼 bot 下它評得比較差的棋)。如果誠實的評估讓某一種從來不值得,
+//     BE 帶著數字回報,不是把門檻調鬆或把 bot 調成會用。
+// C 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
+const MCX = { mechanismC: true };
+const cBotTodo = () => TODO || (E.C_SPEC === undefined ? "TODO: 引擎還沒有機制 C(#39)" : typeof B.moleBelief !== "function" ? "TODO: bots.js 還沒有 moleBelief(還不懂機制 C)" : null);
+// A C board at turn 1's action rounds: the engine's C opening (hand 1 real 2 fake, pool 4 / 3), the hands dealt,
+// both scoring cards headlined; then the Communists' hand of markers and the markers on cities laid out by hand.
+function cBoard({ edits = {}, ccp = [], kmt = [], hand = null, at = {} } = {}) {
+  let st = board(edits, { aid: false, ...MCX });
+  deal(st, CCP, ["score_north", ...ccp]); deal(st, KMT, ["score_east", ...kmt]);
+  for (const side of [CCP, KMT]) st = E.apply(st, { type: "headline", side, card: st.hands[side].find((c) => E.CARD[c].scoring) });
+  st = E.clone(st);
+  if (hand) E.setMoleHand(st, hand);
+  for (const [id, list] of Object.entries(at)) E.setMoles(st, id, list);
+  return st;
+}
+const BC8 = () => play(12001, games(20), "normal", "normal", MCX);
+const near = (x, y) => typeof x === "number" && Math.abs(x - y) < 1e-9;
+
+check("moleBelief 的先驗:還在場上的真標記 ÷ 還在場上的標記(濟南 1、太原 1、共軍手上 1,其中 1 個真的 → 每個 1/3)", () => {
+  const t = cBotTodo(); if (t) return t;
+  // 開局拿了 1 真 2 假(場外 4 / 3,沒有出局的):在場上的真 = 5 − 4 − 0 = 1;在場上的標記 = 城上 2 + 手上 1 = 3。
+  const st = cBoard({ kmt: ["kunming_incident"], hand: [0, 1], at: { jinan: [true], taiyuan: [false] } });
+  const b = B.moleBelief(E.view(st, KMT)) || {};
+  const ps = [...(b.jinan || []), ...(b.taiyuan || [])];
+  return all(eq(ps.length, 2, "濟南、太原的機率個數"), ok(ps.every((p) => near(p, 1 / 3)), `每個標記的機率要是 1/3:${J(b)}`), ok(true, `濟南 ${J(b.jinan)}、太原 ${J(b.taiyuan)}`));
+});
+
+check("共軍在洩密的時機沒有翻:那座城上的標記,機率比沒有這段歷史的城(太原)低", () => {
+  const t = cBotTodo(); if (t) return t;
+  // 濟南藍 3、太原有藍,各 1 個假標記,共軍手上 1 個真的:先驗每個 1/3。共軍淮海戰役 4 點打援濟南,國軍固守,
+  // 引擎問洩密(濟南有標記),共軍答 no。國軍手上兩張牌:輪到國軍時對局停住。
+  let st = cBoard({ edits: { jinan: [0, 3] }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident", "takeover_officials"], hand: [1, 0], at: { jinan: [false], taiyuan: [false] } });
+  const before = B.moleBelief(E.view(st, KMT)) || {};
+  st = E.apply(st, { type: "play", side: CCP, card: "huaihai_campaign", use: "campaign", target: "jinan", siege: "relief" });
+  if (!(st.pending && st.pending.who === KMT)) return `打濟南之後期望國軍回應,實際 ${J(st.pending && { who: st.pending.who, kind: st.pending.kind, tag: st.pending.tag })}`;
+  st = E.apply(st, { type: "choose", side: KMT, choice: "hold" });
+  if (!(st.pending && st.pending.who === CCP && st.pending.tag === "leak")) return `國軍固守之後期望共軍的洩密問題,實際 ${J(st.pending && { who: st.pending.who, kind: st.pending.kind, tag: st.pending.tag })}`;
+  st = E.apply(st, { type: "choose", side: CCP, choice: "no" });
+  const b = B.moleBelief(E.view(st, KMT)) || {};
+  const pj = (b.jinan || [])[0], pt = (b.taiyuan || [])[0];
+  return all(
+    ok(near((before.jinan || [])[0], 1 / 3) && near((before.taiyuan || [])[0], 1 / 3), `打之前濟南、太原都要是 1/3:${J(before)}`),
+    ok(typeof pj === "number" && typeof pt === "number" && pj < pt, `濟南(問了沒翻)的機率 ${pj} 要比太原 ${pt} 低`),
+    ok(true, `之前 濟南 ${J(before.jinan)}、太原 ${J(before.taiyuan)};之後 濟南 ${pj}、太原 ${pt}`),
+  );
+});
+
+check("C 開著普通對普通:每一局都結束;每局平均不超過 20 秒;共軍佈過線,真的、假的都有", () => {
+  const t = cBotTodo(); if (t) return t;
+  const r = BC8();
+  const c = all(clean(r, "普通對普通(C)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
+  const s = r.ms / r.games / 1000, a = r.cActs;
+  return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(a.plantReal >= 1, `共軍佈真標記 ${a.plantReal} 個(${r.games} 局裡至少 1)`), ok(a.plantFake >= 1, `共軍佈假標記 ${a.plantFake} 個(至少 1)`),
+    ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};佈真 ${a.plantReal}、佈假 ${a.plantFake};每局 ${s.toFixed(1)} 秒`));
+});
+
+check("C 開著普通對普通:國軍肅過諜;共軍翻過真標記(洩密、倒戈或和平易手)", () => {
+  const t = cBotTodo(); if (t) return t;
+  const r = BC8();
+  const c = all(clean(r, "普通對普通(C)")); if (c !== true) return c;
+  const a = r.cActs, used = a.leak + a.defect + a.handover;
+  return all(ok(a.purgePlays >= 1, `國軍肅諜 ${a.purgePlays} 次(${r.games} 局裡至少 1)`), ok(used >= 1, `共軍翻真標記 ${used} 次(洩密 ${a.leak}、倒戈 ${a.defect}、和平易手 ${a.handover};至少 1)`),
+    ok(true, `肅諜 ${a.purgePlays} 次、翻了 ${a.purge} 個;洩密 ${a.leak}、倒戈 ${a.defect}、和平易手 ${a.handover}`));
 });
 
 // ---------------------------------------------------------------- verdict

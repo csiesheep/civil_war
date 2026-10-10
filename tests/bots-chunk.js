@@ -26,6 +26,8 @@ const out = {
   politics: [0, 0],
   // mechanism E (#36): the Nationalists' 印鈔 and 平抑, the Communists' 激進
   eActs: { print: 0, radical: 0, peg: 0 },
+  // mechanism C (#40): the Communists' 佈線 (markers, real / fake), 洩密, 倒戈, 和平易手; the Nationalists' 肅諜 (markers named)
+  cActs: { plantReal: 0, plantFake: 0, leak: 0, defect: 0, handover: 0, purge: 0, purgePlays: 0 },
   // mechanism B: per side, the decisions; how many carried a `game`; how many games failed the equilibrium test
   // (first few kept); what was drawn against what the mixes expected, by plan / by kind of answer; pure mixes.
   siege: { ccp: { n: 0, game: 0, bad: [], pure: 0, by: {} }, kmt: { n: 0, game: 0, bad: [], pure: 0, by: {} }, sweep: { stand: 0, withdraw: 0 } },
@@ -72,6 +74,12 @@ for (let seed = first; seed < first + count; seed++) {
         if (a.print || (ch && ch.print)) out.eActs.print++;
         if (a.radical || (ch && ch.radical)) out.eActs.radical++;
         if (a.type === "play" && a.use === "peg") out.eActs.peg++; }
+      { const pol = a.type === "play" && a.use === "politics" ? a : a.type === "choose" && a.choice && typeof a.choice === "object" && a.choice.use === "politics" ? a.choice : null;
+        if (pol && Array.isArray(pol.plant)) for (const p of pol.plant) out.cActs[p && p.real ? "plantReal" : "plantFake"]++;
+        if (pol && Array.isArray(pol.purge)) { out.cActs.purgePlays++; out.cActs.purge += pol.purge.length; }
+        if (pol && pol.handover) out.cActs.handover++;
+        if (st.pending && side === CCP && st.pending.tag === "leak" && a.type === "choose" && a.choice !== "no") out.cActs.leak++;
+        if (st.pending && side === CCP && st.pending.tag === "defect" && a.type === "choose" && a.choice === "defect") out.cActs.defect++; }
       if ((a.type === "play" && a.use === "politics") || (a.type === "choose" && a.choice && typeof a.choice === "object" && a.choice.use === "politics")) out.politics[side]++;
       const plan = planOf(a), answering = st.pending && st.pending.tag === "siege" && side === KMT;
       if (plan || answering) {
