@@ -3962,6 +3962,12 @@ section("16 機制 C:內線(佈線、洩密、倒戈、和平易手、肅諜;選
 //   - 國軍看到的(`E.view(st, 國軍)`)裡沒有任何真假:兩個盤面只差在標記的真假(數目一樣),國軍看到的要一模一樣。
 //   - 抓錯(這次肅諜翻到至少一個假的):E 開時中間派往共軍一格;E 關時民心往共軍 1。一次肅諜最多一次。
 //   - 拿標記:從場外拿;建軍軌第一次到第 4 格(不論怎麼到的)、第 4 回合開始、第 7 回合開始。國軍到第 4 格不給。
+// orchestrator 裁決(#39 第二輪,回 BE 的五個讀法):
+//   1. 洩密的「首都」是國軍當時的首都(遷都之前是南京)。
+//   2. D 開著時「國方點數」是藍加灰;倒戈先移除藍、再移除灰。
+//   3. 機制 B 關掉時沒有洩密、也沒有倒戈(沒有打點 / 打援)。
+//   4. 第 1 回合受降時東北三城有了國方點數就可以佈線(照規則,不另外限制)。
+//   5. 倒戈只在 T 還有國方點數時問;T 已經空了不問(沒東西可移除;國方點數是公開的,不問不洩漏真假)。
 const MC = { mechanismC: true };
 const C_SPEC = { markers: [5, 5], start: [1, 2], perCity: 2, defect: 2, gains: { reform4: [2, 1], turning: [1, 1], decisive: [1, 1] }, caughtFake: { centrists: 1, mandate: 1 } };
 const canon = (x) => (Array.isArray(x) ? x.map(canon) : x && typeof x === "object" ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, canon(x[k])])) : x);
@@ -4043,7 +4049,7 @@ check("肅諜:2 點牌翻 2 個;真的移出遊戲、假的回共軍手上;翻�
   const S = cRig({ kmt: ["kunming_incident", "takeover_officials"], hand: [0, 0], at: { jinan: [true], taiyuan: [false], xuzhou: [false] } });
   const a = act(S, KMT, "kunming_incident", "politics", { purge: ["jinan", "taiyuan"] });
   const b = act(S, KMT, "kunming_incident", "politics", { purge: ["jinan"] });
-  const T = cRig({ kmt: ["kunming_incident"], hand: [0, 0], at: { jinan: [true, false] } });
+  const T = cRig({ kmt: ["kunming_incident", "takeover_officials"], hand: [0, 0], at: { jinan: [true, false] } });
   const c = act(T, KMT, "kunming_incident", "politics", { purge: ["jinan", "jinan"] });
   const bare = cRig({ kmt: ["kunming_incident"], hand: [0, 0], at: { changchun: [false] } }); // 長春藍 0:標記還在,藍沒了
   const off = cRig({ kmt: ["kunming_incident"], options: {} });
@@ -4061,7 +4067,8 @@ check("肅諜:2 點牌翻 2 個;真的移出遊戲、假的回共軍手上;翻�
 
 check("肅諜抓錯,E 開著:中間派往共軍一格,民心不因此動", () => {
   const t = cTodo(); if (t) return t;
-  const S = cRig({ kmt: ["kunming_incident"], hand: [0, 0], at: { taiyuan: [false] }, options: { ...MC, mechanismE: true } });
+  // 國軍留一張牌:兩邊手上都空了,同一個 apply 會一路走到回合結算,E 的中間派結算又動民心(#39 BE 抓到的)。
+  const S = cRig({ kmt: ["kunming_incident", "takeover_officials"], hand: [0, 0], at: { taiyuan: [false] }, options: { ...MC, mechanismE: true } });
   const a = act(S, KMT, "kunming_incident", "politics", { purge: ["taiyuan"] });
   return all(eq(E.centristsOf(a) - E.centristsOf(S), 1, "中間派的變動(往共軍)"), eq(a.mandate - S.mandate, 0, "民心的變動"), ok(true, "E 開:抓錯 → 中間派親共 1,民心不動"));
 });
@@ -4092,24 +4099,29 @@ check("洩密:國軍回應之後、查表之前,T / R / 南京有標記就問;�
     eq(`${rb(viaCapital, "jinan")} ${moles(viaCapital, "nanjing")}`, "1/0 []", "南京的真標記洩密改打點:濟南 紅/藍、南京的標記"),
     eq(`${fakeT.pending && fakeT.pending.tag}`, "leak", "濟南只有假標記:共軍也被問(問了不洩漏真假)"),
     eq(thrown(() => choose(fakeT, "point:jinan")) != null, true, "濟南只有假標記,翻它沒有被拒絕"),
-    eq(none.pending && none.pending.tag === "leak", false, "T、R、南京都沒有標記:共軍被問了洩密"),
+    eq(!!(none.pending && none.pending.tag === "leak"), false, "T、R、南京都沒有標記:共軍被問了洩密"), // #39 BE:沒有待決定時原本讀成 null
     ok(true, "打援對固守 → 洩密改打點:濟南 0/3 → 1/0;南京的真標記一樣能洩密;只有假的被拒絕;沒有標記不問"),
   );
 });
 
-check("倒戈:打點在 T 移除了至少 1 點、T 有標記就問;翻真的再移除 2 點(不放紅);只有假的不能翻", () => {
+check("倒戈:打點在 T 移除了至少 1 點、T 還有國方點數、T 有標記就問;翻真的再移除 2 點(不放紅);只有假的不能翻;T 已經空了不問", () => {
   const t = cTodo(); if (t) return t;
-  // 筆記的例子:濟南藍 5,共軍 4 點打點,國軍固守:移除 4 剩 1;倒戈再移除 2 → 0(吳化文)。
-  const rig = (at) => cRig({ edits: { jinan: { b: 5 } }, ccp: ["huaihai_campaign"], kmt: ["kunming_incident"], hand: [0, 0], at });
-  const go = (S) => { let s = choose(act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "point" }), "hold"); if (s.pending && s.pending.who === CCP && s.pending.tag === "leak") s = choose(s, "no"); return s; }; // 洩密答 no,停在倒戈
+  // 筆記的例子是濟南藍 5、共軍 4 點(移除 4 剩 1,倒戈 → 0,吳化文)。那個局面只剩 1 點,移除 1、2、3 都是 0,分不出「2」
+  // (#39 BE 抓到的洞)。這裡用 2 點:濟南藍 5,高樹勛起義 2 點打點、國軍固守:移除 2 剩 3;倒戈再移除 2 → 1。
+  const rig = (at, edits = { jinan: { b: 5 } }, card = "gao_shuxun") => cRig({ edits, ccp: [card], kmt: ["kunming_incident", "takeover_officials"], hand: [0, 0], at });
+  const go = (S, card = "gao_shuxun") => { let s = choose(act(S, CCP, card, "campaign", { target: "jinan", siege: "point" }), "hold"); if (s.pending && s.pending.who === CCP && s.pending.tag === "leak") s = choose(s, "no"); return s; }; // 洩密答 no,停在倒戈
   const real = go(rig({ jinan: [true] })), fake = go(rig({ jinan: [false] }));
-  const p = pendingIs(real, CCP, "option", "打點固守移除 4 之後"); if (p !== true) return p;
+  // orchestrator 裁決(#39 第二輪):T 已經沒有國方點數時不問倒戈(沒有東西可以移除;國方點數是公開的,不問不洩漏真假)。
+  // 濟南藍 3、淮海戰役 4 點打點、國軍固守:移除 3、放 1 紅 → 1/0。
+  const empty = go(rig({ jinan: [true] }, { jinan: { b: 3 } }, "huaihai_campaign"), "huaihai_campaign");
+  const p = pendingIs(real, CCP, "option", "打點固守移除 2 之後"); if (p !== true) return p;
   const turned = choose(real, "defect"), not = choose(real, "no");
   return all(
-    eq(real.pending.tag, "defect", "共軍待決定的 tag"), same(optIds(real), ["no", "defect"], "共軍的選項"), eq(rb(real, "jinan"), "0/1", "問倒戈的時候 濟南 紅/藍"),
-    eq(`${rb(turned, "jinan")} ${moles(turned, "jinan")}`, "0/0 []", "倒戈之後 濟南 紅/藍、濟南的標記"), eq(rb(not, "jinan"), "0/1", "不倒戈 濟南 紅/藍"),
+    eq(real.pending.tag, "defect", "共軍待決定的 tag"), same(optIds(real), ["no", "defect"], "共軍的選項"), eq(rb(real, "jinan"), "0/3", "問倒戈的時候 濟南 紅/藍"),
+    eq(`${rb(turned, "jinan")} ${moles(turned, "jinan")}`, "0/1 []", "倒戈之後 濟南 紅/藍、濟南的標記"), eq(rb(not, "jinan"), "0/3", "不倒戈 濟南 紅/藍"),
     eq(fake.pending && fake.pending.tag, "defect", "濟南只有假標記:共軍也被問"), eq(thrown(() => choose(fake, "defect")) != null, true, "只有假標記,倒戈沒有被拒絕"),
-    ok(true, "濟南 5 → 打點移除 4 → 0/1 → 倒戈 0/0;不倒戈 0/1;只有假的被拒絕"),
+    eq(rb(empty, "jinan"), "1/0", "對照:濟南藍 3 被 4 點打點固守之後 紅/藍"), eq(!!(empty.pending && empty.pending.tag === "defect"), false, "濟南已經沒有國方點數:共軍被問了倒戈"),
+    ok(true, "濟南 5 → 打點移除 2 → 0/3 → 倒戈 0/1;不倒戈 0/3;只有假的被拒絕;打空了的濟南不問"),
   );
 });
 
