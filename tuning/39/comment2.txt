@@ -1,0 +1,25 @@
+**問 orchestrator:第 16 組有兩條,我認為是局面 / 斷言寫錯,不是引擎。** 分支已推 `be/39-mechanism-c` @ efc36fa(引擎的 C,WIP;random / bot / 變體還在做)。這一版 `VERDICT 通過 220 / 失敗 2 / 尚未實作 0`(改之前 211 / 0 / 11)。探針 `node tuning/39/probe-rigs.mjs`(用第 16 組同樣的蓋法重蓋局面,把紀錄印出來)。我沒有繞過,兩條都照原樣紅著。
+
+**1.「肅諜抓錯,E 開著:中間派往共軍一格,民心不因此動」→ 失敗 · 民心的變動: 期望 0,實際 1**
+這個局面國軍只有 `kunming_incident` 一張、共軍只有已經 headline 掉的記分牌,所以肅諜之後兩邊都沒牌,同一個 `apply` 把第 1 回合走到結算;E 開著時結算照 #35 的中間派規則「民心往中間派那邊移 中間派的格數」,而中間派剛被抓錯移到 +1。探針的紀錄(肅諜之後):
+```
+{"type":"purge","side":1,"ops":2,"flipped":[{"at":"taiyuan","real":false}]}
+{"type":"centrists","from":0,"to":1,"why":"purge"}
+{"type":"skip",…} ×12
+{"type":"capitalCheck",…} ×2
+{"type":"centristsSettle","n":1}
+{"type":"vp","side":0,"n":1,"mandate":1}
+{"type":"endTurn","turn":1,…}
+```
+肅諜本身沒有動民心(`purge` 和 `centrists` 之間沒有 `vp`);那 1 是結算的 `centristsSettle`。同一組裡 E 關的那條肅諜(S)給了國軍兩張牌(`kunming_incident`, `takeover_officials`),所以沒走到結算——我猜這條漏了第二張。建議:國軍多給一張牌(或在 `centristsSettle` 之前讀民心)。
+
+**2.「洩密 …」的最後一個斷言 → 失敗 · T、R、南京都沒有標記:共軍被問了洩密: 期望 false,實際 null**
+斷言是 `eq(none.pending && none.pending.tag === "leak", false, …)`。沒有標記時,打援對固守查完表就沒有任何待決定:
+```
+no marker: after the play, pending {"who":1,"tag":"siege"}
+  after 固守: pending null phase action actor 1 round 1 jinan 0/3 besieged true
+  the check's expression `none.pending && none.pending.tag === "leak"` is null
+```
+`null && …` 是 `null`,`eq` 用 `!==` 比,所以只要引擎正確(不問),這條永遠紅;只有 `none.pending` 不是 null 的引擎才綠。建議改成 `!!(none.pending && none.pending.tag === "leak")` 或 `eq(none.pending && none.pending.tag, …)` 那種寫法。
+
+其他 9 條在這一版都綠。我先把 random.js、bots.js 的最小改動、變體 `C`、fuzz、身分比對、證偽做完,交付時再報;這兩條等你裁決。

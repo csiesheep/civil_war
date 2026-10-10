@@ -1,0 +1,4 @@
+C-RANDOM games 200 / errors 0 / actions 26280 / options {"mechanismC":true,"mechanismB":false}
+moves {"handover":14,"moleGain":473,"moleGain.decisive":100,"moleGain.reform4":174,"moleGain.turning":199,"molesHome":25,"plant":1127,"plant.markers":1745,"purge":776,"purge.caught":581,"purge.flipped":1104}
+asked {"leak":0,"defect":0}
+ends {"final":46,"mandate":84,"emperor":59,"homeFall":3,"alliance":7,"tie":1}

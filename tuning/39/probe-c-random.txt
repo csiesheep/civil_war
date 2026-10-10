@@ -1,0 +1,4 @@
+C-RANDOM games 300 / errors 0 / actions 44847 / options {"mechanismC":true}
+moves {"defect":4,"handover":25,"leak":52,"leak.point->point":5,"leak.point->relief":21,"leak.relief->point":16,"leak.relief->relief":10,"moleGain":722,"moleGain.decisive":161,"moleGain.reform4":261,"moleGain.turning":300,"molesHome":40,"plant":1789,"plant.markers":2773,"purge":1255,"purge.caught":948,"purge.flipped":1772}
+asked {"leak":218,"defect":23}
+ends {"mandate":132,"emperor":84,"collapse":1,"final":63,"homeFall":6,"alliance":14}
