@@ -973,9 +973,10 @@ function cutCount(st, id) {
   return n;
 }
 // 佈線 with `ops` on `cities` (`E.moleOptions`): as many markers as the ops, the hand and the room allow; how many
-// real drawn from the hand as it is (without replacement); the real ones where a real one is worth most to the
-// Communists, the fakes where the Nationalists fear most (the capital, then the cities whose fall cuts most off,
-// then the worth of a real one there). null when nothing can go.
+// real drawn from the hand as it is (without replacement). The note: the fakes go first, where the Nationalists
+// fear most (the capital, then the cities whose fall cuts most off, then the worth of a real one there); the real
+// ones where the Communists mean to attack (a 孤城 or a city next to a space they control, the most worth first),
+// then anywhere by worth. null when nothing can go.
 function plantPayload(st, cities, ops, rng) {
   const m = st.moles, room = {};
   for (const id of cities) room[id] = E.C_SPEC.perCity - E.molesAt(st, id).length;
@@ -986,15 +987,16 @@ function plantPayload(st, cities, ops, rng) {
   const cap = E.homeCapital(st, KMT), iso = new Set(E.isolatedCities(st));
   const worth = Object.fromEntries(cities.map((id) => [id, realWorth(st, id, cap, iso)]));
   const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-  const forReal = cities.slice().sort((a, b) => worth[b] - worth[a] || byName(a, b));
+  const aim = Object.fromEntries(cities.map((id) => [id, iso.has(id) || ccpNext(st, id) ? 1 : 0]));
+  const forReal = cities.slice().sort((a, b) => aim[b] - aim[a] || worth[b] - worth[a] || byName(a, b));
   const fear = Object.fromEntries(cities.map((id) => [id, cutCount(st, id)]));
   const forFake = cities.slice().sort((a, b) => fear[b] - fear[a] || worth[b] - worth[a] || byName(a, b));
   const out = [];
   const put = (order, isReal, k) => {
     for (const id of order) while (k > 0 && room[id] > 0) { out.push({ at: id, real: isReal }); room[id]--; k--; }
   };
-  put(forReal, true, real);
   put(forFake, false, n - real);
+  put(forReal, true, real);
   return out.length ? out : null;
 }
 // C's 政工 as candidates for `side` with `ops` (`mo`: `E.moleOptions` or `legal().cards[].uses.moles`), as
