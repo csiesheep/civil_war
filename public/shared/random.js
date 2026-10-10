@@ -26,6 +26,13 @@
 // 還鄉團 (tag "returnHome") is a pending points choice like any other. None of these keys exists without
 // the option, so a game without it draws exactly what it drew.
 //
+// Mechanism C (#39, option `mechanismC`): 佈線, 和平易手 and 肅諜 are three more 政工 candidates of a card
+// (`legal().cards[].uses.moles`, its lists from `E.moleOptions`; an ops ask's "politics" reads the same):
+// 佈線 1 to min(X, the hand) markers, each on a city with room, real or fake at random within the hand;
+// 肅諜 1 to X markers (a city as often as it has markers), printed too for the Nationalists; 和平易手 one
+// of the cities offered. 洩密 / 倒戈 (tags "leak" / "defect") draw among "no" and the choices whose place
+// has a real marker. None of these keys exists without the option, so nothing more is drawn then.
+//
 // It reads the whole state (the opponent's hand included); playing from a
 // per-seat `view()` is M2's. Its only source of chance is the `rng` it is
 // given (`E.makeRng`'s, with `int(n)`), so a game of random players is fixed
@@ -82,17 +89,58 @@ export function randomOps(st, side, ops, allowed, rng, card) {
   const has = { place: o.placeOptions.length > 0, campaign: o.campaignTargets.length > 0, lobby: o.lobbyTargets.length > 0 };
   // Mechanism D (#31): 政工 is offered only when the ops ask allows it (never without the option).
   const pol = allowed.includes("politics") ? E.politicsOptions(st, side, ops) : [];
-  if (pol.length) has.politics = true;
+  // Mechanism C (#39): its three 政工 too, one candidate each (empty lists without the option).
+  const cands = pol.map((t) => () => politicsPayload(side, t));
+  if (allowed.includes("politics")) cands.push(...moleCandidates(st, E.moleOptions(st, side, ops), ops, rng));
+  if (cands.length) has.politics = true;
   const uses = allowed.filter((u) => has[u]);
   if (!uses.length) return null;
   const use = pickOne(uses, rng);
   if (use === "place") return { use, points: randomPoints(st, side, ops, rng, card) };
   if (use === "campaign") return { use, ...attack(st, side, o.campaignTargets, rng) };
-  if (use === "politics") return { use, ...politicsPayload(side, pickOne(pol, rng)) };
+  if (use === "politics") return { use, ...pickOne(cands, rng)() };
   return { use, target: pickOne(o.lobbyTargets, rng).id };
 }
 // 政工's payload (#31): the Nationalists name a space (整編), the Communists a power (統戰).
 const politicsPayload = (side, id) => (side === E.KMT ? { target: id } : { power: id });
+
+// Mechanism C (#39): 佈線 of 1 to min(X, the hand) markers on `cities` (each with room left), real or fake at
+// random as the hand allows.
+function plantPayload(st, cities, ops, rng) {
+  const hand = E.moleHand(st), out = [], count = {};
+  const n = 1 + rng.int(Math.min(ops, hand[0] + hand[1]));
+  for (let i = 0; i < n && hand[0] + hand[1] > 0; i++) {
+    const open = cities.filter((id) => E.molesAt(st, id).length + (count[id] || 0) < E.C_SPEC.perCity);
+    if (!open.length) break;
+    const at = pickOne(open, rng);
+    const real = hand[0] > 0 && hand[1] > 0 ? rng.int(2) === 0 : hand[0] > 0;
+    hand[real ? 0 : 1]--; count[at] = (count[at] || 0) + 1;
+    out.push({ at, real });
+  }
+  return out;
+}
+// 肅諜 of 1 to X markers on `cities`, a city named as often as it has markers at most.
+function purgePayload(st, cities, ops, rng) {
+  const count = {}, out = [];
+  const total = cities.reduce((t, id) => t + E.molesAt(st, id).length, 0);
+  const n = 1 + rng.int(Math.min(ops, total));
+  for (let i = 0; i < n; i++) {
+    const open = cities.filter((id) => (count[id] || 0) < E.molesAt(st, id).length);
+    if (!open.length) break;
+    const id = pickOne(open, rng);
+    count[id] = (count[id] || 0) + 1;
+    out.push(id);
+  }
+  return out;
+}
+// The payloads C's 政工 may take with these lists (`E.moleOptions`), as thunks: none without the option.
+function moleCandidates(st, mo, ops, rng) {
+  const out = [];
+  if (mo.plant.length) out.push(() => ({ plant: plantPayload(st, mo.plant, ops, rng) }));
+  if (mo.handover.length) out.push(() => ({ handover: pickOne(mo.handover, rng) }));
+  if (mo.purge.length) out.push(() => ({ purge: purgePayload(st, mo.purge, ops, rng) }));
+  return out;
+}
 
 // An answer to the pending decision `p`, whatever its kind.
 export function randomChoice(st, p, rng) {
@@ -117,7 +165,14 @@ export function randomChoice(st, p, rng) {
       while (out.length < n && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
       return out;
     }
-    case "option": return pickOne(p.options, rng).id;
+    case "option": {
+      // Mechanism C (#39): 洩密 / 倒戈 may turn up a real marker only; "no" is always there.
+      if (p.tag === "leak" || p.tag === "defect") {
+        const real = (o) => o.id === "no" || E.molesAt(st, p.tag === "leak" ? o.id.split(":")[1] : p.target).includes(true);
+        return pickOne(p.options.filter(real), rng).id;
+      }
+      return pickOne(p.options, rng).id;
+    }
     case "ops": {
       // Mechanism E (#35): the ask says whether these ops may be printed (`canPrint`) and where a
       // 激進 may go (`radical`); either is taken half the time it is possible. Neither key exists
@@ -170,6 +225,8 @@ export function randomAction(st, side, rng) {
         if (u.lobby) opts.push(ordered("lobby", () => ({ target: pickOne(u.lobby.targets, rng).id })));
         // 政工 (#31): `uses.politics` exists only under mechanism D.
         if (u.politics) opts.push(ordered("politics", () => politicsPayload(side, pickOne(u.politics.targets, rng))));
+        // Mechanism C (#39): 佈線 / 和平易手 / 肅諜 (`uses.moles` exists only under the option), each one candidate.
+        if (u.moles) for (const make of moleCandidates(st, u.moles, u.moles.ops, rng)) opts.push(ordered("politics", make));
         // 馬歇爾調處: the pair's ops, on the same targets as any card's (`legal` read them without a card).
         if (u.pair && u.pair.length && (u.place || u.campaign || u.lobby)) opts.push(() => {
           const pair = pickOne(u.pair, rng);
@@ -192,6 +249,8 @@ export function randomAction(st, side, rng) {
             const { use, ...rest } = randomOps(st, side, E.opsOf(st, side, pair) + E.eSpecOf(st).print, ["place", "campaign"], rng);
             return play(use, { pair, ...rest, print: true });
           });
+          // Mechanism C (#39): a printed 肅諜 (X + the print).
+          if (u.moles && u.moles.purge.length) opts.push(() => play("politics", { ...(u.enemy ? { order: "opsFirst" } : {}), purge: purgePayload(st, u.moles.purge, u.moles.ops + E.eSpecOf(st).print, rng), print: true }));
         }
         // 激進土改: a 扶植 whose first point is a village of `L.radical` it can reach.
         if (u.place && L.radical && L.radical.length) {

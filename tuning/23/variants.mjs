@@ -30,6 +30,10 @@ export const VARIANTS = {
     why: "#38 之前的 E(owner 採用 #37 的數字之前),拿來和 #35 / #36 / #37 的模擬比對",
     options: { mechanismE: true, ePrintOps: 2, ePrintPerTurn: null, eInflation: [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }] },
   },
+  // #39: mechanism C (內線, #39, not a default) on. The bots do not play C yet (#39 only keeps them from
+  // crashing: 洩密 / 倒戈 "no", no 佈線, no 肅諜), so this measures the engine with C on, not C's balance.
+  // (A plain name, not the `C…` combinations named at the head of this file.)
+  C: { what: "機制 C(內線:佈線、洩密、倒戈、和平易手、肅諜)開著", why: "M2b 第 4 批(#39 引擎;bot 還不會用 C)", options: { mechanismC: true } },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {

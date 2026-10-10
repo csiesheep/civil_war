@@ -727,6 +727,18 @@ export function determinize(view, side, rng) {
   if (st.headline[opp] === "hidden") st.headline[opp] = pool.shift() ?? null;
   // #26: the Communists' face-down plan for an attack on a city (`view` hides it until the answer).
   for (const p of st.plan) if (p.do === "siege" && p.plan == null) p.plan = pickOne(E.SIEGE_PLANS, rng);
+  // #39, mechanism C: markers whose truth the view hides get one at random, as many real as the public count
+  // leaves in play (5 − the pool − the ones turned up), so the engine can play the position out.
+  if (st.moles && st.moles.hand == null) {
+    const m = st.moles, slots = [];
+    for (const [id, l] of Object.entries(m.at)) l.forEach((_, i) => slots.push([id, i]));
+    const n = slots.length + (m.handCount || 0), reals = Math.max(0, Math.min(n, E.C_SPEC.markers[0] - m.pool[0] - m.out));
+    const truth = E.shuffle(rng, Array.from({ length: n }, (_, i) => i < reals));
+    slots.forEach(([id, i], k) => { m.at[id][i] = truth[k]; });
+    const inHand = truth.slice(slots.length);
+    m.hand = [inHand.filter((x) => x).length, inHand.filter((x) => !x).length];
+    delete m.handCount;
+  }
   st.draw = pool;
   st.rngState = rng.int(2 ** 31);
   delete st.handCounts; delete st.drawCount; delete st.laterCounts; delete st.homeCapitals;
@@ -1069,7 +1081,9 @@ export function answer(st, p, who, rng) {
     case "points": return p.tag === "withdraw" ? withdrawPoints(st, p) : bestPoints(st, p, who, rng);
     case "card": return bestOf(st, who, cardSets(p), rng);
     // 收手 (realign-own): go on while the next attempt gains on average.
-    case "option": if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
+    // Mechanism C (#39): the bots do not turn markers up yet (the next issue): 洩密 / 倒戈 are "no".
+    case "option": if (p.tag === "leak" || p.tag === "defect") return "no";
+      if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
       return bestOf(st, who, p.options.map((o) => o.id), rng);
     case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card, null, p);
     default: throw new Error(`answer: ${p.kind}`);

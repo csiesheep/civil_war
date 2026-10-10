@@ -1,0 +1,125 @@
+#39 機制 C(內線)做進引擎,選項 mechanismC(預設關)—— BE 報告
+==============================================================
+
+〇、第二輪(orchestrator 回覆 #39 issuecomment-6099638544;驗收 orch/39-acceptance @ 1d2d641)
+-----------------------------------------------------------------------------------------
+- 分支 rebase 到 1d2d641(第 16 組的兩條局面已改、倒戈改成 2 點牌 5 → 3 → 倒戈 → 1,讀法 1–4 照舊、讀法 5 改)。
+- 讀法 5(orchestrator 裁決 #39):T 已經沒有國方點數時不問倒戈。siegeStep 的倒戈條件加 `pointsOf(st, KMT, T) > 0`。
+  先紅:rebase 之後、改之前 VERDICT 221 / 1 / 0,唯一的紅「濟南已經沒有國方點數:共軍被問了倒戈: 期望 false,實際 true」;
+  改之後 222 / 0 / 0。探針 (a2) 現在是「待決定 none」。
+- 六行判決(e963b19):VERDICT 222 / 0 / 0 · BOTS-VERDICT 33 / 0 / 0 · FUZZ 2000 / 2000 / 0、重播 200 不一致 0、動作 298709 ·
+  FUZZ-CELLS 9 個 / 有問題 0 · SIM 7 / 0 / 0 · ART 14 / 0 / 0。
+- 選項關:先紅 default vs E → DIFFER sum.aheadByTurn.1.ccp: 176 vs 168(exit 1);e963b19 上 seed 1 × 1000
+  (tuning/39/runs/default-s1-1000-r2.txt)vs tuning/38/runs/default-s1-1000 → SAME 270 葉 sum、60 葉 more、errors 0。
+- C 開 50 局(tuning/39/runs/C-s1-50-r2.txt):全部結束、錯誤 0,數字和第一輪一樣(共 34 國 16,民心 27、整編 8、終局 6、
+  統一 4、帝制 2、遷都 2、平手 1)。隨機對局 C 300 / C+D+E 300 / C+D 300 / C 加 B 關 200:錯誤 0。
+- 證偽 (c) 重做:倒戈移除 3 點 → 現在紅:「倒戈之後 濟南 紅/藍、濟南的標記: 期望 "0/1 []",實際 "0/0 []"」(VERDICT 221 / 1 / 0)。
+  第五節 (c) 的「沒有紅」是第一輪 067d629 上的讀數。
+- 以下第一到八節是第一輪的報告,沒有改寫;第二節的 220 / 2 和第七節的讀法 5 已被這一節取代。
+
+分支 be/39-mechanism-c(從 origin/orch/39-acceptance 067d629 開)。RULES_VERSION "2026-10-08-2" → "2026-10-10"
+(「新選項 mechanismC,預設不變」)。出處:owner 裁決 #39(2026-10-10,原文「固定的來源,做成選項(建議)」)、筆記 C 節
+(第 16 組開頭手抄)、orchestrator 裁決 #39(介面,第 16 組開頭的註解)。設計與新 id 在 issue 的第一則留言。
+
+一、改了什麼
+----------
+public/shared/engine.js
+- C_SPEC(就是介面的鍵);`st.moles = { hand, pool, out, at, reform4 }`,只有選項開著才有(關掉時狀態不多一個鍵)。
+- 讀數 molesAt / moleHand / molePool;擺局面 setMoles / setMoleHand;moleOptions(legal 與隨機玩家用)。
+- 佈線 / 和平易手 / 肅諜 = `use: "politics"` 的 plant / handover / purge(molePolitics、moleRefusal);和 D 的
+  target / power 用鍵分辨,兩個一起寫被拒絕;doOps、play 的 payload、ops ask 的 allowed 都只在 C 開時多讀。
+- ops ask 的「politics」用 moleOpen 判斷,不讀真假(ask 在國軍的 view 裡);legal().cards[].uses.moles 看真假
+  (只給出手的一方算)。
+- 洩密:siegeStep 在國軍回答之後多一個 stage "leak"(T、R、國軍首都有任何標記就問),之後才是 D 的 grayOrder 判斷
+  與查表(siegeAnswered 是原本那兩行搬出來)。倒戈:查表、−1 / +1 之後多一個 stage "defect"(現在的計畫是打點、
+  這次在 T 移除 ≥ 1、先收回被控制城上的標記、T 還有標記)。假標記在 validateChoice 被拒絕。
+- 標記收回:molesHome 在 checkMarkers 的最後(D 的易幟在 checkMarkers 裡把灰變紅,所以要在它之後;第一版放在開頭,
+  隨機對局 D+C 第 35 局抓到「太原被共軍控制、上面還有標記」,搬到最後之後 300 局乾淨)。
+- 拿標記:startTurn 第 4、7 回合(在民心勝利的開頭判定之後);reformAdvance 共軍第一次到第 4 格。
+- view:國軍與觀眾看到 `moles = { hand: null, handCount, pool, out, at: { 城: [null…] }, reform4 }`,plan 裡佈線
+  payload / choices 的 real 拿掉;遊戲結束後 final 多一個 moles。
+public/shared/random.js:佈線、和平易手、肅諜(含印鈔的肅諜)各一個候選;ops ask 的 politics 也會選 C;洩密 / 倒戈
+  在 "no" 和有真標記的選項之間挑。C 關時一個亂數都不多抽(fuzz 動作數照舊)。
+public/shared/bots.js(最小改動):洩密 / 倒戈一律 "no";determinize 在國軍看不到真假時按公開的總數隨機分配真假
+  (不分配的話模擬裡的狀態不是一個合法的盤面)。bot 不佈線、不肅諜、不和平易手。
+tuning/23/variants.mjs:變體 `C` = { mechanismC: true }。tests/sim.js 沒有動。
+
+二、判決
+-------
+- VERDICT 通過 220 / 失敗 2 / 尚未實作 0(改之前 211 / 0 / 11)。紅的兩條我認為是第 16 組的局面 / 斷言寫錯,已在 issue
+  問(留言 2,附探針 tuning/39/probe-rigs.mjs 的輸出),沒有繞過:
+    失敗 · … · 肅諜抓錯,E 開著:… · 民心的變動: 期望 0,實際 1
+      (國軍只有一張牌,肅諜之後兩邊都沒牌,同一個 apply 走到結算,E 的 centristsSettle 把民心移 1)
+    失敗 · … · 洩密:… · T、R、南京都沒有標記:共軍被問了洩密: 期望 false,實際 null
+      (`none.pending && …` 在沒有待決定時是 null,eq 用 !== 比;正確的引擎永遠紅)
+- BOTS-VERDICT 通過 33 / 失敗 0 / 尚未實作 0
+- FUZZ-VERDICT 局數 2000 / 結束 2000 / 報錯或卡住 0 / 重播 200 局、不一致 0 / 動作 298709
+- FUZZ-CELLS-VERDICT 控制組 9 個 / 有問題的 0 個 / 每個 300 局(含「C 機制 C 開」)
+- SIM-VERDICT 通過 7 / 失敗 0 / 尚未實作 0
+- ART-VERDICT 通過 14 / 失敗 0 / 尚未實作 0
+
+三、選項關掉時不變(第三節)
+------------------------
+- fuzz 動作數 298709(上面)。
+- 先紅:tuning/37/same.mjs tuning/38/runs/default-s1-1000 vs tuning/38/runs/E-s1-1000 → DIFFER sum.aheadByTurn.1.ccp: 176 vs 168(exit 1)。
+- 比對:node tests/sim.js 1000 --cell=full --seed=1 --jobs=24 → tuning/39/runs/default-s1-1000.txt(引擎、random、bots 是交付的
+  樣子,只差 RULES_VERSION 還沒升)vs tuning/38/runs/default-s1-1000.txt.state.json:
+    tuning/37/same.mjs → SAME games 1000: 270 leaves of sum (union of keys), errors 0; more: 60 leaves(exit 0)
+    tuning/28/same.mjs → SAME games 1000: 270 columns of sum, errors 0, 60 columns of more(exit 0)
+  升版之後在 0861cca 上(--jobs=28)再跑一次 → tuning/39/runs/default-s1-1000-final.txt:
+    tuning/37/same.mjs → SAME games 1000: 270 leaves of sum (union of keys), errors 0; more: 60 leaves(exit 0)
+
+四、C 開著
+---------
+(1) bot 普通對普通,變體 C,--seed=1,50 局(node tests/sim.js 50 --cell=full --variant=C --seed=1 --chunk=2 --jobs=25):
+    50 局全部結束,錯誤 0。共軍勝 34、國軍勝 16。結束方式:民心 27、整編(alliance)8、統一(unification)4、遷都 2、
+    帝制(emperor)2、終局記分 6、平手 1。結束的回合:第 5 回合 2、第 6 回合 7、第 7 回合 15、第 8 回合 26。
+    這不是 C 的平衡:bot 不佈線,標記只在共軍手上;和預設比的差別來自 determinize 多抽的亂數。
+(2) 隨機對局(tuning/39/probe-c-random.mjs,每一步檢查:標記總數守恆 5 / 5、共軍控制的城上沒有標記、國軍與觀眾的 view
+    沒有真假,也沒有 "real" 出現在 purge 紀錄以外的地方):
+    C          300 局 錯誤 0 動作 44847:佈線 1789 次(2773 個)、肅諜 1255 次(翻 1772 個,抓錯 948 次)、和平易手 25、
+               洩密被問 218 次、翻了 52(打點→打點 5、打點→打援 21、打援→打點 16、打援→打援 10)、倒戈被問 23 次、翻了 4、
+               收回 40 次、拿標記 722(第 4 格 261、易勢期 300、決戰期 161)
+    C+D        300 局 錯誤 0;C+D+E 300 局 錯誤 0;C 加 B 關 200 局 錯誤 0(洩密 / 倒戈 0 次,照第一則留言的讀法 3)
+    (第一版的 C+D+E 200 局有 1 個錯:第 35 局,D 的易幟在 checkMarkers 裡把太原的灰變紅,標記沒收回。已修,見第一節。)
+
+五、證偽(§五 1;一次一個,各自 git checkout 還原、git status 乾淨、engine.js 裡 FALSIFY 0 處)
+------------------------------------------------------------------------------------
+期望值是第 16 組的(orchestrator 從筆記手抄),不是從引擎讀的。下面每一個都另外還有上面那兩條原本就紅的。
+(a) view 把真假帶出去(`at` 的 `l.map(() => null)` → `l.slice()`):VERDICT 219 / 3 / 0
+    失敗 · … · 國軍看到的(濟南真、手上 0/2)和(濟南假、手上 1/1)一樣: 期望 true,實際 false
+(a') 紀錄把真假帶出去(plant 紀錄多一個 real 陣列):VERDICT 219 / 3 / 0
+    失敗 · … · 國軍看到的(徐州佈真)和(徐州佈假)一樣(紀錄也不能洩漏): 期望 true,實際 false
+(b) 洩密只在有真標記時才問(leakCities 的 `.length` → `.includes(true)`):VERDICT 220 / 2 / 0
+    失敗 · 洩密:… · 濟南只有假標記:共軍也被問(問了不洩漏真假): 期望 "leak",實際 "null"
+    (同一條原本紅在最後一個斷言,這次紅在前面這一個,所以總數沒有變;讀的是理由。)
+(c) 倒戈移除 3 點(C_SPEC.defect + 1):VERDICT 220 / 2 / 0 —— 沒有紅。倒戈移除 1 點:一樣沒有紅。
+    原因:局面是濟南藍 5、打點 4 移除 4 之後只剩 1,倒戈不管移除 1、2、3 都是 0/0。這條只分得出「0 點」和「≥ 1 點」;
+    常數那一條擋得住改 C_SPEC.defect,擋不住另一條程式路徑用錯數字。已回報(harness 的洞,我沒改 tests/)。
+    倒戈放 1 紅:VERDICT 219 / 3 / 0
+    失敗 · 倒戈:… · 倒戈之後 濟南 紅/藍、濟南的標記: 期望 "0/0 []",實際 "1/0 []"
+(d) 第 7 回合不給標記(C_GAIN_TURNS 拿掉 7):VERDICT 219 / 3 / 0
+    失敗 · 拿標記:… · 第 7 回合開始共軍手上(這次只走了第 7 回合): 期望 "[2,3]",實際 "[1,2]"
+
+六、驗收沒寫到的情況(§五 2;tuning/39/probe-uncovered.mjs,輸出在 probe-uncovered.txt)
+-------------------------------------------------------------------------------
+(a)  濟南藍 1 上有 [真, 假],打點 4 對固守:先問洩密(答 no);濟南 3/0 被共軍控制,兩個都回手 [1,1],不問倒戈。
+(a2) 同樣但藍 2:濟南 2/0 沒人控制,標記還在,**倒戈照樣被問,但 T 已經沒有藍可移**(介面只說「移除 ≥ 1、有標記就問」)。
+(b)  洩密和倒戈同一場:濟南藍 5 [真, 真],打援 → 固守 → 洩密改打點(翻一個)→ 打點移除 4 → 0/1 → 倒戈(翻另一個)→ 0/0。
+     紀錄 leak(plan point)、siegeResult(removed 4)、defect(removed 1);出局的真 2。
+(c)  D 和 C 同時開:佈線放在太原(藍 1 灰 2)可以;plant 和 power 一起寫被拒絕(「政工: one of plant, handover, purge」);
+     legal 的 uses.politics(統戰)和 uses.moles 分開列;國軍肅諜太原、整編太原都照常。
+(d)  肅諜只寫一次 [真, 假] 的城:400 個種子裡翻到真的 211 次(引擎的亂數,國軍分不出來)。
+(e)  B 關:沒有圍點打援,洩密 / 倒戈從不問;奇襲拿下濟南,標記回手。
+
+七、要 orchestrator 裁決的讀法(第一則留言,照括號裡做;都是一兩行)
+------------------------------------------------------------
+1 洩密的「南京」:用國軍的首都(homeCapital),遷都之前就是南京。2 D 開時「藍」「國方點數」算藍 + 灰;倒戈先移藍再移灰。
+3 B 關時沒有洩密、倒戈。4 受降時的東北三城可以佈線。5(新)上面 (a2):T 已經沒有國方點數時仍問倒戈。
+
+八、沒有驗到的
+------------
+- 第 16 組那兩條在我的分支上是紅的;等 orchestrator 改局面 / 斷言之後,我沒有在改過的驗收上跑過。
+- C 的平衡:bot 不會用 C,變體 C 的 50 局量的是「開著不當掉」,不是 C 好不好玩。
+- 畫面:沒有任何 FE 改動;國軍的 view 換了 moles 的形狀(hand: null),前端還沒有讀它。
+- 倒戈的「2 點」只有常數那一條擋著(第五節 c)。

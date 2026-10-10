@@ -1,0 +1,28 @@
+BE 開工(be/39-mechanism-c,從 orch/39-acceptance 067d629)。設計與新 id;寫完就繼續做,不等回覆。
+
+**狀態放哪裡**:`st.moles = { hand: [真, 假], pool: [真, 假], out: n(翻開出局的真標記數), at: { <城>: [true, false, …] }, reform4: bool(共軍建軍軌第 4 格給過了沒) }`。只有 `mechanismC` 開著時才有這個鍵(關掉時狀態一個位元組都不多)。沒有標記的城不留鍵。
+
+**view 怎麼藏真假**:`E.view(st, side)` 在 side 不是共軍時(國軍、觀眾)把 `moles` 換成 `{ hand: null, handCount: n, pool, out, at: { <城>: [null, …] }, reform4 }`——每城的數目還在、真假變成 null;手上只有總數。`plan` 裡還留著的佈線 payload / choices 的 `real` 也拿掉。紀錄裡本來就不寫真假:佈線只記 `{ type: "plant", at: [城…] }`;翻開(洩密、倒戈、和平易手、肅諜)的真假本來就是公開的,照記。動作清單 `actions` 本來就不在 view 裡。遊戲結束後 `final` 照舊。
+另外一個管道:**ops 的 ask(`pending.allowed`)不讀真假**——共軍的「politics」只要「手上有標記且有城可佈」或「有孤城上有標記(不論真假)且 X ≥ 那裡的國方點數」就列出;否則國軍從對手 pending 的 `allowed` 讀得出孤城上有沒有真的。`legal(st, 共軍)` 只給共軍自己算,裡面的和平易手清單看真假(`uses.moles`)。
+
+**洩密 / 倒戈插在 B 的哪一步**(`siegeStep`):
+- `respond`(國軍回答)→ **新 stage `leak`**(T、R、國軍首都上有標記就問共軍,tag "leak";選了 `point:<城>` / `relief:<城>` 就翻那城的一個真標記、出局、`step.plan` 換成新的)→ 原本的 D `grayOrder` 判斷(在洩密之後,因為要不要問順序跟打點 / 打援有關)→ 查表(`siegeResolve`)→ `siegeLoss` / `siegeCapture` → **新 stage `defect`**(現在的計畫是打點、這次在 T 移除了 ≥ 1、先把被共軍控制的城上的標記收回、T 上還有標記就問,tag "defect";翻真的 → 再移除 T 的 2 點)→ `attackEnd`(民生、標記檢查、停戰)。
+- 「標記所在的城被共軍控制時收回」:放在 `checkMarkers` 開頭(`molesHome`,C 開著才跑),所有改變盤面的地方本來就會呼叫它。
+- 拒絕假標記:在 `validateChoice` 的 option 那一格(tag leak / defect 且不是 "no" → 那城 / T 上沒有真標記就丟錯),跟其他拒絕一樣整個動作不收。
+
+**隨機玩家怎麼玩 C**(`random.js`,只在 C 開著時多抽,所以 C 關的 fuzz 抽到的一樣):`legal().cards[].uses.moles`(C 開時才有)= `{ ops, plant: [城], handover: [城], purge: [城] }`,每一種有目標就多一個候選:佈線(1..min(X, 手上總數) 個、城與真假都在可行的範圍內隨機)、和平易手(在 `handover` 裡挑一個)、肅諜(1..X 個,同城可重複到那裡的標記數);國軍印鈔也可以帶肅諜(X+1)。ops ask 的 `politics` 讀 `E.moleOptions` 自己算。洩密 / 倒戈:在「no」和「有真標記的選項」之間隨機挑。bots.js:洩密 / 倒戈一律 "no";`determinize` 在國軍看不到真假時,按公開的總數(5 − 場外 − 出局 = 手上加城上的真)隨機分配真假,模擬才跑得動。bot 不佈線不肅諜(下一張)。
+
+**新 id**
+- 選項鍵:`mechanismC`(不進 DEFAULT_OPTIONS)
+- 狀態鍵:`st.moles`(子鍵 hand、pool、out、at、reform4);view 的 `moles.handCount`
+- 匯出:`C_SPEC`、`molesAt`、`moleHand`、`molePool`、`setMoles`、`setMoleHand`、`moleOptions`
+- pending tag:`leak`、`defect`;siege step 的 stage `leak`、`defect`
+- 動作 payload 鍵:`plant`、`handover`、`purge`(`use: "politics"`);`legal()` 的 `uses.moles`
+- 紀錄 type:`plant`、`purge`、`leak`、`defect`、`handover`、`molesHome`、`moleGain`
+- 變體:`C`(tuning/23/variants.mjs);資料夾 `tuning/39/`
+
+**要 orchestrator 裁決的讀法(先照括號裡的做,一行就能改)**
+1. 洩密的「南京」:筆記寫「國軍的首都」,第二節寫「南京」。首都遷走(`homeFall: "move"`)之後兩者不同。(先用 `homeCapital(st, 國軍)`——遷都之前就是南京,第 16 組量到的都一樣。)
+2. D 和 C 同時開:「國方點數」「藍」算不算灰。(先照 B 在 D 底下的讀法:佈線 / 肅諜要「藍 + 灰 > 0」;和平易手 X ≥ 藍 + 灰、兩種都移除;倒戈的 2 點先移藍再移灰,不問順序。)
+3. 機制 B 關掉時(`mechanismB: false`)沒有「打點」:倒戈不會被問;洩密也沒有(沒有圍點打援)。佈線、肅諜、和平易手照常。
+4. 受降(第 1 回合)東北三城:筆記沒說,(先不禁止佈線)。
