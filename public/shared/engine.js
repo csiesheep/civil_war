@@ -708,6 +708,200 @@ function pegPlay(st, side, c, bogCards) {
   st.plan.unshift({ do: "endAction" });
   return run(st);
 }
+// #39, mechanism C (內線; owner's mechanisms note C, hand-copied in tests/acceptance.test.js group 16, with owner
+// 裁決 #39 「固定的來源,做成選項(建議)」 and orchestrator 裁決 #39, the interface), the option `mechanismC`.
+// NOT a key of DEFAULT_OPTIONS: an absent or false option plays as before C, byte for byte -- the state has no
+// `moles` then, nothing below runs and no random number is drawn for it.
+//   - 10 markers, 5 real 5 fake (`C_SPEC.markers`). The Communists hold 1 real 2 fake at the start; the rest wait
+//     off the board (`pool`) and come from it at the first time their 建軍軌 reaches box 4 (2 real 1 fake), at
+//     the start of turn 4 (易勢期) and of turn 7 (決戰期) (1 real 1 fake each) (`moleGain`). No event gives any.
+//   - 佈線 (`use: "politics"`, `plant: [{ at, real }]`, the Communists): at most X markers, each on a city with
+//     Nationalist points (blue + gray), at most `perCity` (2) on a city, not bound by adjacency.
+//   - 和平易手 (`handover: <city>`, the Communists): a 孤城 with a real marker, X ≥ its Nationalist points: they
+//     all go, the real marker leaves the game, 1 red goes in.
+//   - 肅諜 (`purge: [<city>, …]`, the Nationalists): at most X markers on cities with Nationalist points (a city
+//     named twice: two of its markers; one of two: the engine's dice say which). A real one leaves the game, a
+//     fake one goes back to the Communists' hand; any fake (抓錯) moves the centrists a step toward the
+//     Communists under E, else 民心 1 toward them; once a 肅諜.
+//   - 洩密 (pending tag "leak") and 倒戈 (tag "defect"): steps of B's 圍點打援 (`siegeStep`). Asked whenever the
+//     place has a marker, real or not, so the question shows nothing; a choice naming a place with no real
+//     marker is refused (`validateChoice`).
+//   - A city the Communists control sends its markers back to their hand (`molesHome`, read by `checkMarkers`).
+//   - The Nationalists (and a spectator) see how many markers each city and the hand hold, never which are
+//     real (`view`). The log never says what a marker planted is.
+// The state: `st.moles` = { hand: [real, fake], pool: [real, fake], out (real markers revealed, out of the
+// game), at: { <city>: [true, false, …] } (no key for a city with none), reform4 (box 4's gain is given) }.
+export const C_SPEC = { markers: [5, 5], start: [1, 2], perCity: 2, defect: 2, gains: { reform4: [2, 1], turning: [1, 1], decisive: [1, 1] }, caughtFake: { centrists: 1, mandate: 1 } };
+const mechC = (st) => !!(st.options && st.options.mechanismC);
+const C_GAIN_TURNS = { 4: "turning", 7: "decisive" };
+function newMoles() {
+  return { hand: C_SPEC.start.slice(), pool: [0, 1].map((i) => C_SPEC.markers[i] - C_SPEC.start[i]), out: 0, at: {}, reform4: false };
+}
+// The markers on `id` (true = real; null = not known to this view), [] for none.
+export function molesAt(st, id) { return st.moles && st.moles.at[id] ? st.moles.at[id].slice() : []; }
+// The Communists' hand of markers, [real, fake]; null in a view that may not see it; [0, 0] without the option.
+export function moleHand(st) { return st.moles ? (st.moles.hand ? st.moles.hand.slice() : null) : [0, 0]; }
+// The markers not yet come into the game, [real, fake].
+export function molePool(st) { return st.moles ? st.moles.pool.slice() : [0, 0]; }
+function moleHandCount(m) { return m.hand ? m.hand[0] + m.hand[1] : m.handCount || 0; }
+// For laying out a position (the acceptance rigs, the tutorial): no rule is read, the pool is left as it is.
+export function setMoles(st, id, list) {
+  if (!mechC(st) || !st.moles) fail("setMoles: mechanism C is off");
+  if (!SPACE[id] || SPACE[id].kind !== "city") fail(`setMoles: ${id} is not a city`);
+  if (!Array.isArray(list) || list.length > C_SPEC.perCity || list.some((x) => typeof x !== "boolean")) fail(`setMoles: ${JSON.stringify(list)}`);
+  if (list.length) st.moles.at[id] = list.slice(); else delete st.moles.at[id];
+}
+export function setMoleHand(st, hand) {
+  if (!mechC(st) || !st.moles) fail("setMoleHand: mechanism C is off");
+  if (!Array.isArray(hand) || hand.length !== 2 || hand.some((n) => !Number.isInteger(n) || n < 0)) fail(`setMoleHand: ${JSON.stringify(hand)}`);
+  st.moles.hand = hand.slice();
+}
+// A gain from the pool (`C_SPEC.gains[why]`), as much of it as is left there.
+function moleGain(st, why) {
+  const m = st.moles, g = C_SPEC.gains[why], n = [0, 1].map((i) => Math.min(g[i], m.pool[i]));
+  for (const i of [0, 1]) { m.pool[i] -= n[i]; m.hand[i] += n[i]; }
+  log(st, { type: "moleGain", why, n });
+}
+// Markers on a city the Communists control go back to their hand (the note, rule 3).
+function molesHome(st) {
+  const m = st.moles;
+  for (const id of Object.keys(m.at)) {
+    if (controller(st, id) !== CCP) continue;
+    const list = m.at[id];
+    delete m.at[id];
+    if (m.hand) for (const real of list) m.hand[real ? 0 : 1]++;
+    else m.handCount = (m.handCount || 0) + list.length;
+    log(st, { type: "molesHome", space: id, n: list.length });
+  }
+}
+// One real marker at `id` is turned up and leaves the game.
+function revealReal(st, id) {
+  const m = st.moles, list = m.at[id];
+  list.splice(list.indexOf(true), 1);
+  if (!list.length) delete m.at[id];
+  m.out++;
+}
+const cityWithKmt = (st, id) => !!SPACE[id] && SPACE[id].kind === "city" && pointsOf(st, KMT, id) > 0;
+// Which of C's 政工 a choice names ("plant" | "handover" | "purge"), or null.
+const C_KINDS = ["plant", "handover", "purge"];
+function moleKind(choice) { return C_KINDS.find((k) => choice[k] != null) || null; }
+// Why C's 政工 `choice` by `side` with `ops` is refused, or null when it is legal.
+function moleRefusal(st, side, ops, choice) {
+  if (!mechC(st)) return "政工: mechanism C is off (內線)";
+  const kinds = C_KINDS.filter((k) => choice[k] != null);
+  if (kinds.length !== 1 || choice.target != null || choice.power != null) return "政工: one of plant, handover, purge";
+  const m = st.moles;
+  if (kinds[0] === "plant") {
+    if (side !== CCP) return "佈線: only the Communists";
+    const list = choice.plant;
+    if (!Array.isArray(list) || !list.length) return "佈線: name at least one marker";
+    if (list.length > ops) return `佈線: ${list.length} markers with ${ops} ops`;
+    const need = [0, 0], count = {};
+    for (const e of list) {
+      if (!e || typeof e !== "object" || typeof e.real !== "boolean") return "佈線: each marker is { at, real: true | false }";
+      if (!SPACE[e.at]) return `佈線: unknown space ${e.at}`;
+      if (!cityWithKmt(st, e.at)) return `佈線: ${e.at} is not a city with Nationalist points`;
+      count[e.at] = (count[e.at] || 0) + 1;
+      if (molesAt(st, e.at).length + count[e.at] > C_SPEC.perCity) return `佈線: at most ${C_SPEC.perCity} markers on ${e.at}`;
+      need[e.real ? 0 : 1]++;
+    }
+    if (need[0] > m.hand[0] || need[1] > m.hand[1]) return `佈線: the hand holds ${m.hand[0]} real and ${m.hand[1]} fake`;
+    return null;
+  }
+  if (kinds[0] === "handover") {
+    if (side !== CCP) return "和平易手: only the Communists";
+    const t = choice.handover;
+    if (!SPACE[t]) return `和平易手: unknown space ${t}`;
+    if (!isolatedCities(st).includes(t)) return `和平易手: ${t} is not a 孤城`;
+    if (!molesAt(st, t).includes(true)) return `和平易手: no real marker on ${t}`;
+    if (ops < pointsOf(st, KMT, t)) return `和平易手: ${ops} ops, ${pointsOf(st, KMT, t)} Nationalist points on ${t}`;
+    return null;
+  }
+  if (side !== KMT) return "肅諜: only the Nationalists";
+  const list = choice.purge;
+  if (!Array.isArray(list) || !list.length) return "肅諜: name at least one city";
+  if (list.length > ops) return `肅諜: ${list.length} markers with ${ops} ops`;
+  const count = {};
+  for (const id of list) {
+    if (!SPACE[id]) return `肅諜: unknown space ${id}`;
+    if (!cityWithKmt(st, id)) return `肅諜: ${id} is not a city with Nationalist points`;
+    count[id] = (count[id] || 0) + 1;
+    if (count[id] > molesAt(st, id).length) return `肅諜: not that many markers on ${id}`;
+  }
+  return null;
+}
+// The Nationalists' points at `id` that go: blue first, then gray (BE's reading under D, flagged on #39).
+function loseKmtPoints(st, id, n, why) {
+  const b = remove(st, KMT, id, n), g = Math.min(n - b, grayOf(st, id));
+  if (g > 0) loseGray(st, id, g, why);
+  return b + g;
+}
+function molePolitics(st, side, ops, choice) {
+  const why = moleRefusal(st, side, ops, choice);
+  if (why) fail(why);
+  const m = st.moles, kind = moleKind(choice);
+  if (kind === "plant") {
+    for (const e of choice.plant) { m.hand[e.real ? 0 : 1]--; (m.at[e.at] ||= []).push(e.real); }
+    log(st, { type: "plant", side, ops, at: choice.plant.map((e) => e.at) });
+  } else if (kind === "handover") {
+    const t = choice.handover;
+    revealReal(st, t);
+    const removed = loseKmtPoints(st, t, pointsOf(st, KMT, t), "handover"), placed = place(st, CCP, t, 1);
+    log(st, { type: "handover", side, ops, space: t, removed, placed });
+  } else {
+    const count = {};
+    for (const id of choice.purge) count[id] = (count[id] || 0) + 1;
+    const flipped = [];
+    for (const [id, k] of Object.entries(count)) {
+      const list = m.at[id];
+      // All of them, or k of them drawn by the engine's dice: the Nationalists cannot tell the markers apart.
+      const idx = k >= list.length ? list.map((_, i) => i) : withRng(st, (rng) => shuffle(rng, list.map((_, i) => i))).slice(0, k);
+      for (const i of idx) flipped.push({ at: id, real: list[i] });
+      const left = list.filter((_, i) => !idx.includes(i));
+      if (left.length) m.at[id] = left; else delete m.at[id];
+    }
+    let caught = false;
+    for (const f of flipped) { if (f.real) m.out++; else { m.hand[1]++; caught = true; } }
+    log(st, { type: "purge", side, ops, flipped });
+    // 抓錯: once a 肅諜 (owner 裁決 #39: the centrists under E, else 民心).
+    if (caught) {
+      if (mechE(st)) moveCentrists(st, C_SPEC.caughtFake.centrists, "purge");
+      else vp(st, CCP, C_SPEC.caughtFake.mandate);
+    }
+  }
+  checkMarkers(st);
+}
+// What C's 政工 may name with `ops` now: { plant, handover, purge }, lists of cities. The Communists' handover
+// reads which markers are real, so it is for the side that plays (legal(), the random player), not for a view.
+export function moleOptions(st, side, ops) {
+  const out = { plant: [], handover: [], purge: [] };
+  if (!mechC(st) || !st.moles) return out;
+  const m = st.moles;
+  if (side === CCP) {
+    if (m.hand && moleHandCount(m) > 0) out.plant = SPACES.filter((s) => cityWithKmt(st, s.id) && molesAt(st, s.id).length < C_SPEC.perCity).map((s) => s.id);
+    out.handover = isolatedCities(st).filter((id) => molesAt(st, id).includes(true) && ops >= pointsOf(st, KMT, id));
+  } else out.purge = Object.keys(m.at).filter((id) => cityWithKmt(st, id));
+  return out;
+}
+// Whether C's 政工 is open to `side` with `ops`, read without the markers' truth (an ops ask names it, and the
+// ask is in the Nationalists' view): a handover is open when a 孤城 holds any marker.
+function moleOpen(st, side, ops) {
+  if (!mechC(st) || !st.moles) return false;
+  const m = st.moles;
+  if (side === KMT) return Object.keys(m.at).some((id) => cityWithKmt(st, id));
+  if (moleHandCount(m) > 0 && SPACES.some((s) => cityWithKmt(st, s.id) && molesAt(st, s.id).length < C_SPEC.perCity)) return true;
+  return isolatedCities(st).some((id) => molesAt(st, id).length > 0 && ops >= pointsOf(st, KMT, id));
+}
+// 洩密's places for an attack on T answered with `response`: T, the R of 增援 / 突圍, the Nationalists' capital
+// (BE's reading of 南京 / 國軍的首都, flagged on #39), those with a marker.
+function leakCities(st, T, response) {
+  const R = String(response).split(":")[1];
+  const out = [];
+  for (const id of [T, R, homeCapital(st, KMT)]) if (id && !out.includes(id) && molesAt(st, id).length) out.push(id);
+  return out;
+}
+// The play's C payload, only the keys it names.
+function cExtras(action) { return Object.fromEntries(C_KINDS.filter((k) => action[k] != null).map((k) => [k, action[k]])); }
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -1224,6 +1418,8 @@ export function moveSupport(st, side, delta) {
 }
 export function checkMarkers(st) {
   if (st.winner != null) return;
+  // #39, mechanism C: markers on a city the Communists control go back to their hand.
+  if (st.moles) molesHome(st);
   // #31: under mechanism D the markers are D's (`dMarkers`); victory below is the same.
   if (mechD(st)) dMarkers(st);
   else for (const [id, s] of Object.entries(STATES)) {
@@ -1330,6 +1526,8 @@ export function reformAdvance(st, side, n = 1) {
     if (st.reform[side] >= 6) return;
     const box = ++st.reform[side], R = REFORM[box - 1];
     log(st, { type: "reform", side, box });
+    // #39, mechanism C: the Communists' box 4 (隱蔽戰線), the first time, brings 2 real and 1 fake marker.
+    if (side === CCP && box === 4 && st.moles && !st.moles.reform4) { st.moles.reform4 = true; moleGain(st, "reform4"); }
     if (st.reformFirst[box] == null) {
       const wins = R.perk === "emperor" && emperorWins(st, side);
       st.reformFirst[box] = side;
@@ -1757,9 +1955,24 @@ function siegeStep(st, step) {
       return ask(st, { ...step, side: KMT }, { kind: "option", tag: "siege", target: T, ops: X, options: siegeResponses(st, T).map((id) => ({ id })) });
     }
     const response = String(step.choices.shift());
-    // #31: an answer whose removal hits blue and gray, not all of them, asks the order first.
-    if (mechD(st) && siegeOrderNeeded(st, step, response)) { step.response = response; step.stage = "grayOrder"; }
-    else siegeResolve(st, step, response, null);
+    // #39, mechanism C, 洩密: a marker on T, R or the capital, real or not, and the Communists are asked
+    // before the table is read (the plan may change, so before D's order question).
+    if (mechC(st) && leakCities(st, T, response).length) { step.response = response; step.stage = "leak"; }
+    else siegeAnswered(st, step, response);
+  }
+  if (step.stage === "leak") {
+    if (!step.choices.length) {
+      const options = [{ id: "no" }, ...leakCities(st, T, step.response).flatMap((id) => [{ id: `point:${id}` }, { id: `relief:${id}` }])];
+      return ask(st, { ...step, side: CCP }, { kind: "option", tag: "leak", target: T, options });
+    }
+    const pick = String(step.choices.shift());
+    if (pick !== "no") {
+      const [plan, id] = pick.split(":");
+      revealReal(st, id);
+      log(st, { type: "leak", side: CCP, target: T, space: id, from: step.plan, plan });
+      step.plan = plan;
+    }
+    siegeAnswered(st, step, step.response);
   }
   if (step.stage === "grayOrder") {
     if (!step.choices.length) return ask(st, { ...step, side: KMT }, { kind: "option", tag: "grayOrder", target: T, options: GRAY_ORDER.map((o) => ({ ...o })) });
@@ -1774,8 +1987,28 @@ function siegeStep(st, step) {
     log(st, { type: step.stage, side: CCP, target: T, space: id, n });
     step.stage = "end";
   }
+  // #39, mechanism C, 倒戈: the result is in; 打點 removed at least 1 at T and a marker, real or not, is
+  // still there (one on a city the Communists now control has gone home first): the Communists are asked.
+  if (step.stage === "end" && mechC(st) && step.plan === "point" && step.removedAtT > 0) {
+    molesHome(st);
+    if (molesAt(st, T).length) step.stage = "defect";
+  }
+  if (step.stage === "defect") {
+    if (!step.choices.length) return ask(st, { ...step, side: CCP }, { kind: "option", tag: "defect", target: T, options: [{ id: "no" }, { id: "defect" }] });
+    if (step.choices.shift() === "defect") {
+      revealReal(st, T);
+      log(st, { type: "defect", side: CCP, target: T, removed: loseKmtPoints(st, T, C_SPEC.defect, "defect") });
+    }
+    step.stage = "end";
+  }
   attackEnd(st, CCP, T);
   return true;
+}
+// The Nationalists' answer is in (and 洩密 asked, under C): D's order question, or the table.
+function siegeAnswered(st, step, response) {
+  // #31: an answer whose removal hits blue and gray, not all of them, asks the order first.
+  if (mechD(st) && siegeOrderNeeded(st, step, response)) { step.response = response; step.stage = "grayOrder"; }
+  else siegeResolve(st, step, response, null);
 }
 // The table's cell for `response` (B's, #26). #31: the removals at T hit blue +
 // gray (`hitKmt`, in `order`); 增援 and 突圍 move blue only; 突圍 leaves the gray,
@@ -1813,6 +2046,7 @@ function siegeResolve(st, step, response, order) {
     if (!pointsOf(st, KMT, T)) r.placed = place(st, CCP, T, 1);
   }
   log(st, r);
+  if (mechC(st)) step.removedAtT = step.plan === "point" ? r.removed || 0 : 0; // #39: 倒戈 reads it
   step.stage = pick && ccpAround(st, T).length ? pick : "end";
 }
 // Whether the cell for `response` will remove some but not all of T's blue + gray,
@@ -2128,6 +2362,8 @@ function startGame(seed, options) {
   }
   // #35, mechanism E: the three tracks, only with the option.
   if (mechE(st)) { eSpecOf(st); st.mechE = newMechE(); } // #37: eSpecOf refuses a malformed E option here
+  // #39, mechanism C: the markers, only with the option.
+  if (mechC(st)) st.moles = newMoles();
   if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   // CIVIL WAR: the first era's deck is drawn from; the other two wait in
@@ -2257,6 +2493,8 @@ function exec(st, step) {
           if (!isAid(step.card)) {
             const pol = politicsOptions(st, step.side, step.ops);
             if (pol.length) { allowed.push("politics"); o.politicsTargets = pol; }
+            // #39: C's 政工, read without the markers' truth (the ask is in the other side's view).
+            else if (moleOpen(st, step.side, step.ops)) allowed.push("politics");
           }
           if (!allowed.length) { log(st, { type: "opsLost", side: step.side, ops: step.ops }); return true; }
           // #35: under E the ask says whether these ops may be printed and where a 激進 could go.
@@ -2402,6 +2640,8 @@ function startTurn(st) {
   // #23 round three: a mandate beyond the threshold before `mandateFrom` wins at the start of that turn
   // (#24: `MANDATE_FROM` unless the option says otherwise).
   if (mandateFromOf(st).includes(st.turn)) { mandateCheck(st); if (st.winner != null) return; }
+  // #39, mechanism C: 易勢期 and 決戰期 each bring the Communists 1 real and 1 fake marker.
+  if (st.moles && C_GAIN_TURNS[st.turn]) moleGain(st, C_GAIN_TURNS[st.turn]);
   st.plan.splice(1, 0, { do: "situation", stage: "start", choices: [] }, { do: "deal" });
 }
 function dealHands(st) {
@@ -2678,9 +2918,12 @@ function doOps(st, side, card, ops, choice) {
     // #31: blue and gray both hit, not all: the Nationalists choose the order first (the `grayHit` step).
     else if (grayOrderNeeded(st, side, t, ops)) st.plan.splice(1, 0, { do: "grayHit", side, target: t, ops, choices: [] });
     else campaign(st, side, t, ops);
-  } else if (choice.use === "politics" && mechD(st)) {
+  } else if (choice.use === "politics" && (mechD(st) || mechC(st))) {
     if (isAid(card)) fail("politics: not with an aid card");
-    politics(st, side, ops, choice);
+    // #39: C's 佈線 / 和平易手 / 肅諜 are told from D's 整編 / 統戰 by their keys (both options may be on).
+    if (mechC(st) && moleKind(choice)) molePolitics(st, side, ops, choice);
+    else if (mechD(st)) politics(st, side, ops, choice);
+    else fail("政工: name plant, handover or purge (mechanism C)");
   } else if (choice.use === "lobby") {
     if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
     ops += aidBonus(card, choice);
@@ -2767,6 +3010,11 @@ function validateChoice(st, p, choice) {
     }
     case "option": {
       if (!p.options.some((o) => o.id === choice)) fail(`option: ${choice} not allowed`);
+      // #39, mechanism C: 洩密 / 倒戈 were asked for any marker; only a real one may be turned up.
+      if (st.moles && (p.tag === "leak" || p.tag === "defect") && choice !== "no") {
+        const id = p.tag === "leak" ? String(choice).split(":")[1] : p.target;
+        if (!molesAt(st, id).includes(true)) fail(`${p.tag}: no real marker on ${id}`);
+      }
       return choice;
     }
     case "ops": {
@@ -2876,9 +3124,10 @@ function play(st, action) {
     if (reformUsesLeft(st, side) <= 0) fail("reform: no advances left this turn");
     if (card.ops < reformThreshold(st, side)) fail("reform: card below the threshold");
     steps.push({ do: "reform", side }, { do: "finishCard", card: c, side, triggered: false }, { do: "endAction" });
-  } else if (["place", "campaign", "lobby"].includes(use) || (use === "politics" && mechD(st))) {
+  } else if (["place", "campaign", "lobby"].includes(use) || (use === "politics" && (mechD(st) || mechC(st)))) {
     // #31: 政工 is the ops' fifth use (`doOps`): an enemy card's event goes with it as with the others.
-    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...(use === "politics" ? { power: action.power } : {}), ...eExtras(action) };
+    // #39: C's keys (`plant`, `handover`, `purge`) ride along, only under the option.
+    const payload = { use, points: action.points, target: action.target, ...(action.siege != null ? { siege: action.siege } : {}), ...(use === "politics" ? { power: action.power } : {}), ...(use === "politics" && mechC(st) ? cExtras(action) : {}), ...eExtras(action) };
     const enemy = card.side != null && card.side !== side;
     const paired = c === MARSHALL && action.pair;
     // The player chooses whether an enemy card's ops or its event comes first
@@ -2989,6 +3238,13 @@ export function legal(st, side) {
       const t = polMemo.get(ops);
       uses.politics = t.length ? { ops, targets: t.slice() } : null;
     }
+    // #39: C's 政工 with this card's ops -- 佈線 / 和平易手 (the Communists), 肅諜 (the Nationalists).
+    if (mechC(st)) {
+      const key = `c${ops}`;
+      if (!polMemo.has(key)) polMemo.set(key, moleOptions(st, side, ops));
+      const t = polMemo.get(key);
+      uses.moles = t.plant.length || t.handover.length || t.purge.length ? { ops, plant: t.plant.slice(), handover: t.handover.slice(), purge: t.purge.slice() } : null;
+    }
     return { id: c, ops, uses };
   });
   // The aid card (#4): null when it may not be used now (option off, used this
@@ -3021,6 +3277,14 @@ export function view(st, side) {
   // #26: the Communists' plan for an attack on a city (打點 / 打援) is face down
   // until the Nationalists have answered: only the Communists' view has it.
   if (side !== CCP) for (const p of v.plan || []) if (p.do === "siege" && p.stage === "respond") p.plan = null;
+  // #39, mechanism C: the Nationalists and a spectator see how many markers, never which are real -- on the
+  // board, in the hand, and in a 佈線 still in the plan.
+  if (st.moles && side !== CCP) {
+    const m = st.moles;
+    v.moles = { hand: null, handCount: moleHandCount(m), pool: m.pool.slice(), out: m.out, at: Object.fromEntries(Object.entries(m.at).map(([id, l]) => [id, l.map(() => null)])), reform4: m.reform4 };
+    const blind = (x) => { if (x && typeof x === "object" && Array.isArray(x.plant)) x.plant = x.plant.map((e) => ({ at: e && e.at })); };
+    for (const p of v.plan || []) { blind(p.payload); for (const c of Array.isArray(p.choices) ? p.choices : []) blind(c); }
+  }
   if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
   if (side == null) {
     // A spectator sees the table and neither hand.
@@ -3050,6 +3314,7 @@ export function view(st, side) {
     v.final = clone({
       hands: st.hands, draw: st.draw, later: st.later, discard: st.discard, removed: st.removed,
       seed: st.seed ?? 0, inf: st.inf, reform: st.reform, weariness: st.weariness, seals: st.seals, mie: st.mie,
+      ...(st.moles ? { moles: st.moles } : {}), // #39: the markers, real and fake
     });
     // With seed + options (`v.options`) the recorded actions replay the game
     // (`replay`). A game without them (older save, tutorial) has no `actions`
