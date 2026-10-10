@@ -123,7 +123,7 @@ export function randomChoice(st, p, rng) {
       // 激進 may go (`radical`); either is taken half the time it is possible. Neither key exists
       // without the option, so nothing more is drawn then.
       if (p.canPrint && rng.int(2)) {
-        const o = randomOps(st, p.who, p.ops + E.E_SPEC.print, p.allowed.filter((u) => PRINT_USES.includes(u)), rng, p.card);
+        const o = randomOps(st, p.who, p.ops + E.eSpecOf(st).print, p.allowed.filter((u) => PRINT_USES.includes(u)), rng, p.card);
         if (o) return { ...o, print: true };
       }
       if (p.radical && p.allowed.includes("place")) {
@@ -177,19 +177,19 @@ export function randomAction(st, side, rng) {
           return play(use, { pair, ...rest });
         });
         // Mechanism E (#35): `uses.print` and `L.radical` exist only under the option.
-        // 印鈔: the card's ops +2 on 扶植, an attack or 政工 (an enemy card's ops first; with its event
+        // 印鈔: the card's ops +E.eSpecOf(st).print (#38: 1; #35's 2 under `ePrintOps: 2`) on 扶植, an attack or 政工 (an enemy card's ops first; with its event
         // first the print is asked with the ops, `randomChoice`), and 馬歇爾調處's pair the same way.
         if (u.print) {
           const ok = PRINT_USES.filter((x) => u[x]);
           if (ok.length) opts.push(() => {
-            const use = pickOne(ok, rng), ops = u[use].ops + E.E_SPEC.print, order = u.enemy ? { order: "opsFirst" } : {};
+            const use = pickOne(ok, rng), ops = u[use].ops + E.eSpecOf(st).print, order = u.enemy ? { order: "opsFirst" } : {};
             if (use === "place") return play("place", { ...order, points: randomPoints(st, side, ops, rng), print: true });
             if (use === "campaign") return play("campaign", { ...order, ...attack(st, side, u.campaign.targets, rng), print: true });
             return play("politics", { ...order, ...politicsPayload(side, pickOne(u.politics.targets, rng)), print: true });
           });
           if (u.pair && u.pair.length && (u.place || u.campaign)) opts.push(() => {
             const pair = pickOne(u.pair, rng);
-            const { use, ...rest } = randomOps(st, side, E.opsOf(st, side, pair) + E.E_SPEC.print, ["place", "campaign"], rng);
+            const { use, ...rest } = randomOps(st, side, E.opsOf(st, side, pair) + E.eSpecOf(st).print, ["place", "campaign"], rng);
             return play(use, { pair, ...rest, print: true });
           });
         }

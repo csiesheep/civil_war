@@ -69,6 +69,8 @@
 //     左傾 (激進 `radical`, 還鄉團 `returnHome`), 中間派 (`st.mechE`, `E_SPEC`; see at E_SPEC).
 //   - #37 E's numbers as options, none a default (`ePrintOps`, `ePrintStep`, `ePrintPerTurn`, `eInflation`,
 //     `ePeg`, `eRadical`, `eLeftism`, `eCentristsVp`; one reading, `eSpecOf`, see after E_SPEC).
+//   - #38 E's numbers are #37's ME-cap1+ops1+early (owner 裁決 #37): `E_SPEC` (印鈔 +1, at most once a turn,
+//     通膨 2 / 4 / 6 / 8) and the default thresholds `E_INFLATION`; E is still an option, not a default.
 // EVERYTHING ELSE IS STILL ZONGHENG'S RULES, and its comments still cite
 // Zongheng's rulebook and issue numbers. The Phase 0
 // slice was written and checked by one session only (TEAM.md).
@@ -164,7 +166,7 @@ export function eraLimits(st, turn = st.turn) {
   const e = eraOf(t), o = tune(st, "eraRounds") && st.options.eraRounds[e.id];
   return eHandCut(st, t, { hand: (o && o.hand ? o.hand : e.hand).slice(), rounds: (o && o.rounds ? o.rounds : e.rounds).slice() });
 }
-// #35, mechanism E: from the turn after 通膨 reached 8, the Nationalists' hand is one smaller, for good.
+// #35, mechanism E: from the turn after 通膨 reached 6 (#38; 8 before), the Nationalists' hand is one smaller, for good.
 function eHandCut(st, t, limits) {
   if (st.mechE && st.mechE.handCutFrom != null && t >= st.mechE.handCutFrom) limits.hand[KMT] -= eSpecOf(st).hand.hand; // #37: eInflation's `hand` (1)
   return limits;
@@ -479,14 +481,15 @@ function loyalGray(st, side, id) {
 // 15 with orchestrator 裁決 #35 and owner 裁決 #34: 「E 和民生並存,先做成選項」), the option `mechanismE`.
 // NOT a key of DEFAULT_OPTIONS: an absent or false option plays as before E, byte for byte -- the state has
 // no `mechE` then and the three readings answer 0. 民生 and the 72 cards are as they were.
-//   - 通膨 (the Nationalists', 0 to 10). 印鈔: `print: true` with a hand card's ops spent on 扶植, an attack
+//   - 通膨 (the Nationalists', 0 to 8). 印鈔: `print: true` with a hand card's ops spent on 扶植, an attack
 //     or 政工 (an enemy card too, its event as always; with an event first, in the ops chosen after it):
-//     the ops +E_SPEC.print, inflation +1 (`printRefusal`, `doOps`). Never an event, 變法, a headline or
-//     an aid card. 平抑: 美援 played as `use: "peg"`: no ops, inflation −E_SPEC.peg, not below 0; when the
-//     aid card may be used at all (`canPeg`). Thresholds, each the first time it is reached (`inflate`):
-//     3 民心 1 toward the Communists; 6 民心 2 toward them and the centrists a step their way; 8 the
-//     Nationalists' hand one smaller from the next turn's refill on, for good (`eraLimits`); 10 the
-//     Nationalists lose at once (reason "inflation").
+//     the ops +E_SPEC.print (1), inflation +1 (`printRefusal`, `doOps`), at most E_SPEC.printPerTurn (1) a
+//     turn (#38). Never an event, 變法, a headline or an aid card. 平抑: 美援 played as `use: "peg"`: no ops,
+//     inflation −E_SPEC.peg, not below 0; when the aid card may be used at all (`canPeg`). Thresholds, each the
+//     first time it is reached (`inflate`): 2 民心 1 toward the Communists; 4 民心 2 toward them and the
+//     centrists a step their way; 6 the Nationalists' hand one smaller from the next turn's refill on, for good
+//     (`eraLimits`); 8 the Nationalists lose at once (reason "inflation").
+//     (#35 / #36 played 印鈔 +2 with no cap and 3 / 6 / 8 / 10; that E is `tuning/23/variants.mjs`'s `E-35`.)
 //   - 左傾 (the Communists', 0 to 6). 激進土改: `radical: <village>` on a 扶植 (a hand card's or 蘇援's) whose
 //     points include that village, where they already have red: each op spent there is E_SPEC.radical red
 //     (orchestrator 裁決 #35, the note's letter: a point costing 2 ops there, the village the Nationalists'
@@ -500,15 +503,20 @@ function loyalGray(st, side, id) {
 //   - Not in this version: the E effects of 金圓券, 糾偏, 學潮, 取締民盟 and 政協.
 // The state: `st.mechE` = { inflation, leftism, centrists, reached: { inflation: [n…], leftism: [n…] },
 // handCutFrom (the first turn of 8's smaller hand, or null), radicalTurn (the turn of the last 激進) }.
-export const E_SPEC = { print: 2, peg: 2, radical: 2, inflation: [3, 6, 8, 10], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
+// #38: owner 裁決 #37 (2026-10-08, 「採用這組,E 仍是選項(建議)」) and the owner's mechanisms note, E, as changed
+// 2026-10-08: 印鈔 +1 and 通膨 +1, at most once a turn; 通膨 2 / 4 / 6 / 8; 平抑, 激進, 左傾 and 中間派 unchanged.
+// (#35 / #36: print 2, no per-turn cap, inflation [3, 6, 8, 10].)
+export const E_SPEC = { print: 1, printPerTurn: 1, peg: 2, radical: 2, inflation: [2, 4, 6, 8], leftism: [2, 4, 6], leftismReset: 3, centrists: [-2, 2] };
 const mechE = (st) => !!(st.options && st.options.mechanismE);
 const PRINT_USES = ["place", "campaign", "politics"];
 // #37: E's numbers as options (owner 裁決 #37: 「調一輪 E 的數字」), read only under `mechanismE`; none is a key of
-// DEFAULT_OPTIONS and an absent one is today's E (E_SPEC and the effects above). `eSpecOf(st)` is the one reading:
-//   ePrintOps n       印鈔: the card's ops +n (E_SPEC.print)
+// DEFAULT_OPTIONS and an absent one is today's E (E_SPEC and the effects above). `eSpecOf(st)` is the one reading.
+// #38: the base moved under them (today's E is #37's ME-cap1+ops1+early); a given option still wins over it.
+//   ePrintOps n       印鈔: the card's ops +n (E_SPEC.print, 1)
 //   ePrintStep n      印鈔: inflation +n (1)
-//   ePrintPerTurn n   the Nationalists print at most n times a turn (absent: with every play that may print);
-//                     counted in st.mechE.printTurn / printN, which exist only with this option
+//   ePrintPerTurn n   the Nationalists print at most n times a turn (E_SPEC.printPerTurn, 1); `ePrintPerTurn: null`
+//                     = no cap, with every play that may print (#35 / #36's E). Counted in st.mechE.printTurn /
+//                     printN, which exist only under a cap
 //   eInflation [{ at, vp, centrists, hand, lose }]   the inflation thresholds, lowest first, each the first time
 //                     it is reached: 民心 vp toward the Communists, the centrists that many steps their way, the
 //                     Nationalists' hand that many smaller from the next turn's refill on; the last one, and only
@@ -520,7 +528,7 @@ const PRINT_USES = ["place", "campaign", "politics"];
 //                     Nationalists; 民心 vp toward the Nationalists); the last every time (−villages red in every
 //                     village the Communists control, then back to `reset`; its `at` is the track's top)
 //   eCentristsVp n    at the 結算, 民心 moves n for every step the centrists lean (1)
-const E_INFLATION = [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }];
+const E_INFLATION = [{ at: 2, vp: 1 }, { at: 4, vp: 2, centrists: 1 }, { at: 6, hand: 1 }, { at: 8, lose: true }]; // #38 (#35 / #36: 3 / 6 / 8 / 10)
 const E_LEFTISM = [{ at: 2, centrists: -1 }, { at: 4, vp: 2 }, { at: 6, villages: 1, reset: 3 }];
 const E_KEYS = ["ePrintOps", "ePrintStep", "ePrintPerTurn", "eInflation", "ePeg", "eRadical", "eLeftism", "eCentristsVp"];
 function eSpecBuild(o) {
@@ -542,7 +550,7 @@ function eSpecBuild(o) {
   if (inflation.filter((e) => e.hand).length > 1) fail("eInflation: at most one threshold cuts the hand");
   const leftism = table("eLeftism", E_LEFTISM, (e, isLast) => isLast !== (e.reset !== undefined) || (isLast && !(Number.isInteger(e.reset) && e.reset >= 0 && e.reset < e.at)));
   return {
-    print: num("ePrintOps", E_SPEC.print, 0), printStep: num("ePrintStep", 1, 1), printPerTurn: o.ePrintPerTurn === undefined ? null : num("ePrintPerTurn", null, 1),
+    print: num("ePrintOps", E_SPEC.print, 0), printStep: num("ePrintStep", 1, 1), printPerTurn: o.ePrintPerTurn === null ? null : num("ePrintPerTurn", E_SPEC.printPerTurn, 1),
     peg: num("ePeg", E_SPEC.peg, 0), radical: num("eRadical", E_SPEC.radical, 1), centristsVp: num("eCentristsVp", 1, 1),
     inflation, leftism, centrists: E_SPEC.centrists,
     inflationMax: inflation[inflation.length - 1].at, leftismMax: leftism[leftism.length - 1].at, leftismReset: leftism[leftism.length - 1].reset,
@@ -550,8 +558,9 @@ function eSpecBuild(o) {
   };
 }
 const E_DEFAULT = eSpecBuild({});
-if (E_DEFAULT.inflation.map((e) => e.at).join() !== E_SPEC.inflation.join() || E_DEFAULT.leftism.map((e) => e.at).join() !== E_SPEC.leftism.join() || E_DEFAULT.leftismReset !== E_SPEC.leftismReset) {
-  throw new Error("E_INFLATION / E_LEFTISM do not match E_SPEC");
+if (E_DEFAULT.inflation.map((e) => e.at).join() !== E_SPEC.inflation.join() || E_DEFAULT.leftism.map((e) => e.at).join() !== E_SPEC.leftism.join() || E_DEFAULT.leftismReset !== E_SPEC.leftismReset
+  || E_DEFAULT.print !== E_SPEC.print || E_DEFAULT.printPerTurn !== E_SPEC.printPerTurn || E_DEFAULT.peg !== E_SPEC.peg || E_DEFAULT.radical !== E_SPEC.radical) {
+  throw new Error("E_INFLATION / E_LEFTISM / the defaults do not match E_SPEC");
 }
 const eSpecCache = new WeakMap();
 // E's numbers for this game: today's (`E_DEFAULT`) unless one of #37's keys is given.
@@ -584,8 +593,8 @@ function moveCentrists(st, d, why) {
   log(st, { type: "centrists", from, to, why });
 }
 // Inflation by `d` (print +ePrintStep, peg −ePeg), then every threshold reached for the first time, lowest first
-// (today: 3 民心 1 toward the Communists; 6 民心 2 and the centrists a step their way; 8 the hand one smaller from
-// the next refill; 10 the Nationalists collapse).
+// (today, #38: 2 民心 1 toward the Communists; 4 民心 2 and the centrists a step their way; 6 the hand one smaller
+// from the next refill; 8 the Nationalists collapse).
 function inflate(st, d, why) {
   const spec = eSpecOf(st);
   const m = st.mechE, from = m.inflation, to = Math.max(0, Math.min(spec.inflationMax, from + d));
@@ -633,7 +642,8 @@ function printRefusal(st, side, card, use) {
   if (side !== KMT) return "print: only the Nationalists print money";
   if (isAid(card)) return "print: not with an aid card";
   if (!PRINT_USES.includes(use)) return "print: only for 扶植, an attack or 政工";
-  // #37: at most `ePrintPerTurn` a turn (only with that option; the count is st.mechE.printTurn / printN).
+  // #37 / #38: at most `ePrintPerTurn` a turn (E_SPEC.printPerTurn, 1; none with `ePrintPerTurn: null`; the count is
+  // st.mechE.printTurn / printN).
   const cap = eSpecOf(st).printPerTurn;
   if (cap != null && st.mechE.printTurn === st.turn && st.mechE.printN >= cap) return `print: at most ${cap} a turn (ePrintPerTurn)`;
   return null;
@@ -2071,7 +2081,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-08"; // #37: E's numbers as options under `mechanismE` (`ePrintOps`, `ePrintStep`, `ePrintPerTurn`, `eInflation`, `ePeg`, `eRadical`, `eLeftism`, `eCentristsVp`; `eSpecOf`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's E ("2026-10-07" was #35: mechanism E as the option `mechanismE` (通膨 / 印鈔 / 平抑, 左傾 / 激進土改 / 還鄉團, 中間派; `E_SPEC`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05-3" was #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))))))
+export const RULES_VERSION = "2026-10-08-2"; // #38: what `mechanismE: true` plays changed (owner 裁決 #37): E_SPEC is #37's ME-cap1+ops1+early (印鈔 +1, at most once a turn, 通膨 2 / 4 / 6 / 8); `ePrintPerTurn: null` is no cap; the default (E off) is unchanged ("2026-10-08" was #37: E's numbers as options under `mechanismE` (`ePrintOps`, `ePrintStep`, `ePrintPerTurn`, `eInflation`, `ePeg`, `eRadical`, `eLeftism`, `eCentristsVp`; `eSpecOf`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's E ("2026-10-07" was #35: mechanism E as the option `mechanismE` (通膨 / 印鈔 / 平抑, 左傾 / 激進土改 / 還鄉團, 中間派; `E_SPEC`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05-3" was #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -2625,7 +2635,7 @@ function doOps(st, side, card, ops, choice) {
   if (!choice || typeof choice !== "object") fail("ops: no choice");
   // #35, mechanism E, 印鈔: declared with the ops. Checked; the ops with the extra points dry-run (an illegal
   // payload is refused even when the inflation would end the game); then the inflation and its thresholds
-  // (10 ends the game before the ops are spent); then the ops.
+  // (the collapse, 8 since #38, ends the game before the ops are spent); then the ops.
   if (choice.print) {
     const why = printRefusal(st, side, card, choice.use);
     if (why) fail(why);

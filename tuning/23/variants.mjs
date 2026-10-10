@@ -22,6 +22,14 @@ export const VARIANTS = {
   D: { what: "機制 D(實力派的態度:灰、整編、統戰、易幟 / 整編完成)開著", why: "M2b 第 2 批(#31 引擎、#32 bot 與模擬)", options: { mechanismD: true } },
   // #36: mechanism E (#35, not a default) on, the bots taught E (#36); measured against the default rules.
   E: { what: "機制 E(印鈔與土改:通膨、左傾、中間派)開著", why: "M2b 第 3 批(#35 引擎、#36 bot 與模擬)", options: { mechanismE: true } },
+  // #38: since #38 `E` plays #37's ME-cap1+ops1+early (owner 裁決 #37: 印鈔 +1、每回合最多一次、通膨 2 / 4 / 6 / 8).
+  // `E-35` is the E of #35 / #36 written with #37's options (印鈔 +2, no per-turn cap = `ePrintPerTurn: null`,
+  // 通膨 3 / 6 / 8 / 10); it plays as `E` did before #38 (tuning/38/report.txt: the same 300 games as #37's Eon-main).
+  "E-35": {
+    what: "#35 / #36 的機制 E:印鈔 +2、每回合不限次數;通膨到 3:民心往共軍 1;到 6:民心往共軍 2、中間派往共軍一格;到 8:下一回合起國軍手牌少一張;到 10:國軍崩潰",
+    why: "#38 之前的 E(owner 採用 #37 的數字之前),拿來和 #35 / #36 / #37 的模擬比對",
+    options: { mechanismE: true, ePrintOps: 2, ePrintPerTurn: null, eInflation: [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }] },
+  },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {
@@ -603,6 +611,10 @@ md("MD-thr-1", "統戰門檻:綏 2、晉 3、桂 2、馬 3、滇 2(各少 1,滇�
 // ---- #37: E's numbers (owner 裁決 #37: 「調一輪 E 的數字」). Every `ME-…` is laid over the variant E
 // ({ mechanismE: true }) and uses only #37's options (engine.js, `eSpecOf`); a later part's key wins. `what` is
 // the rulebook sentence, `why` its reason (the owner's note E, or history).
+// #38: the base `E` is now #37's ME-cap1+ops1+early (印鈔 +1, once a turn, 通膨 2 / 4 / 6 / 8), so every `ME-…` below
+// is laid over that E and means something else than in #37 (e.g. ME-cap2 is now ops1 + early + two prints a turn,
+// ME-pain is ops1 + one print a turn + 3 / 6 / 8 / 10 with more pain, ME-cap1+ops1+early is plain `E`); their
+// options are left as #37 wrote them. #37's measurements of them stand for the E of #35 / #36 (`E-35`).
 const ME = {};
 const me = (name, what, why, options) => { ME[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismE: true, ...options } }; };
 const mec = (name, what, parts) => {
@@ -610,8 +622,8 @@ const mec = (name, what, parts) => {
   for (const p of parts) Object.assign(options, ME[p].options);
   VARIANTS[name] = { what, why: parts.join(" + "), parts, options };
 };
-// Today's inflation thresholds, written out (engine.js E_INFLATION), for the variants that change one of them.
-export const E_INFLATION_TODAY = [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }];
+// #35 / #36's inflation thresholds (engine.js E_INFLATION until #38; #37 called them "today's"), written out.
+export const E_INFLATION_35 = [{ at: 3, vp: 1 }, { at: 6, vp: 2, centrists: 1 }, { at: 8, hand: 1 }, { at: 10, lose: true }];
 me("ME-cap1", "國軍每回合最多印鈔 1 次",
   "法幣的增發是逐年加速,不是一開始就印滿:發行額 1945 年底約 1 兆元、1946 年底約 3.7 兆、1947 年底約 33 兆、1948 年 8 月約 660 兆;每半年能墊給軍費的錢有限", { ePrintPerTurn: 1 });
 me("ME-cap2", "國軍每回合最多印鈔 2 次", "同 ME-cap1,上限放寬一點", { ePrintPerTurn: 2 });

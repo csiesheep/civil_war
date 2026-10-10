@@ -29,6 +29,7 @@
 //     the side's own track spread over the steps to them (`ePrice`), the evaluation charges the walked part
 //     and values the centrists, and 印鈔 / 激進 / 平抑 are candidates (see "mechanism E" below).
 //     #37: every number of E is read from `E.eSpecOf` (E's options; today's E when none is given). No weight moved.
+//     #38: today's E is #37's ME-cap1+ops1+early (印鈔 +1, once a turn, 通膨 2 / 4 / 6 / 8); the bot did not change.
 //
 // The bot never catches the engine's refusal of its own candidates: a candidate
 // the engine refuses while the bot thinks is a bug of the candidate lists, and
@@ -530,11 +531,12 @@ function dropSuicideIntegrate(st, side, list) {
 // once reached, is in the state (民心, the centrists) or in `eHandCut` (8's smaller hand), so nothing is
 // counted twice. `ePrice` is what one more step costs. The centrists (`eCentrists`) are worth their lean at
 // every 結算 still to come.
-//   通膨: 3 → 民心 1; 6 → 民心 2 and the centrists a step toward the Communists (the 結算 still to come, unless
-//     they are at +2 already); 8 → one card fewer at every refill after this turn (W_E.card a card); 10 → the
-//     Nationalists lose: the two steps from 8 are priced as the prints the Nationalists could still use
-//     (W_E.print a print, times the time left, `ePrintRoom`: nothing at the game's last action), and the step
-//     into 10 is the loss itself (E_LOSS; never offered, `printable`).
+//   通膨 (#38's numbers; #35 / #36 had 3 / 6 / 8 / 10, the same prices one segment later): 2 → 民心 1; 4 → 民心 2
+//     and the centrists a step toward the Communists (the 結算 still to come, unless they are at +2 already);
+//     6 → one card fewer at every refill after this turn (W_E.card a card); 8 → the Nationalists lose: the two
+//     steps from 6 are priced as the prints the Nationalists could still use (W_E.print a print, times the time
+//     left, `ePrintRoom`: nothing at the game's last action, and under the per-turn cap only the prints still
+//     allowed), and the step into 8 is the loss itself (E_LOSS; never offered, `printable`).
 //   左傾: 2 → the centrists a step toward the Nationalists; 4 → 民心 2; 6 (every time) → −1 red in every village
 //     the Communists control (W_E.villageRed each, W_E.villageCtl more where the red is exactly what holds
 //     it), then back to 3: the segment of 6 starts at the reset (3).
@@ -665,7 +667,7 @@ export function ePrice(st, side) {
 }
 // May the Nationalists print now without losing on the spot (通膨 at the collapse)?
 const printable = (st, side) => mechE(st) && side === KMT && E.inflationOf(st) + E.eSpecOf(st).printStep < E.eSpecOf(st).inflationMax;
-// A step that costs nothing (the last turn below 8; 8 to 9 at the game's last action): the print dominates
+// A step that costs nothing (#38: the last turn below 6; 6 to 7 at the game's last action): the print dominates
 // the same play without it, which is then not offered.
 const freePrint = (st, side) => printable(st, side) && ePrice(st, side) <= 1e-9;
 // The villages worth a 激進 now, best first: the red it adds there (E_SPEC.radical per op, under the cap)

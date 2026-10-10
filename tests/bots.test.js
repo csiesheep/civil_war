@@ -550,16 +550,17 @@ check("D 開著普通對普通:每一局都結束;每局平均不超過 20 秒;�
 
 // ================================================================ 7
 section("B7 機制 E:印鈔與激進的價格(選項 mechanismE)");
-// #36。筆記(Projects/civil_war/civil_war - mechanisms.md,E 的「bot」一節,手抄):
+// #36。筆記(Projects/civil_war/civil_war - mechanisms.md,E 的「bot」一節,手抄;2026-10-08 照 #37 的數字改過):
 //   - 印鈔和激進都是「這 2 點行動點現在值多少」對「離下一個門檻還有幾格」。bot 把門檻的代價攤到每一格上當價格。
-//   - 國軍 bot 在最後一回合會把通膨印到 9:這是對的,也是史實。
-// orchestrator 裁決(#36):
+//   - 國軍 bot 在最後一回合會把通膨印到 7(崩潰的前一格):這是對的,也是史實。(原本的門檻是印到 9。)
+// #38(owner 裁決 #37):E 的數字是印鈔 +1、每回合最多一次、通膨門檻 2 / 4 / 6 / 8(6 下回合起手牌 −1,8 崩潰)。
+// orchestrator 裁決(#36,#38 照新的數字改):
 //   - `B.ePrice(st, side)`:這一方自己的軌(國軍通膨、共軍左傾)再走一格的價格(評估的分數,越大越貴)。怎麼攤是 BE 的事;
-//     這裡只驗方向:通膨 9(下一格就崩潰)比通膨 0 貴得多。
-//   - 評估看 E:同一個盤面,通膨越高國軍越差;左傾越高共軍越差;中間派偏向誰誰好。
-//   - 最後一回合國軍的倒數第二個行動:通膨 7、8 時要印(8 的手牌 −1 已經沒有下一回合;筆記「印到 9」);通膨 9 時永遠不印(10 = 當場輸)。
-//     (#36:第一版放在全局最後一個行動,BE 指出那裡國軍怎麼下都贏、17 個選項都是 1000 分,bot 只是在平手裡亂選;
-//     倒數第二個行動印不印才會改變結果。筆記說的是「最後一回合」,不是最後一個行動。)
+//     這裡只驗方向:通膨 7(下一格就崩潰)比通膨 0 貴得多。
+//   - 評估看 E:同一個盤面,通膨越高國軍越差(#38:通膨 0 → 5 → 7);左傾越高共軍越差;中間派偏向誰誰好。
+//   - 最後一回合:通膨 5、6 時國軍這一回合會印(6 的手牌 −1 已經沒有下一回合,7 沒有門檻;筆記「印到 7」);通膨 7 時永遠不印(8 = 當場輸)。
+//     (#36:放在全局最後一個行動時國軍怎麼下都贏,bot 只是在平手裡亂選,所以從倒數第二個行動問起。#38:每回合只能印一次,
+//     bot 可以在倒數第二個或最後一個行動印,兩個都對,所以從倒數第二個行動起讓 bot 把這一回合下完,看這一回合有沒有印。)
 // E 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
 const MEX = { mechanismE: true };
 const eBotTodo = () => TODO || (E.E_SPEC === undefined ? "TODO: 引擎還沒有機制 E(#35)" : typeof B.ePrice !== "function" ? "TODO: bots.js 還沒有 ePrice(還不懂機制 E)" : null);
@@ -587,36 +588,51 @@ function atRoundE(turn, round, actor, hands, options) {
 }
 const BE7 = () => play(11001, games(20), "normal", "normal", MEX);
 const printed = (a) => !!(a && (a.print || (a.choice && typeof a.choice === "object" && a.choice.print)));
+// From `st`, let both bots play until the turn ends (or the game does); did the Nationalists print on the way?
+function printsRestOfTurn(st, rng) {
+  const turn = st.turn;
+  let s = st, any = false;
+  for (let k = 0; k < 60 && !s.winner && s.turn === turn; k++) {
+    const who = s.pending ? s.pending.who : s.actor;
+    const { game, ...move } = B.decide(E.view(s, who), who, "normal", rng);
+    if (who === KMT && printed(move)) any = true;
+    s = E.apply(s, move);
+  }
+  if (s.turn === turn && !s.winner) throw new Error(`printsRestOfTurn: 第 ${turn} 回合 60 步還沒走完`);
+  return any;
+}
 
-check("ePrice:通膨 9(下一格崩潰)的價格比通膨 0 高得多", () => {
+check("ePrice:通膨 7(下一格崩潰)的價格比通膨 0 高得多", () => {
   const t = eBotTodo(); if (t) return t;
-  const p0 = B.ePrice(eBoard({ inflation: 0 }), KMT), p9 = B.ePrice(eBoard({ inflation: 9 }), KMT);
-  return all(ok(p9 > p0 && p9 > 0, `國軍通膨 0 的價格 ${p0},通膨 9 的價格 ${p9}(9 要比 0 高)`), ok(true, `通膨 0:${p0};通膨 9:${p9}`));
+  const p0 = B.ePrice(eBoard({ inflation: 0 }), KMT), p7 = B.ePrice(eBoard({ inflation: 7 }), KMT);
+  return all(ok(p7 > p0 && p7 > 0, `國軍通膨 0 的價格 ${p0},通膨 7 的價格 ${p7}(7 要比 0 高)`), ok(true, `通膨 0:${p0};通膨 7:${p7}`));
 });
 
 check("評估看 E:通膨越高國軍越差;左傾越高共軍越差;中間派偏向誰誰好", () => {
   const t = eBotTodo(); if (t) return t;
-  const k = [0, 5, 9].map((n) => B.evaluate(eBoard({ inflation: n }), KMT));
+  // #38: 取在每一段的中間(和 #36 的 0 / 5 / 9 一樣)。eBoard 用 setInflation 擺,門檻的效果沒有發生;剛好擺在門檻上(例如 4)
+  // 是「這一段的起點、前面的代價已經付過但盤面上沒有」,把已到的門檻當成沉沒成本的評估在那裡讀起來和 0 一樣,分不出方向。
+  const k = [0, 5, 7].map((n) => B.evaluate(eBoard({ inflation: n }), KMT));
   const c = [0, 3, 5].map((n) => B.evaluate(eBoard({ leftism: n }), CCP));
   const m = [-2, 0, 2].map((n) => B.evaluate(eBoard({ centrists: n }), CCP));
   const f = (xs) => xs.map((x) => x.toFixed(2)).join(" → ");
   return all(
-    ok(k[0] > k[1] && k[1] > k[2], `國軍的評估(通膨 0 → 5 → 9)要一路變小:${f(k)}`),
+    ok(k[0] > k[1] && k[1] > k[2], `國軍的評估(通膨 0 → 5 → 7)要一路變小:${f(k)}`),
     ok(c[0] > c[1] && c[1] > c[2], `共軍的評估(左傾 0 → 3 → 5)要一路變小:${f(c)}`),
     ok(m[0] < m[1] && m[1] < m[2], `共軍的評估(中間派 親國 2 → 中立 → 親共 2)要一路變大:${f(m)}`),
     ok(true, `國軍 ${f(k)};共軍(左傾)${f(c)};共軍(中間派)${f(m)}`),
   );
 });
 
-check("最後一回合國軍的倒數第二個行動(turns: 7):通膨 7、8 時印鈔(各至少 16 / 20);通膨 9 時一次都不印", () => {
+check("最後一回合(turns: 7),國軍從倒數第二個行動下完這一回合:通膨 5、6 時這一回合有印鈔(各至少 16 / 20);通膨 7 時一次都不印", () => {
   const t = eBotTodo(); if (t) return t;
   // 選項 turns: 7 讓第 7 回合是最後一回合(第 8 回合一開始有和談的決定,走不到行動回合);決戰期國軍有 7 個行動回合,
   // 第 6 個是倒數第二個(共軍沒有牌,國軍接著還有第 7 個)。國軍手上兩張 2 點牌。
   const at = (n) => { const st = atRoundE(7, 6, KMT, [["score_north"], ["score_east", "kunming_incident", "takeover_officials"]], { ...MEX, turns: 7 }); E.setInflation(st, n); return st; };
-  const ask = (st) => Array.from({ length: 20 }, (_, i) => B.decide(E.view(st, KMT), KMT, "normal", E.makeRng(900 + i)));
-  const p7 = ask(at(7)).filter(printed).length, p8 = ask(at(8)).filter(printed).length, p9 = ask(at(9)).filter(printed).length;
-  return all(ok(p7 >= 16, `通膨 7:20 次裡印鈔 ${p7} 次(至少 16)`), ok(p8 >= 16, `通膨 8:20 次裡印鈔 ${p8} 次(至少 16;筆記「印到 9」)`), eq(p9, 0, "通膨 9:20 次裡印鈔的次數"),
-    ok(true, `通膨 7 印 ${p7} / 20;8 印 ${p8} / 20;9 印 0`));
+  const ask = (n) => Array.from({ length: 20 }, (_, i) => printsRestOfTurn(at(n), E.makeRng(900 + i))).filter(Boolean).length;
+  const p5 = ask(5), p6 = ask(6), p7 = ask(7);
+  return all(ok(p5 >= 16, `通膨 5:20 次裡這一回合有印 ${p5} 次(至少 16)`), ok(p6 >= 16, `通膨 6:20 次裡這一回合有印 ${p6} 次(至少 16;筆記「印到 7」)`), eq(p7, 0, "通膨 7:20 次裡這一回合有印的次數"),
+    ok(true, `通膨 5 印 ${p5} / 20;6 印 ${p6} / 20;7 印 0`));
 });
 
 check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;國軍印過鈔、共軍激進過;沒有一局是國軍自己印到崩潰", () => {
@@ -627,7 +643,7 @@ check("E 開著普通對普通:每一局都結束;每局平均不超過 20 秒;�
   // #36 (the BE: a bot blind to the collapse ended both of its games by inflation and this check stayed green).
   const collapsed = r.reasons.inflation || 0;
   return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(p >= 1, `國軍印鈔 ${p} 次(${r.games} 局裡至少 1 次)`), ok(rad >= 1, `共軍激進 ${rad} 次(至少 1 次)`),
-    eq(collapsed, 0, "以通膨崩潰結束的局數(國軍自己印到 10)"),
+    eq(collapsed, 0, "以通膨崩潰結束的局數(國軍自己印到 8)"),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};印鈔 ${p}、激進 ${rad}、平抑 ${r.eActs ? r.eActs.peg : 0};每局 ${s.toFixed(1)} 秒`));
 });
 
