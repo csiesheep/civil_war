@@ -6,7 +6,9 @@ set -u
 O=tuning/40/runs/falsify
 mkdir -p $O
 if [ -n "$(git status --porcelain public/shared)" ]; then echo "public/shared is not clean"; exit 1; fi
-one() { # name file sed-expression
+ONLY=${1:-}
+one() { # name file sed-expression  (sh tuning/40/falsify.sh <letter> runs only that one)
+  case "$1" in "$ONLY"*) ;; *) [ -n "$ONLY" ] && return 0 ;; esac
   sed -i "$3" "$2"
   if git diff --quiet -- "$2"; then echo "$1: the pattern did not hit"; exit 1; fi
   BOTS_SCALE=0.25 node --test tests/bots.test.js > $O/$1.log 2>&1

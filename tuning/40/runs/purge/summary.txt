@@ -1,8 +1,11 @@
-games 120; action rounds of the Nationalists with a 肅諜 legal 77, in 3 games; chosen 0
-turn 4: rounds 6, best 肅諜 above the best other play 0, chosen 0, gap median -14.4, max -11.97
-turn 5: rounds 18, best 肅諜 above the best other play 0, chosen 0, gap median -25.4, max -10.56
-turn 6: rounds 18, best 肅諜 above the best other play 0, chosen 0, gap median -15.8, max -4.66
-turn 7: rounds 21, best 肅諜 above the best other play 0, chosen 0, gap median -19.5, max -4.83
-turn 8: rounds 14, best 肅諜 above the best other play 1, chosen 0, gap median -10.1, max 0.17
-cities in the best 肅諜's list (rounds): {"beiping":38,"nanjing":52}
-belief of the first city named: min 0.29, median 0.4, max 0.43
+games 120; action rounds of the Nationalists with a 肅諜 legal 152, in 9 games; chosen 0
+turn 1: rounds 5, best 肅諜 above the best other play 0, chosen 0, gap median -10.3, max -8.74
+turn 2: rounds 7, best 肅諜 above the best other play 0, chosen 0, gap median -21.0, max -10.71
+turn 3: rounds 7, best 肅諜 above the best other play 0, chosen 0, gap median -32.5, max -30.81
+turn 4: rounds 7, best 肅諜 above the best other play 0, chosen 0, gap median -16.8, max -12.33
+turn 5: rounds 36, best 肅諜 above the best other play 0, chosen 0, gap median -22.0, max -7.14
+turn 6: rounds 26, best 肅諜 above the best other play 0, chosen 0, gap median -25.4, max -8.39
+turn 7: rounds 42, best 肅諜 above the best other play 0, chosen 0, gap median -18.3, max -5.44
+turn 8: rounds 22, best 肅諜 above the best other play 1, chosen 0, gap median -8.5, max 0.15
+cities in the best 肅諜's list (rounds): {"nanjing":132,"zhengzhou":13,"wuhan":15,"jinzhou":8,"xian":11,"guilin":18}
+belief of the first city named: min 0.25, median 0.38, max 0.5
