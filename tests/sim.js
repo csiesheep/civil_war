@@ -152,6 +152,8 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 //   plant / plantAt[city]: the markers planted (real / fake), from the Communists' decisions; purge / purgeAt[city]:
 //     the 肅諜 played and what each turned up (log `purge`), `caught` the 肅諜 that turned up a fake (抓錯);
 //   leak / defect / handover: the real markers used (log); no.leak / no.defect: asked and said no (log `moleNo`);
+//   asked[tag]: the questions put, by whether a real marker was among the places (real: and realNo, the "no"s
+//     among them: the bot's q; none: only fakes there, "no" is forced);
 //   home: the markers sent back by a capture (log `molesHome`); gains[why]: the markers gained (log `moleGain`);
 //   legal: action rounds where a 佈線 / 肅諜 / 和平易手 was legal, and where it was played;
 //   byTurn[t]: plant, purge, leak, defect, handover;
@@ -166,6 +168,7 @@ function newC() {
   return {
     plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
     leak: 0, defect: 0, handover: 0, no: { leak: 0, defect: 0 }, home: 0, gains: {},
+    asked: { leak: { real: 0, realNo: 0, none: 0 }, defect: { real: 0, realNo: 0, none: 0 } },
     legal: { plantRounds: 0, plantChosen: 0, purgeRounds: 0, purgeChosen: 0, handoverRounds: 0, handoverChosen: 0 },
     byTurn: {}, calib: cCal(), board: { capital: cCal(), other: cCal() }, end: {}, reform4Turn: null, pend: null,
   };
@@ -180,6 +183,12 @@ const cPayload = (d) => (d.type === "play" ? d : d.type === "choose" && d.choice
 const cityMean = (belief, id) => { const l = belief[id] || []; return l.length ? l.reduce((t, x) => t + x, 0) / l.length : null; };
 function readDecisionC(C, st, side, d, view) {
   const pol = cPayload(d), t = slot(C.byTurn, st.turn, () => ({}));
+  const p = st.pending;
+  if (p && side === CCP && (p.tag === "leak" || p.tag === "defect")) {
+    const places = p.tag === "defect" ? [p.target] : p.options.filter((o) => o.id !== "no").map((o) => String(o.id).split(":")[1]);
+    const a = C.asked[p.tag];
+    if (places.some((id) => (st.moles.at[id] || []).includes(true))) { a.real++; if (d.choice === "no") a.realNo++; } else a.none++;
+  }
   if (st.phase === "action" && !st.pending) {
     const L = E.legal(st, side), mo = L.kind === "action" ? L.cards.map((c) => c.uses.moles).filter(Boolean) : [];
     if (side === CCP && mo.some((m) => m.plant.length)) { C.legal.plantRounds++; if (pol.plant) C.legal.plantChosen++; }
