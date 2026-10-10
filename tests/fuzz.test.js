@@ -74,6 +74,8 @@ const CELLS = [
   ["D 機制 D 開", { mechanismD: true }],
   // M2b (#35): mechanism E is an option until the owner adopts it; random play must handle its decisions too.
   ["E 機制 E 開", { mechanismE: true }],
+  // M2b (#39): mechanism C (內線) is an option; random play must plant, purge, hand over, leak and turn too.
+  ["C 機制 C 開", { mechanismC: true }],
 ];
 test("fuzz: the control cells", async () => {
   const E = await import("../public/shared/engine.js");
