@@ -667,6 +667,13 @@ section("B8 機制 C:國軍對標記的信念、佈線與肅諜(選項 mechanism
 //   最好的其他出法好:一整張牌換一個每回合只值 0.3–0.5 的真標記)。那是規則的問題,交給 owner;bot 不調成會肅諜。
 //   第四條改成驗 bot 的肅諜評估跟著信念走:`B.purgeValue(view, [城, …])` = 這次肅諜本身的期望值(國軍的角度,評估的單位,
 //   不扣這張牌的機會成本);同一個盤面,機率高的城比機率低的城值得翻。肅諜的次數只報,不是門檻。
+// orchestrator 裁決(#40 第三輪):
+//   - 第四條原本比濟南和太原,兩座城的真標記本來就值不一樣,`purgeValue` 不看信念也會過(BE 抓到的洞)。改成 BE 提的寫法:
+//     同一座城、同一個盤面,只差信念的歷史——view 和「把紀錄裡的 moleNo 拿掉的 view」;不看信念的實作兩邊會相等。
+//   - 「20 局裡共軍翻過真標記」也改成只報:誠實的評估下真標記每局只用到約 0.02 次(第五節 3000 局 21 次),
+//     20 局的門檻量到的是運氣;和肅諜一樣是規則的發現,交給 owner。
+//   - 第三條的「佈過線,真的、假的都有」同理改成只報(3000 局 110 次佈線);兩種都有,由 orchestrator 從模擬的 more.c 讀。
+//   - 共軍的佈線:首都可以放真的(筆記規則第 6 條),假的偏向首都與割點、真的偏向打算打的地方,每一類地方都真假混著(比例加雜訊)。
 // C 關掉時 bot 的每一個決定都不變:不在這裡,orchestrator 驗收時用同種子的模擬比對。
 const MCX = { mechanismC: true };
 const cBotTodo = () => TODO || (E.C_SPEC === undefined ? "TODO: 引擎還沒有機制 C(#39)" : typeof B.moleBelief !== "function" ? "TODO: bots.js 還沒有 moleBelief(還不懂機制 C)" : null);
@@ -719,26 +726,34 @@ check("共軍在洩密的時機沒有翻:那座城上的標記,機率比沒有�
   );
 });
 
-check("C 開著普通對普通:每一局都結束;每局平均不超過 20 秒;共軍佈過線,真的、假的都有", () => {
+check("C 開著普通對普通:每一局都結束;每局平均不超過 20 秒(佈線的次數只報)", () => {
+  // #40 第三輪:第五節 3000 局只佈線 110 次(每局約 0.04 次),20 局的「至少一次」量到的是運氣;佈線兩種都有,
+  // orchestrator 在驗收時從 C 開三批的 more.c 讀(不是這裡的門檻)。
   const t = cBotTodo(); if (t) return t;
   const r = BC8();
   const c = all(clean(r, "普通對普通(C)"), nonEmpty(r.ended, "結束的局數")); if (c !== true) return c;
   const s = r.ms / r.games / 1000, a = r.cActs;
-  return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`), ok(a.plantReal >= 1, `共軍佈真標記 ${a.plantReal} 個(${r.games} 局裡至少 1)`), ok(a.plantFake >= 1, `共軍佈假標記 ${a.plantFake} 個(至少 1)`),
+  return all(ok(s <= 20, `每局平均 ${s.toFixed(1)} 秒(上限 20)`),
     ok(true, `${r.games} 局:共軍勝 ${r.wins[CCP]}、國軍勝 ${r.wins[KMT]};${J(r.reasons)};佈真 ${a.plantReal}、佈假 ${a.plantFake};每局 ${s.toFixed(1)} 秒`));
 });
 
-check("肅諜的期望值跟著信念走:洩密問了沒翻的濟南比太原不值得翻;C 開 20 局共軍翻過真標記(肅諜的次數只報)", () => {
+check("肅諜的期望值跟著信念走:同一座城、同一個盤面,洩密問了沒翻的歷史讓翻它的期望值變低(C 開 20 局的肅諜、翻真標記只報)", () => {
   const t = purgeTodo(); if (t) return t;
   const d = declinedLeak(); if (typeof d === "string") return d;
-  const v = E.view(d.st, KMT), vj = B.purgeValue(v, ["jinan"]), vt = B.purgeValue(v, ["taiyuan"]);
+  const v = E.view(d.st, KMT);
+  // 同一個 view,只拿掉「問了、沒翻」的紀錄(#40 引擎在 C 開時寫的 moleNo):盤面一樣,信念回到先驗。
+  const bare = { ...v, log: (v.log || []).filter((l) => l.type !== "moleNo") };
+  const had = (v.log || []).filter((l) => l.type === "moleNo").length;
+  const pj = (B.moleBelief(v).jinan || [])[0], pj0 = (B.moleBelief(bare).jinan || [])[0];
+  const pre = all(ok(had >= 1, `國軍的紀錄裡要有「問了、沒翻」(moleNo):${had} 筆`), ok(typeof pj === "number" && typeof pj0 === "number" && pj < pj0, `濟南的機率:有那筆紀錄 ${pj} 要比拿掉之後 ${pj0} 低`));
+  if (pre !== true && !(pre && pre.pass)) return pre; // ok() 過的時候回 { pass },不是 true(#27 我犯過同一個錯)
+  const vj = B.purgeValue(v, ["jinan"]), vj0 = B.purgeValue(bare, ["jinan"]);
   const r = BC8();
   const c = all(clean(r, "普通對普通(C)")); if (c !== true) return c;
   const a = r.cActs, used = a.leak + a.defect + a.handover;
   return all(
-    ok(typeof vj === "number" && typeof vt === "number" && vt > vj, `翻太原的期望值 ${vt} 要比翻濟南 ${vj} 高(太原的機率較高)`),
-    ok(used >= 1, `共軍翻真標記 ${used} 次(洩密 ${a.leak}、倒戈 ${a.defect}、和平易手 ${a.handover};${r.games} 局裡至少 1)`),
-    ok(true, `翻濟南 ${vj}、翻太原 ${vt};${r.games} 局:肅諜 ${a.purgePlays} 次(只報)、翻了 ${a.purge} 個;洩密 ${a.leak}、倒戈 ${a.defect}、和平易手 ${a.handover}`),
+    ok(typeof vj === "number" && typeof vj0 === "number" && vj < vj0, `翻濟南的期望值:有那筆紀錄 ${vj} 要比拿掉之後 ${vj0} 低`),
+    ok(true, `濟南 機率 ${pj} / ${pj0}、翻它的期望值 ${vj} / ${vj0};${r.games} 局:肅諜 ${a.purgePlays} 次、翻了 ${a.purge} 個;翻真標記 ${used} 次(洩密 ${a.leak}、倒戈 ${a.defect}、和平易手 ${a.handover})——只報`),
   );
 });
 
