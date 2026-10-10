@@ -1,5 +1,5 @@
 (a) 濟南藍 1 [真, 假],打點 4 對固守:洩密 共:leak;之後 濟南 3/0 控制 0;濟南的標記 [];共軍手上 [1,1];待決定 none
-(a2) 濟南藍 2 [真, 假],打點 4 對固守:洩密 共:leak;之後 濟南 2/0 控制 null;濟南的標記 [true,false];共軍手上 [0,0];待決定 共:defect
+(a2) 濟南藍 2 [真, 假],打點 4 對固守:洩密 共:leak;之後 濟南 2/0 控制 null;濟南的標記 [true,false];共軍手上 [0,0];待決定 none
 (b) 濟南藍 5 [真, 真] 打援 → 固守:共:leak → point:jinan → 濟南 0/1 [true],共:defect → defect → 濟南 0/0 標記 [],出局的真 2;紀錄 [{"type":"leak","plan":"point"},{"type":"siegeResult","plan":"point","removed":4},{"type":"defect","removed":1}]
 (c) D+C:太原(藍 1 灰 2)佈假 → 太原的標記 [false];同時 plant + power:政工: one of plant, handover, purge;legal 的 politics null moles.plant 有太原 true
     國軍 肅諜太原 → 共軍手上 [0,1] 民心 1;整編太原 → 太原 藍 3 灰 0 晉 ccp

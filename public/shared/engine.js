@@ -1988,11 +1988,12 @@ function siegeStep(st, step) {
     log(st, { type: step.stage, side: CCP, target: T, space: id, n });
     step.stage = "end";
   }
-  // #39, mechanism C, 倒戈: the result is in; 打點 removed at least 1 at T and a marker, real or not, is
-  // still there (one on a city the Communists now control has gone home first): the Communists are asked.
+  // #39, mechanism C, 倒戈: the result is in; 打點 removed at least 1 at T, T still has Nationalist points
+  // (orchestrator 裁決 #39, reading 5: none left, nothing is asked), and a marker, real or not, is still there
+  // (one on a city the Communists now control has gone home first): the Communists are asked.
   if (step.stage === "end" && mechC(st) && step.plan === "point" && step.removedAtT > 0) {
     molesHome(st);
-    if (molesAt(st, T).length) step.stage = "defect";
+    if (molesAt(st, T).length && pointsOf(st, KMT, T) > 0) step.stage = "defect";
   }
   if (step.stage === "defect") {
     if (!step.choices.length) return ask(st, { ...step, side: CCP }, { kind: "option", tag: "defect", target: T, options: [{ id: "no" }, { id: "defect" }] });
