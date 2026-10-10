@@ -42,7 +42,8 @@ for (let seed = first; seed < first + games; seed++) {
       }
     }
     // 和平易手: an action round of the Communists where one is legal: the best 和平易手 against the best of the rest
-    // (`B.scoreCandidates`, its own rng), plus the worth of the real marker it turns up (the evaluation charged it).
+    // (`B.scoreCandidates`, its own rng), plus the worth of the real marker it turns up (the evaluation charged it;
+    // read with the C_W of the run: tuning/40/runs/gains/ were played with #40's first C_W shape, overridden as named).
     if (!p && st.phase === "action" && side === CCP) {
       const L = E.legal(st, CCP);
       if (L.kind === "action" && L.cards.some((c) => c.uses.moles && c.uses.moles.handover.length)) {
@@ -50,7 +51,7 @@ for (let seed = first; seed < first + games; seed++) {
         const h = sc.find((x) => x.a.handover), o = sc.find((x) => !x.a.handover);
         if (h) {
           const id = h.a.handover, iso = new Set(E.isolatedCities(st));
-          const worth = Math.max(1, st.options.turns - st.turn + 1) * (B.C_W.real + (id === E.homeCapital(st, KMT) ? B.C_W.capital : 0) + (E.adjOf(st, id).some((x) => E.controller(st, x) === CCP) ? B.C_W.open : 0) + (iso.has(id) ? B.C_W.isolated : 0));
+          const worth = Math.max(1, st.options.turns - st.turn + 1) * (id === E.homeCapital(st, KMT) ? B.C_W.capital : iso.has(id) ? B.C_W.isolated : E.adjOf(st, id).some((x) => E.controller(st, x) === CCP) ? B.C_W.open : B.C_W.real);
           out.handovers.push({ seed, turn: st.turn, id, raw: Math.round(((h.v - (o ? o.v : h.v)) + worth) * 100) / 100, points: E.pointsOf(st, KMT, id) });
         }
       }

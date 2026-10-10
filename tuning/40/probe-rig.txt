@@ -1,0 +1,4 @@
+turn 1 C_W {"real":0.1,"capital":0.5,"open":0.3,"isolated":0.2,"fake":0.05,"handReal":0.1,"handFake":0,"q":{"leak":0.9,"defect":0.4}}
+belief with the no: {"jinan":[0.3103448275862069],"taiyuan":[0.3448275862068966]}  without: {"jinan":[0.3333333333333333],"taiyuan":[0.3333333333333333]}
+jinan 孤城 purgeValue with the no 0.083 without 0.133
+taiyuan open purgeValue with the no 0.434 without 0.400

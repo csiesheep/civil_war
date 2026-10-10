@@ -705,7 +705,7 @@ function radicalChoices(st, side, villages) {
 //     (the engine's public `moleNo` entry, #40): a "no" is a likelihood, C_W.q of the question if a real marker
 //     was among those asked about, 1 if none was. The posterior is exact under the count R (`molePosterior`).
 //   - 肅諜's value = the benefit of a real caught × p − the price of a fake (抓錯) × (1 − p): played out by the
-//     engine on the guess per outcome and weighted by the posterior (`purgeValue`).
+//     engine on the guess per outcome and weighted by the posterior (`purgePlayValue`).
 //   - The Communists plant fakes where the Nationalists fear most (their capital, a city whose fall cuts others
 //     off), reals where they mean to attack (a city they can reach now, the capital), and how many of each is
 //     drawn from their hand as it is (the ratio plus the noise of the draw), so it cannot be read (`plantPayload`).
@@ -718,9 +718,12 @@ const mechC = (st) => !!(st.options && st.options.mechanismC);
 // (tuning/40/probe-gains.mjs, 240 games: the capital 洩密 on any 圍點打援, a city the Communists can attack
 // 洩密 / 倒戈, a 孤城 洩密 / 倒戈; 和平易手 was never the best play there, so it adds nothing). A fake does nothing
 // by itself (its worth is what the Nationalists pay to find it, measured afterwards); a marker in the hand only
-// once planted. `q`: how often the Communists say no to 洩密 / 倒戈 with a real marker there.
+// once planted. One class per city, in the probe's order (the capital, else a 孤城, else a city next to a space
+// the Communists control, else any other): per turn the gain the probe measured there (capital 0.42 questions ×
+// 1.18, 孤城 0.057 × 3.3 without the one 洩密 that won a game, open 0.11 × 2.6; the others were never asked, 0.1
+// for the chance of becoming one of these). `q`: how often the Communists say no to 洩密 / 倒戈 with a real one there.
 export const C_W = {
-  real: 0.1, capital: 0.4, open: 0.2, isolated: 0.1, fake: 0.05, handReal: 0.1, handFake: 0,
+  real: 0.1, capital: 0.5, open: 0.3, isolated: 0.2, fake: 0.05, handReal: 0.1, handFake: 0,
   q: { leak: 0.9, defect: 0.4 },
 };
 const turnsLeft = (st) => Math.max(1, st.options.turns - Math.max(1, st.turn) + 1);
@@ -728,7 +731,7 @@ const binom = (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 
 const ccpNext = (st, id) => E.adjOf(st, id).some((a) => E.controller(st, a) === CCP);
 // What a real marker on `id` is worth to the Communists (`iso`: the 孤城 now, a Set).
 function realWorth(st, id, cap, iso) {
-  return turnsLeft(st) * (C_W.real + (id === cap ? C_W.capital : 0) + (ccpNext(st, id) ? C_W.open : 0) + (iso.has(id) ? C_W.isolated : 0));
+  return turnsLeft(st) * (id === cap ? C_W.capital : iso.has(id) ? C_W.isolated : ccpNext(st, id) ? C_W.open : C_W.real);
 }
 // The markers' worth to the Communists, read with their truth (a guess, or the Communists' own state).
 function cValue(st) {
@@ -892,7 +895,7 @@ function purgeOutcomes(post, ids, count) {
 // (the ones not named are set aside while the engine plays it, so its draw cannot pick them), played out and
 // evaluated; the markers' worth that the outcome itself changed on the guess is put back (`cValue`), so every
 // outcome is read against the same guess.
-function purgeValue(st, action, post, rng) {
+function purgePlayValue(st, action, post, rng) {
   const list = action.type === "play" ? action.purge : action.choice.purge;
   const count = {};
   for (const id of list) count[id] = (count[id] || 0) + 1;
@@ -911,6 +914,36 @@ function purgeValue(st, action, post, rng) {
     const s = simulate(g, action, rng);
     if (s.moles && s.winner == null) for (const id of ids) if (rest[id].length) s.moles.at[id] = [...(s.moles.at[id] || []), ...rest[id]];
     v += o.w * (evaluate(s, KMT) + shift);
+  }
+  return v;
+}
+// 肅諜 on its own (orchestrator 裁決 #40, round 2): its expected value to the Nationalists, in the evaluation's
+// units, from their view only and before the card it costs -- the note's 「抓到真的好處 × 機率 − 抓錯的代價」.
+// `cities` names the markers as a 肅諜 does (a city twice: two of its markers). Per outcome of the posterior
+// (`purgeOutcomes`): each real one turned up takes its worth off the Communists (`realWorth`), each fake one
+// goes from the board to their hand, and any fake costs the 抓錯 once (民心 C_SPEC.caughtFake.mandate; under E the
+// centrists a step, valued as the evaluation values one, `eCentrists`). null without C or for a list a 肅諜
+// could not name. The decision itself plays the card out (`purgePlayValue`), so it pays for the card too.
+export function purgeValue(view, cities) {
+  const post = molePosterior(view);
+  if (!post || !(post.total > 0) || !Array.isArray(cities) || !cities.length) return null;
+  const count = {};
+  for (const id of cities) count[id] = (count[id] || 0) + 1;
+  const ids = Object.keys(count);
+  if (ids.some((id) => !view.moles.at[id] || count[id] > view.moles.at[id].length)) return null;
+  const cap = E.homeCapital(view, KMT), iso = new Set(E.isolatedCities(view)), left = turnsLeft(view);
+  const worth = ids.map((id) => realWorth(view, id, cap, iso)), fakeMove = left * (C_W.fake - C_W.handFake);
+  let caught = E.C_SPEC.caughtFake.mandate;
+  if (mechE(view)) {
+    const sp = E.eSpecOf(view), c = E.centristsOf(view), to = clampC(sp, c + E.C_SPEC.caughtFake.centrists);
+    caught = (to - c) * sp.centristsVp * eSettlements(view);
+  }
+  let v = 0;
+  for (const o of purgeOutcomes(post, ids, count)) {
+    let x = 0, fakes = 0;
+    ids.forEach((id, i) => { x += o.f[i] * worth[i]; const k = count[id] - o.f[i]; fakes += k; x += k * fakeMove; });
+    if (fakes > 0) x -= caught;
+    v += o.w * x;
   }
   return v;
 }
@@ -1290,7 +1323,7 @@ function winsNow(st, action) { return E.apply(st, action).winner === action.side
 // #36, mechanism E: `ask` is the ops question itself; under E it says whether these ops may be printed
 // (`canPrint`) and where a 激進 could go (`radical`), and the printed / radical versions are offered too.
 // #40, mechanism C: `cx` ({ post }) is passed by the Nationalists' decision itself: a 肅諜 is then valued by its
-// expected value over the belief (`purgeValue`), never inside a simulation.
+// expected value over the belief (`purgePlayValue`), never inside a simulation.
 function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null, cx = null) {
   const aid = card && E.isAid(card) ? card : undefined;
   const o = E.opsOptions(st, who, aid);
@@ -1357,7 +1390,7 @@ function bestOps(st, who, ops, allowed, rng, card, top = null, ask = null, cx = 
     const a = { type: "choose", side: who, choice: ch };
     let v, g = null;
     if (sieges.has(ch)) { g = siegeGame(st, who, a, rng, 0); v = g.game.value; }
-    else if (purges.has(ch)) v = purgeValue(st, a, cx.post, rng);
+    else if (purges.has(ch)) v = purgePlayValue(st, a, cx.post, rng);
     else v = meanEval(st, a, who, rng, rollsFor(st, a));
     if (v > bestV) { bestV = v; best = ch; bestG = g; }
   }
@@ -1717,7 +1750,7 @@ export function scoreCandidates(view, side, rng) {
   const L = E.legal(st, side);
   if (L.kind !== "action") return [];
   const cx = mechC(st) ? { rng, post: side === KMT ? molePosterior(view) : null } : null;
-  return actionCandidates(st, side, L, null, cx).map((a) => ({ a, v: a.purge && cx && cx.post ? purgeValue(st, a, cx.post, rng) : evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
+  return actionCandidates(st, side, L, null, cx).map((a) => ({ a, v: a.purge && cx && cx.post ? purgePlayValue(st, a, cx.post, rng) : evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
 }
 
 // Zongheng #134: several plays can win on the one guess the bot scored; every
@@ -1778,7 +1811,7 @@ export function decide(view, side, level = "normal", rng) {
       const games = new Map();
       const scored = cands.map((a) => {
         if (sieges.has(a)) { const g = siegeGame(st, side, a, rng, noise); games.set(a, g); return { a, raw: g.raw, v: g.game.value }; }
-        const raw = a.purge && cx && cx.post ? purgeValue(st, a, cx.post, rng) : evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) };
+        const raw = a.purge && cx && cx.post ? purgePlayValue(st, a, cx.post, rng) : evalAction(st, a, side, rng); return { a, raw, v: raw + noise * gauss(rng) };
       });
       scored.sort((x, y) => y.v - x.v);
       // An attack on a city goes to the win check with the plan it would draw.
