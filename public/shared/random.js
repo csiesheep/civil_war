@@ -171,6 +171,11 @@ export function randomChoice(st, p, rng) {
         const real = (o) => o.id === "no" || E.molesAt(st, p.tag === "leak" ? o.id.split(":")[1] : p.target).includes(true);
         return pickOne(p.options.filter(real), rng).id;
       }
+      // #41, the free 佈線 (`cFreePlant`): a kind the hand holds, or "no".
+      if (p.tag === "plant") {
+        const h = E.moleHand(st), ok = (o) => o.id === "no" || (h && h[o.id.startsWith("real:") ? 0 : 1] > 0);
+        return pickOne(p.options.filter(ok), rng).id;
+      }
       return pickOne(p.options, rng).id;
     }
     case "ops": {

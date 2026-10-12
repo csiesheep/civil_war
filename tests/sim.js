@@ -68,7 +68,7 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
   const X = options.mechanismE ? newE() : null;
   if (X) more.e = X;
   // #40, mechanism C (only with options.mechanismC: off C `more` has no `c` and nothing below runs).
-  const C = options.mechanismC ? newC() : null;
+  const C = options.mechanismC ? newC(options) : null;
   if (C) more.c = C;
   // At the turn-end checks (probe.home, "turnEnd"): the besieged cities that supply still reaches, i.e.
   // a 孤城 only by the marker; the `attrition` entry that follows is read against them.
@@ -165,8 +165,11 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 //     other cities (`board.capital`, `board.other`), with the prior beside it;
 //   end: where the markers are at the end (on the board real / fake, in the hand, out, in the pool).
 const cCal = () => ({ n: 0, real: 0, p: 0, brier: 0, brierPrior: 0, bins: {}, binsPrior: {} });
-function newC() {
+// #41: `free` (the free 佈線 of cFreePlant: real / fake, also in plantAt / plantClass) and `mandate` (民心 from
+// cRealMandate) only with those options, so a game without them sums as before.
+function newC(options = {}) {
   return {
+    ...(options.cFreePlant ? { free: { real: 0, fake: 0 } } : {}), ...(options.cRealMandate ? { mandate: 0 } : {}),
     plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, plantClass: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
     leak: 0, defect: 0, handover: 0, no: { leak: 0, defect: 0 }, home: 0, gains: {},
     asked: { leak: { real: 0, realNo: 0, none: 0 }, defect: { real: 0, realNo: 0, none: 0 } },
@@ -189,6 +192,11 @@ function readDecisionC(C, st, side, d, view) {
     const places = p.tag === "defect" ? [p.target] : p.options.filter((o) => o.id !== "no").map((o) => String(o.id).split(":")[1]);
     const a = C.asked[p.tag];
     if (places.some((id) => (st.moles.at[id] || []).includes(true))) { a.real++; if (d.choice === "no") a.realNo++; } else a.none++;
+  }
+  // #41, the free 佈線: the answer names the kind and the city.
+  if (p && side === CCP && p.tag === "plant" && C.free && d.choice !== "no") {
+    const [kind, id] = String(d.choice).split(":"), k = kind === "real" ? "real" : "fake";
+    C.free[k]++; bump(t, "free"); bump(slot(C.plantAt, id, () => ({})), k); bump(slot(C.plantClass, B.moleClass(st, id), () => ({})), k);
   }
   if (st.phase === "action" && !st.pending) {
     const L = E.legal(st, side), mo = L.kind === "action" ? L.cards.map((c) => c.uses.moles).filter(Boolean) : [];
@@ -220,6 +228,7 @@ function readLogC(C, l) {
     C.pend = null;
   } else if (l.type === "leak" || l.type === "defect" || l.type === "handover") { C[l.type]++; bump(t, l.type); }
   else if (l.type === "moleNo") C.no[l.tag]++;
+  else if (l.type === "moleMandate") { C.mandate = (C.mandate || 0) + l.vp; bump(t, "mandate", l.vp); } // #41
   else if (l.type === "molesHome") C.home += l.n;
   else if (l.type === "moleGain") { bump(C.gains, l.why, l.n[0] + l.n[1]); if (l.why === "reform4") C.reform4Turn = l.t; }
 }
@@ -451,6 +460,8 @@ export function moreStats(list) {
         bump(per.purgeReal, c.purge.real); bump(per.purgeFake, c.purge.fake);
         bump(per.leak, c.leak); bump(per.defect, c.defect); bump(per.handover, c.handover); bump(per.used, c.leak + c.defect + c.handover);
         bump(per.reform4, reform4Turn ?? "none");
+        if (c.free) { (per.freeReal ??= {}); (per.freeFake ??= {}); bump(per.freeReal, c.free.real); bump(per.freeFake, c.free.fake); } // #41
+        if (c.mandate != null) bump((per.mandate ??= {}), c.mandate);
       }
       // #36: E's sums, and per game: how many 印鈔 / 平抑 / 激進, the end's inflation and leftism (in `e.end`).
       if (e) {

@@ -1,0 +1,26 @@
+RED  cPurgeSplit:3 點牌翻太原 + 放 2 點:太原的標記、南京 / 上海的藍 +1: expected ["[]",1,1], got ["[]",0,0]
+RED  cPurgeSplit:3 點牌翻 1 個 + 放 3 點被拒: expected true, got false
+ok   cPurgeSplit 沒給:肅諜帶 points,南京 / 上海的藍不變: [0,0]
+RED  cCaught 0 / 2 / 沒給:抓錯的民心變動(往共軍為正): expected [0,2,1], got [1,1,1]
+RED  cLeakBonus 1 / 沒給:洩密改打點之後 濟南 紅/藍: expected ["2/0","1/0"], got ["1/0","1/0"]
+RED  cDefectAny / 沒給:打援對固守之後問倒戈: expected [true,false], got [false,false]
+RED  cDefectAny:倒戈之後 濟南 紅/藍: expected "0/3", got "[object Object]"
+RED  cDefect 3 / 沒給:打點固守、倒戈之後 濟南 紅/藍: expected ["0/0","0/1"], got ["0/1","0/1"]
+ok   濟南是孤城: true
+RED  cHandover half / 沒給(藍 3);half / one(藍 5):和平易手之後 濟南 紅/藍: expected ["1/0","refused","refused","1/0"], got ["refused","refused","refused","refused"]
+RED  cFreePlant 1 / 沒給:第 2 回合發牌之後問共軍佈線: expected [true,false], got [false,false]
+RED  cRealMandate 1 / 沒給:結算後民心的差、moleMandate 的 n: expected [2,2], got [0,null]
+RED  bot(cRealMandate 1):一個真標記在評估裡多值 8(第 1 回合,8 個結算): expected 8, got 0
+RED  bot(cRealMandate 1):結算說場上 0 個真的之後,國軍信太原的標記是真的機率: expected 0, got 0.3333333333333333
+ok   對照(沒給):同一個局面國軍的信念 > 0: true
+RED  cLeakCapital false / 沒給:只有南京有標記時問洩密: expected [false,true], got [true,true]
+RED  bot(cPurgeSplit):每個肅諜候選翻的個數 + 扶植花的點數 = 3: expected [3,3], got [2,1]
+ok   bot(cPurgeSplit 沒給):肅諜候選沒有 points: true
+RED  bot(cCaught 0):purgeValue(太原 1 個) 比今天多 (1 − p) × 1: expected 0, got -0.5
+RED  bot(今天的 C):南京一個真標記值 G × (1 − (1 − p)^8): expected 5.149058, got 4
+RED  bot(今天的 C):不再是 #40 的 8 × 0.5: expected true, got false
+RED  bot(今天的 C):手上一個真標記值 0.2 × 南京的一次(剩 7 回合): expected 0.925636, got 0.8
+RED  bot(cLeakBonus 1):南京一個真標記: expected 8.4981, got 4
+RED  bot(cLeakCapital false):南京一個真標記: expected 2.529514, got 4
+RED  bot(cDefectAny):孤城濟南一個真標記: expected 5.689844, got 1.6
+PROBE-41 ok 4 / red 21

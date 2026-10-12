@@ -653,3 +653,47 @@ mec("ME-cap1+pain", "ME-cap1 + ME-pain", ["ME-cap1", "ME-pain"]);
 mec("ME-cap1+early", "ME-cap1 + ME-early", ["ME-cap1", "ME-early"]);
 mec("ME-cap1+ops1+pain", "ME-cap1 + ME-ops1 + ME-pain", ["ME-cap1", "ME-ops1", "ME-pain"]);
 mec("ME-cap1+ops1+early", "ME-cap1 + ME-ops1 + ME-early", ["ME-cap1", "ME-ops1", "ME-early"]);
+
+// ---- #41: C's levers (owner 裁決 #41: 「調一輪 C 的規則」; tuning/40/report.txt 〇). Every `MC-…` is laid over the
+// variant C ({ mechanismC: true }) and uses only #41's options (engine.js, `cSpecOf`); a later part's key wins.
+// `what` is the rulebook sentence, `why` its reason (the owner's note C, #40's report, or history).
+const MC = {};
+const mc = (name, what, why, options) => { MC[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismC: true, ...options } }; };
+const mcc = (name, what, parts) => {
+  const options = { mechanismC: true };
+  for (const p of parts) Object.assign(options, MC[p].options);
+  VARIANTS[name] = { what, why: parts.join(" + "), parts, options };
+};
+mc("MC-split", "肅諜:每翻一個標記花 1 點行動點;這張牌剩下的點數照扶植的規則放國方點數",
+  "反諜是常設的機構在做,不是停下前線去做:保密局 1947 年 9 月破獲王石堅的情報網(北平、瀋陽等地的電台),前線照打(#40 槓桿 1)", { cPurgeSplit: true });
+mc("MC-caught0", "抓錯不扣民心(假的標記照樣回到共軍手上)",
+  "抓錯人的代價在戰時看不太出來:1948 年 8 月特種刑事法庭在各大城市大逮捕學生(八一九大逮捕),學運暫時壓下去,代價要到事後才算(#40 槓桿 2)", { cCaught: 0 });
+mc("MC-leak1", "洩密:共軍可以重新選打點或打援,而且這次進攻的行動點 +1",
+  "郭汝瑰在國防部作戰廳,送出去的不只是打哪裡,還有兵力怎麼擺,共軍可以預先集中兵力(#40 槓桿 3)", { cLeakBonus: 1 });
+mc("MC-defectAny", "倒戈:圍點打援之後,只要標記在 T、T 還有國方點數就可以(不必打點、不必已經移除)",
+  "起義不一定等到城破:曾澤生的第 60 軍在長春圍城中起義(1948 年 10 月),吳化文在濟南開戰三天後起義(1948 年 9 月)(#40 槓桿 4)", { cDefectAny: true });
+mc("MC-defect3", "倒戈:再移除 3 點", "起義常常是整個軍:吳化文帶走兩萬多人,曾澤生的第 60 軍約兩萬六千人(#40 槓桿 4)", { cDefect: 3 });
+mc("MC-handHalf", "和平易手:X ≥ 那座孤城國方點數的一半(無條件進位)",
+  "和平易手是談出來的,不是打下來的:傅作義在北平(1949 年 1 月)手上還有二十多萬人,程潛、陳明仁在長沙(1949 年 8 月)(#40 槓桿 5)", { cHandover: "half" });
+mc("MC-plant1", "每回合發牌之後,共軍可以免費佈 1 個標記(不花牌)",
+  "地下黨不靠前線的兵力:北平的城工部(劉仁)長年發展學生、職員、軍官,傅作義的女兒傅冬菊就是地下黨員(#40 槓桿 6)", { cFreePlant: 1 });
+mc("MC-mand1", "回合結算時,場上每一個真標記讓民心往共軍 1(公佈有幾個,不公佈在哪)",
+  "地下黨在國統區城市發動學運與工潮,毛澤東 1947 年 5 月稱為「第二條戰線」:1946 年 12 月沈崇事件後的抗暴運動、1947 年 5 月 20 日「反飢餓、反內戰」(#40 槓桿 7)", { cRealMandate: 1 });
+mc("MC-leakTR", "洩密:標記只看 T 和 R,不看首都",
+  "#40 報告〇的第 8 點:洩密每一場都問首都,真標記放首都最值錢,和筆記要假的偏向首都互相拉扯;拿掉首都,真的要放在要打的城(史實的反例:郭汝瑰就在南京的國防部)", { cLeakCapital: false });
+// The second round (tuning/41/report.txt B): alone, only MC-leak1 gets 肅諜 to ≥ 0.5 a game (0.86; the capital's real
+// marker is worth 2.8 a turn, so the Nationalists go after it) and only MC-plant1 gets real markers used near it (0.37;
+// markers on the board in every game); MC-mand1 is the only one whose belief beats the prior (the 結算 count). Lay them
+// together, and 肅諜's split over them.
+mcc("MC-plant1+leak1", "MC-plant1 + MC-leak1", ["MC-plant1", "MC-leak1"]);
+mcc("MC-plant1+mand1", "MC-plant1 + MC-mand1", ["MC-plant1", "MC-mand1"]);
+mcc("MC-mand1+leak1", "MC-mand1 + MC-leak1", ["MC-mand1", "MC-leak1"]);
+mcc("MC-plant1+mand1+leak1", "MC-plant1 + MC-mand1 + MC-leak1", ["MC-plant1", "MC-mand1", "MC-leak1"]);
+mcc("MC-plant1+mand1+split", "MC-plant1 + MC-mand1 + MC-split", ["MC-plant1", "MC-mand1", "MC-split"]);
+mcc("MC-plant1+leak1+split", "MC-plant1 + MC-leak1 + MC-split", ["MC-plant1", "MC-leak1", "MC-split"]);
+// Round 2 read so far: 肅諜 ≥ 0.5 wherever MC-leak1 or MC-mand1 is with MC-plant1, but the real markers used stay
+// at 0.11–0.37 a game (goal 3 wants 0.5); MC-mand1 lowers them (a real one standing is worth more than one used).
+// Two more toward goal 3: the other two uses made easier over MC-plant1 + MC-leak1, and two free markers a turn.
+mc("MC-plant2", "每回合發牌之後,共軍可以免費佈 2 個標記(不花牌)", "同 MC-plant1,多一個(#40 槓桿 6)", { cFreePlant: 2 });
+mcc("MC-plant1+leak1+defectAny+handHalf", "MC-plant1 + MC-leak1 + MC-defectAny + MC-handHalf", ["MC-plant1", "MC-leak1", "MC-defectAny", "MC-handHalf"]);
+mcc("MC-plant2+leak1", "MC-plant2 + MC-leak1", ["MC-plant2", "MC-leak1"]);

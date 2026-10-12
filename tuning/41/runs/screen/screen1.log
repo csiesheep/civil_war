@@ -1,0 +1,19 @@
+off s1 300: sim exit 0 (3.4 min)
+off s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-plant1 s1 300: sim exit 0 (6.1 min)
+MC-plant1 s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-split s1 300: sim exit 0 (3.7 min)
+MC-split s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-mand1 s1 300: sim exit 0 (4.7 min)
+MC-mand1 s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-leak1 s1 300: sim exit 0 (6.2 min)
+MC-leak1 s1 300: targets exit 0; TARGETS full 通過 7 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-defectAny s1 300: sim exit 0 (4.0 min)
+MC-defectAny s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-handHalf s1 300: sim exit 0 (3.8 min)
+MC-handHalf s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-leakTR s1 300: sim exit 0 (3.7 min)
+MC-leakTR s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-caught0 s1 300: sim exit 0 (3.7 min)
+MC-caught0 s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+ALL-DONE

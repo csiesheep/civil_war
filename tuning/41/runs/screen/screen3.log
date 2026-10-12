@@ -1,0 +1,7 @@
+MC-plant1+leak1+defectAny+handHalf s1 300: sim exit 0 (7.5 min)
+MC-plant1+leak1+defectAny+handHalf s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-plant2+leak1 s1 300: sim exit 0 (5.9 min)
+MC-plant2+leak1 s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+MC-plant2 s1 300: sim exit 0 (6.6 min)
+MC-plant2 s1 300: targets exit 0; TARGETS full 通過 8 / 10;停損的兩項(民心曲線、開局沒有孤城)通過
+ALL-DONE
