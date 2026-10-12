@@ -681,3 +681,13 @@ mc("MC-mand1", "回合結算時,場上每一個真標記讓民心往共軍 1(公
   "地下黨在國統區城市發動學運與工潮,毛澤東 1947 年 5 月稱為「第二條戰線」:1946 年 12 月沈崇事件後的抗暴運動、1947 年 5 月 20 日「反飢餓、反內戰」(#40 槓桿 7)", { cRealMandate: 1 });
 mc("MC-leakTR", "洩密:標記只看 T 和 R,不看首都",
   "#40 報告〇的第 8 點:洩密每一場都問首都,真標記放首都最值錢,和筆記要假的偏向首都互相拉扯;拿掉首都,真的要放在要打的城(史實的反例:郭汝瑰就在南京的國防部)", { cLeakCapital: false });
+// The second round (tuning/41/report.txt B): alone, only MC-leak1 gets 肅諜 to ≥ 0.5 a game (0.86; the capital's real
+// marker is worth 2.8 a turn, so the Nationalists go after it) and only MC-plant1 gets real markers used near it (0.37;
+// markers on the board in every game); MC-mand1 is the only one whose belief beats the prior (the 結算 count). Lay them
+// together, and 肅諜's split over them.
+mcc("MC-plant1+leak1", "MC-plant1 + MC-leak1", ["MC-plant1", "MC-leak1"]);
+mcc("MC-plant1+mand1", "MC-plant1 + MC-mand1", ["MC-plant1", "MC-mand1"]);
+mcc("MC-mand1+leak1", "MC-mand1 + MC-leak1", ["MC-mand1", "MC-leak1"]);
+mcc("MC-plant1+mand1+leak1", "MC-plant1 + MC-mand1 + MC-leak1", ["MC-plant1", "MC-mand1", "MC-leak1"]);
+mcc("MC-plant1+mand1+split", "MC-plant1 + MC-mand1 + MC-split", ["MC-plant1", "MC-mand1", "MC-split"]);
+mcc("MC-plant1+leak1+split", "MC-plant1 + MC-leak1 + MC-split", ["MC-plant1", "MC-leak1", "MC-split"]);

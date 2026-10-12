@@ -177,5 +177,17 @@ const K3 = "surrender_order", K2 = ["kunming_incident", "takeover_officials"]; /
   check("bot(cCaught 0):purgeValue(太原 1 個) 比今天多 (1 − p) × 1", Math.round((B.purgeValue(v0, ["taiyuan"]) - B.purgeValue(v1, ["taiyuan"]) - (1 - p)) * 1e9) / 1e9, 0);
 }
 
+// ---- the bot reads the levers priced by the probe (bots.js C_W_OPT, tuning/41/runs/probe/): a real marker on 南京 (the
+// capital) at turn 1 is worth 8 turns × the class's worth a turn more under cLeakBonus 1 (the probe's +2.31) and
+// 8 × 0.44 less under cLeakCapital false; one on 濟南 laid as a 孤城 is worth 8 × 0.84 more under cDefectAny.
+// (The numbers are the probe's, copied by hand from tuning/41/report.txt D; this checks that the bot reads them.)
+{
+  const t = (o, at, inf = {}) => { const s = rig({ options: o, ccp: ["gao_shuxun"], kmt: K2, at, inf }), x = {}; B.evaluate(s, CCP, x); return x.mechC || 0; };
+  const d = (o, at, inf) => Math.round((t(o, at, inf) - t(o, {}, inf) - (t({}, at, inf) - t({}, {}, inf))) * 1e6) / 1e6;
+  check("bot(cLeakBonus 1):南京一個真標記多值 8 × 2.31", d({ cLeakBonus: 1 }, { nanjing: [true] }), Math.round(8 * 2.31 * 1e6) / 1e6);
+  check("bot(cLeakCapital false):南京一個真標記少值 8 × 0.44", d({ cLeakCapital: false }, { nanjing: [true] }), Math.round(-8 * 0.44 * 1e6) / 1e6);
+  check("bot(cDefectAny):孤城濟南一個真標記多值 8 × 0.84", d({ cDefectAny: true }, { jinan: [true] }, { luzhong: [5, 0] }), Math.round(8 * 0.84 * 1e6) / 1e6);
+}
+
 console.log(`PROBE-41 ok ${ok} / red ${red}`);
 if (red) process.exitCode = 1;
