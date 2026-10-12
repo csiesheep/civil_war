@@ -58,8 +58,28 @@ if (fin.length) {
   for (const x of fin) P(`  ${x.b.name.padEnd(28)} ${(x.b.curve.split(" · ")[2] || "").replace("共軍領先 / 國軍領先(已結束的算贏家):", "")}`);
   P();
 }
+// #41 round 2 (orchestrator 裁決 #41: the real marker priced as its one use): the identity is now C off's, the
+// re-screen is runs/screen2/ with the fixed bot (`C` there = today's rules + the fixed bot, the new baseline).
+const off2 = existsSync(`${R}/screen2/off-s1-300.txt.state.json`) ? readBatch("C 關", `${R}/screen2/off-s1-300.txt.state.json`) : null;
+if (off2) {
+  P("== A2. 第二輪:C 關不變(預設規則、--seed=1、300 局;修過 bot 的分支 vs origin/main ad31d53)");
+  P(`off(分支 a013444)vs off-main:${same(`${R}/screen2/off-s1-300.txt.state.json`, `${R}/same/off-main-s1-300.txt.state.json`)}`);
+  P(`(C 開、不給新選項,修過的 bot vs main:${same(`${R}/screen2/C-s1-300.txt.state.json`, `${R}/same/C-main-s1-300.txt.state.json`)} —— 預期不同,bot 改了)`);
+  P();
+  const ORDER2 = ["C(修過的 bot)", "MC-leak1", "MC-plant1", "MC-plant2", "MC-mand1", "MC-plant1+leak1", "MC-plant2+leak1", "MC-mand1+leak1", "MC-plant1+mand1", "MC-plant1+leak1+defectAny+handHalf"];
+  const s2 = files(`${R}/screen2`).filter((f) => !f.startsWith("off-")).map((f) => readBatch(f === "C-s1-300.txt.state.json" ? "C(修過的 bot)" : f.replace(/-s1-300\.txt\.state\.json$/, ""), `${R}/screen2/${f}`))
+    .sort((a, b) => (ORDER2.indexOf(a.name) + 1 || 99) - (ORDER2.indexOf(b.name) + 1 || 99));
+  P("== B2. 第二輪的篩選(修過的 bot;--seed=1、300 局;欄同 B;括號減掉這一批的 C 關)");
+  P(row(off2));
+  P(row(readBatch("C(修之前的 bot)", `${R}/same/C-main-s1-300.txt.state.json`), off2));
+  for (const b of s2) P(row(b, off2));
+  P();
+  P("== E2. 第二輪每一批的細節");
+  for (const b of s2) { P(block(b, off2)); P(); }
+}
 P("== D. 真標記每回合值多少(tuning/41/probe-run.mjs,480 局、種子 41000–41479、每一組都開免費佈線 1、手上的真標記值 0)");
-const arms = ["base", "leak1", "defectAny", "defect3", "handHalf", "handOne", "leakTR"].filter((n) => existsSync(`${R}/probe/${n}-0.txt`));
+P("   base / leak1 / …:#40 的價格的 bot 玩的;base2 / leak1b:第一次量到的一次性價格的 bot 玩的(C_ONCE 用這兩個);base3:交付的 bot 玩的(還會動多少)");
+const arms = ["base", "base2", "base3", "leak1", "leak1b", "defectAny", "defect3", "handHalf", "handOne", "leakTR"].filter((n) => existsSync(`${R}/probe/${n}-0.txt`));
 const base = arms.includes("base") ? sum("base") : null;
 for (const n of arms) {
   const t = sum(n);
@@ -69,6 +89,8 @@ for (const n of arms) {
 P();
 P("== F. 共軍為什麼留著真標記(tuning/41/probe-hold.mjs:MC-plant1+leak1 的選項、bot 自己的價格,280 局、種子 43000–43279)");
 if (existsSync(`${R}/probe/hold-plant1leak1-0.txt`)) P(holdSum("hold-plant1leak1"));
+P("   第二輪(同一批種子):hold2 = 第一次的一次性價格(base / leak1 的 p、G);hold3 = 交付的 bot;holdF = 交付的 bot 把價格改回 #40 的寫法(p × G × 剩下的回合,tuning/41/falsify-price.mjs)");
+for (const n of ["hold2-plant1leak1", "hold3-plant1leak1", "holdF-plant1leak1"]) if (existsSync(`${R}/probe/${n}-0.txt`)) P(holdSum(n));
 P();
 P("== E. 每一批的細節(C 的各批,再來是 B 的每一批)");
 for (const x of fin) { P(block(x.b, readBatch(`C 關 s${x.seed}`, `tuning/40/runs/off-s${x.seed}.txt.state.json`))); P(); }

@@ -17,4 +17,10 @@ RED  cLeakCapital false / 沒給:只有南京有標記時問洩密: expected [fa
 RED  bot(cPurgeSplit):每個肅諜候選翻的個數 + 扶植花的點數 = 3: expected [3,3], got [2,1]
 ok   bot(cPurgeSplit 沒給):肅諜候選沒有 points: true
 RED  bot(cCaught 0):purgeValue(太原 1 個) 比今天多 (1 − p) × 1: expected 0, got -0.5
-PROBE-41 ok 4 / red 15
+RED  bot(今天的 C):南京一個真標記值 G × (1 − (1 − p)^8): expected 5.149058, got 4
+RED  bot(今天的 C):不再是 #40 的 8 × 0.5: expected true, got false
+RED  bot(今天的 C):手上一個真標記值 0.2 × 南京的一次(剩 7 回合): expected 0.925636, got 0.8
+RED  bot(cLeakBonus 1):南京一個真標記: expected 8.4981, got 4
+RED  bot(cLeakCapital false):南京一個真標記: expected 2.529514, got 4
+RED  bot(cDefectAny):孤城濟南一個真標記: expected 5.689844, got 1.6
+PROBE-41 ok 4 / red 21

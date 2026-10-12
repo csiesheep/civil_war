@@ -16,7 +16,7 @@ export function holdSum(name) {
     const used = r.filter((x) => x.used), usedPos = pos.filter((x) => x.used);
     const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor((s.length - 1) / 2)] : NaN; };
     L.push(`${name} ${tag === "leak" ? "洩密" : "倒戈"}:${games} 局、有真標記的詢問 ${r.length};用掉比答 no 好(不算標記本身的價格)${pos.length}(${pct(pos.length, r.length)}),其中 bot 用了 ${usedPos.length}(${pct(usedPos.length, pos.length)});好處大過 bot 對那個標記開的價 ${over.length};bot 用了 ${used.length}(${pct(used.length, r.length)})`);
-    if (pos.length) L.push(`   有好處的那些:好處的中位數 ${med(pos.map((x) => x.gain)).toFixed(2)}、bot 開的價的中位數 ${med(pos.map((x) => x.price)).toFixed(2)}(價 = 評估裡 mechC 的差,剩下的回合 × 每回合的價值)`);
+    if (pos.length) L.push(`   有好處的那些:好處的中位數 ${med(pos.map((x) => x.gain)).toFixed(2)}、bot 開的價的中位數 ${med(pos.map((x) => x.price)).toFixed(2)}(價 = 評估裡 mechC 的差:bot 對翻掉那個真標記開的價)`);
   }
   return L.join("\n");
 }
