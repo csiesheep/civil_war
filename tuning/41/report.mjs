@@ -18,8 +18,8 @@ const P = (s = "") => console.log(s);
 const files = (dir) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".state.json")).sort() : []);
 const same = (a, b) => { const r = spawnSync(process.execPath, ["tuning/41/same.mjs", a, b], { encoding: "utf8" }); return `${(r.stdout || r.stderr).trim()}(exit ${r.status})`; };
 
-P("== A. 不給新選項 = 今天的 C(C 開、--seed=1、300 局;tuning/41/same.mjs)");
-for (const f of files(`${R}/same`).filter((f) => f !== "C-main-s1-300.txt.state.json")) P(`${f.replace(".txt.state.json", "")} vs C-main(origin/main ad31d53):${same(`${R}/same/${f}`, `${R}/same/C-main-s1-300.txt.state.json`)}`);
+P("== A. 第一輪:不給新選項 = 今天的 C(C 開、--seed=1、300 局;tuning/41/same.mjs;第二輪 bot 改了,改看 A2)");
+for (const f of files(`${R}/same`).filter((f) => f.startsWith("C-") && f !== "C-main-s1-300.txt.state.json")) P(`${f.replace(".txt.state.json", "")} vs C-main(origin/main ad31d53):${same(`${R}/same/${f}`, `${R}/same/C-main-s1-300.txt.state.json`)}`);
 if (existsSync(`${R}/screen/MC-split-s1-300.txt.state.json`)) P(`(比對會紅:C-main vs MC-split → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-split-s1-300.txt.state.json`)})`);
 if (existsSync(`${R}/screen/MC-caught0-s1-300.txt.state.json`)) P(`(MC-caught0 和今天的 C 是同樣的 300 局:沒有一局肅諜,抓錯的代價從來沒有被讀到 → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-caught0-s1-300.txt.state.json`)})`);
 P();

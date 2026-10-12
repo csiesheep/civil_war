@@ -1,7 +1,6 @@
-== A. 不給新選項 = 今天的 C(C 開、--seed=1、300 局;tuning/41/same.mjs)
+== A. 第一輪:不給新選項 = 今天的 C(C 開、--seed=1、300 局;tuning/41/same.mjs;第二輪 bot 改了,改看 A2)
 C-branch-s1-300 vs C-main(origin/main ad31d53):SAME games 300: 248 leaves of sum (union of keys), errors 0; more (keys both have, more.c included): 207 leaves(exit 0)
 C-head-s1-300 vs C-main(origin/main ad31d53):SAME games 300: 248 leaves of sum (union of keys), errors 0; more (keys both have, more.c included): 207 leaves(exit 0)
-off-main-s1-300 vs C-main(origin/main ad31d53):DIFFER sum.aheadByTurn.1.ccp: 51 vs 66(exit 1)
 (比對會紅:C-main vs MC-split → DIFFER sum.aheadByTurn.6.kmt: 135 vs 134(exit 1))
 (MC-caught0 和今天的 C 是同樣的 300 局:沒有一局肅諜,抓錯的代價從來沒有被讀到 → SAME games 300: 248 leaves of sum (union of keys), errors 0; more (keys both have, more.c included): 207 leaves(exit 0))
 
