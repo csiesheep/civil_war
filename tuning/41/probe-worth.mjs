@@ -11,7 +11,7 @@
 // "no", max(0, ·) -- the Communists may always say no. For every action round of theirs with a 和平易手 legal: the
 // best 和平易手 against the best of the rest (`B.scoreCandidates`), plus the worth the evaluation charged for the
 // real marker it turns up (`B.cWorth`), max(0, ·). Worth of a class = the gains there / its real-marker turns.
-// The lever's own price is set to "no change" while it is measured (`C_ONCE_OPT[key] = C_ONCE.base`), as #40 measured with
+// The lever's own price is set to "no change" while it is measured (`C_ONCE_OPT[key]` = no change against `C_ONCE.base`), as #40 measured with
 // C_W's first shape: the gain is read without the markers' worth, so the price does not enter it except through
 // where the bot plants.
 import * as E from "../../public/shared/engine.js";
@@ -22,7 +22,7 @@ const options = { mechanismC: true, ...(process.argv[4] ? JSON.parse(process.arg
 if (process.argv[5]) Object.assign(B.C_W, JSON.parse(process.argv[5]));
 const sp = E.cSpecOf({ options });
 for (const [k, v, d] of [["cLeakBonus", sp.leakBonus, 0], ["cDefect", sp.defect, E.C_SPEC.defect], ["cDefectAny", sp.defectAny, false], ["cHandover", sp.handover, null], ["cLeakCapital", sp.leakCapital, true]]) {
-  if (v !== d && !B.C_ONCE_OPT[`${k}:${v}`]) B.C_ONCE_OPT[`${k}:${v}`] = B.C_ONCE.base;
+  if (v !== d && !B.C_ONCE_OPT[`${k}:${v}`]) B.C_ONCE_OPT[`${k}:${v}`] = { ref: B.C_ONCE.base, arm: B.C_ONCE.base };
 }
 const K = ["capital", "isolated", "open", "other"];
 const zero = () => Object.fromEntries(K.map((k) => [k, 0]));

@@ -743,22 +743,25 @@ const ccpNext = (st, id) => E.adjOf(st, id).some((a) => E.controller(st, a) === 
 // #40's ratio of the hand to the capital (C_W.handReal / C_W.capital = 0.2: the chance a card is spent on it).
 // A fake's worth stays a decoy's, a turn at a time (C_W.fake); `q` stays #40's.
 // tuning/41/report.txt has the probe's table. A class nobody asked about (p = 0) is worth 0.
-export const C_ONCE = {
-  base: { capital: { p: 0.0392, G: 11.51 }, open: { p: 0.0705, G: 9.04 }, isolated: { p: 0.0425, G: 3.83 }, real: { p: 0, G: 0 } },
-};
+// The probe is played by the bot, and where the bot puts its real markers follows their price, so the numbers move
+// with the price: `base` (arm base2) is the probe played by the bot priced from the first measurement (arm base, the
+// #40-priced bot); arm base3, played by this bot, checks how far it still moves (tuning/41/report.txt, 四).
+const P0 = { capital: { p: 0.0392, G: 11.51 }, open: { p: 0.0705, G: 9.04 }, isolated: { p: 0.0425, G: 3.83 }, real: { p: 0, G: 0 } }; // arm base
+const P1 = { capital: { p: 0.0563, G: 13.88 }, open: { p: 0.0556, G: 10.6 }, isolated: { p: 0.0353, G: 4.95 }, real: { p: 0.0091, G: 20.06 } }; // arm base2
+export const C_ONCE = { base: P1 };
 // #41: C's levers (`E.cSpecOf`). A lever that changes what a real marker does when it is turned up (洩密 +n,
 // 倒戈's reach or size, 和平易手's price, 洩密 without the capital) changes p and G: the same probe re-run under the
-// option (its arm, below, against `base`). Several levers: the changes of p and of p × G (the gain a turn) are
-// added up and G is read back from them. A lever value not measured has no entry and is refused (an unpriced lever
-// would be a guess). `cRealMandate` is exact: 民心 is 1 to 1 in the evaluation, so a real marker on the board is
-// worth n more for every 結算 it stands through (this turn's included).
+// option (`arm`) against the base arm played by the same bot (`ref`); the change of p and of p × G (the gain a turn) is
+// laid over C_ONCE.base, several levers' changes added up, and G read back from them. A lever value not measured has
+// no entry and is refused (an unpriced lever would be a guess). `cRealMandate` is exact: 民心 is 1 to 1 in the
+// evaluation, so a real marker on the board is worth n more for every 結算 it stands through (this turn's included).
 export const C_ONCE_OPT = {
-  "cLeakBonus:1": { capital: { p: 0.234, G: 11.82 }, open: { p: 0.0971, G: 9.01 }, isolated: { p: 0.0518, G: 9.65 }, real: { p: 0, G: 0 } },
-  "cDefectAny:true": { capital: { p: 0.0497, G: 9.58 }, open: { p: 0.0713, G: 9.59 }, isolated: { p: 0.1113, G: 8.99 }, real: { p: 0.0027, G: 4.85 } },
-  "cDefect:3": { capital: { p: 0.0379, G: 11.98 }, open: { p: 0.0798, G: 9.15 }, isolated: { p: 0.0428, G: 4.03 }, real: { p: 0, G: 0 } },
-  "cHandover:half": { capital: { p: 0.0445, G: 10.35 }, open: { p: 0.0739, G: 8.99 }, isolated: { p: 0.0948, G: 2.75 }, real: { p: 0, G: 0 } },
-  "cHandover:one": { capital: { p: 0.0376, G: 10.43 }, open: { p: 0.0742, G: 9.01 }, isolated: { p: 0.1151, G: 3.36 }, real: { p: 0, G: 0 } },
-  "cLeakCapital:false": { capital: { p: 0.0022, G: 3.6 }, open: { p: 0.0701, G: 9.55 }, isolated: { p: 0.0455, G: 5.27 }, real: { p: 0, G: 0 } },
+  "cLeakBonus:1": { ref: P1, arm: { capital: { p: 0.1556, G: 11.46 }, open: { p: 0.0737, G: 9.31 }, isolated: { p: 0.0564, G: 7.74 }, real: { p: 0, G: 0 } } }, // arm leak1b
+  "cDefectAny:true": { ref: P0, arm: { capital: { p: 0.0497, G: 9.58 }, open: { p: 0.0713, G: 9.59 }, isolated: { p: 0.1113, G: 8.99 }, real: { p: 0.0027, G: 4.85 } } },
+  "cDefect:3": { ref: P0, arm: { capital: { p: 0.0379, G: 11.98 }, open: { p: 0.0798, G: 9.15 }, isolated: { p: 0.0428, G: 4.03 }, real: { p: 0, G: 0 } } },
+  "cHandover:half": { ref: P0, arm: { capital: { p: 0.0445, G: 10.35 }, open: { p: 0.0739, G: 8.99 }, isolated: { p: 0.0948, G: 2.75 }, real: { p: 0, G: 0 } } },
+  "cHandover:one": { ref: P0, arm: { capital: { p: 0.0376, G: 10.43 }, open: { p: 0.0742, G: 9.01 }, isolated: { p: 0.1151, G: 3.36 }, real: { p: 0, G: 0 } } },
+  "cLeakCapital:false": { ref: P0, arm: { capital: { p: 0.0022, G: 3.6 }, open: { p: 0.0701, G: 9.55 }, isolated: { p: 0.0455, G: 5.27 }, real: { p: 0, G: 0 } } },
 };
 const C_CLASSES = ["capital", "open", "isolated", "real"];
 const cWorthMemo = new WeakMap();
@@ -772,9 +775,9 @@ export function cWorth(st) {
   const on = [["cLeakBonus", sp.leakBonus, 0], ["cDefect", sp.defect, E.C_SPEC.defect], ["cDefectAny", sp.defectAny, false], ["cHandover", sp.handover, null], ["cLeakCapital", sp.leakCapital, true]];
   for (const [k, v, d] of on) {
     if (v === d) continue;
-    const arm = C_ONCE_OPT[`${k}:${v}`];
+    const e = C_ONCE_OPT[`${k}:${v}`], arm = e && e.arm, ref = e && e.ref;
     if (!arm) throw new Error(`cWorth: ${k} ${v} is not priced (tuning/41/probe-worth.mjs)`);
-    for (const c of C_CLASSES) { acc[c].p += arm[c].p - base[c].p; acc[c].r += arm[c].p * arm[c].G - base[c].p * base[c].G; }
+    for (const c of C_CLASSES) { acc[c].p += arm[c].p - ref[c].p; acc[c].r += arm[c].p * arm[c].G - ref[c].p * ref[c].G; }
   }
   for (const c of C_CLASSES) {
     const p = Math.min(1, Math.max(0, acc[c].p)), r = Math.max(0, acc[c].r);

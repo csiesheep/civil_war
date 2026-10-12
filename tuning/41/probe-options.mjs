@@ -177,16 +177,28 @@ const K3 = "surrender_order", K2 = ["kunming_incident", "takeover_officials"]; /
   check("bot(cCaught 0):purgeValue(太原 1 個) 比今天多 (1 − p) × 1", Math.round((B.purgeValue(v0, ["taiyuan"]) - B.purgeValue(v1, ["taiyuan"]) - (1 - p)) * 1e9) / 1e9, 0);
 }
 
-// ---- the bot reads the levers priced by the probe (bots.js C_W_OPT, tuning/41/runs/probe/): a real marker on 南京 (the
-// capital) at turn 1 is worth 8 turns × the class's worth a turn more under cLeakBonus 1 (the probe's +2.31) and
-// 8 × 0.44 less under cLeakCapital false; one on 濟南 laid as a 孤城 is worth 8 × 0.84 more under cDefectAny.
-// (The numbers are the probe's, copied by hand from tuning/41/report.txt D; this checks that the bot reads them.)
+// ---- #41 round 2 (orchestrator 裁決 #41): a real marker is priced as its one use. The expected values below are the
+// rule "first chance taken": G × (1 − (1 − p)^L), with p and G hand-copied from the probe's table (tuning/41/report.txt,
+// 四) and L = 8 at turn 1 -- not read from bots.js. A real marker on 南京 (the capital) at turn 1, today's C; under
+// cLeakBonus 1 and cLeakCapital false; one on 濟南 laid as a 孤城 under cDefectAny. And the fix itself: the #40 price of
+// the capital one (8 turns × 0.5 = 4) is not what the bot charges any more; a real one in the hand is 0.2 × the capital's
+// one use with 7 turns left.
 {
-  const t = (o, at, inf = {}) => { const s = rig({ options: o, ccp: ["gao_shuxun"], kmt: K2, at, inf }), x = {}; B.evaluate(s, CCP, x); return x.mechC || 0; };
-  const d = (o, at, inf) => Math.round((t(o, at, inf) - t(o, {}, inf) - (t({}, at, inf) - t({}, {}, inf))) * 1e6) / 1e6;
-  check("bot(cLeakBonus 1):南京一個真標記多值 8 × 2.31", d({ cLeakBonus: 1 }, { nanjing: [true] }), Math.round(8 * 2.31 * 1e6) / 1e6);
-  check("bot(cLeakCapital false):南京一個真標記少值 8 × 0.44", d({ cLeakCapital: false }, { nanjing: [true] }), Math.round(-8 * 0.44 * 1e6) / 1e6);
-  check("bot(cDefectAny):孤城濟南一個真標記多值 8 × 0.84", d({ cDefectAny: true }, { jinan: [true] }, { luzhong: [5, 0] }), Math.round(8 * 0.84 * 1e6) / 1e6);
+  // base = arm base2; base0 = arm base (the #40-priced bot's), the reference of the arms measured with it; an arm's change of
+  // p and of p × G laid over base (the rule written in tuning/41/report.txt, 四).
+  const P = { base: { capital: [0.0563, 13.88], isolated: [0.0353, 4.95] }, base0: { capital: [0.0392, 11.51], isolated: [0.0425, 3.83] },
+    leak1: { capital: [0.1556, 11.46] }, leakTR: { capital: [0.0022, 3.6] }, defectAny: { isolated: [0.1113, 8.99] } };
+  const lay = (b, r, a) => { const p = b[0] + (a[0] - r[0]), x = b[0] * b[1] + (a[0] * a[1] - r[0] * r[1]); return [p, x / p]; };
+  const one = ([p, G], L) => G * (1 - (1 - p) ** L);
+  const r6 = (x) => Math.round(x * 1e6) / 1e6;
+  const t = (o, at, inf = {}, hand = [0, 0]) => { const s = rig({ options: o, ccp: ["gao_shuxun"], kmt: K2, at, inf, hand }), x = {}; B.evaluate(s, CCP, x); return x.mechC || 0; };
+  const d = (o, at, inf) => r6(t(o, at, inf) - t(o, {}, inf));
+  check("bot(今天的 C):南京一個真標記值 G × (1 − (1 − p)^8)", d({}, { nanjing: [true] }), r6(one(P.base.capital, 8)));
+  check("bot(今天的 C):不再是 #40 的 8 × 0.5", d({}, { nanjing: [true] }) !== 4, true);
+  check("bot(今天的 C):手上一個真標記值 0.2 × 南京的一次(剩 7 回合)", r6(t({}, {}, {}, [1, 0]) - t({}, {}, {}, [0, 0])), r6(0.2 * one(P.base.capital, 7)));
+  check("bot(cLeakBonus 1):南京一個真標記", d({ cLeakBonus: 1 }, { nanjing: [true] }), r6(one(lay(P.base.capital, P.base.capital, P.leak1.capital), 8)));
+  check("bot(cLeakCapital false):南京一個真標記", d({ cLeakCapital: false }, { nanjing: [true] }), r6(one(lay(P.base.capital, P.base0.capital, P.leakTR.capital), 8)));
+  check("bot(cDefectAny):孤城濟南一個真標記", d({ cDefectAny: true }, { jinan: [true] }, { luzhong: [5, 0] }), r6(one(lay(P.base.isolated, P.base0.isolated, P.defectAny.isolated), 8)));
 }
 
 console.log(`PROBE-41 ok ${ok} / red ${red}`);
