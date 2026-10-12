@@ -734,6 +734,57 @@ function pegPlay(st, side, c, bogCards) {
 export const C_SPEC = { markers: [5, 5], start: [1, 2], perCity: 2, defect: 2, gains: { reform4: [2, 1], turning: [1, 1], decisive: [1, 1] }, caughtFake: { centrists: 1, mandate: 1 } };
 const mechC = (st) => !!(st.options && st.options.mechanismC);
 const C_GAIN_TURNS = { 4: "turning", 7: "decisive" };
+// #41: C's levers as options (owner 裁決 #41 「調一輪 C 的規則」; tuning/40/report.txt 〇 lists them). Read only
+// under `mechanismC`, through `cSpecOf(st)`; none is a key of DEFAULT_OPTIONS and an absent one plays today's C
+// (C_SPEC itself is unchanged: group 16 of the acceptance pins it).
+//   cPurgeSplit true   肅諜: each marker turned up costs 1 op; the rest of the card's ops are placed (扶植) by the
+//                      placement rules (payload `points`, beside `purge`)
+//   cCaught n          抓錯: 民心 n toward the Communists (E on: the centrists n steps their way) (1)
+//   cLeakBonus n       洩密: this attack's ops +n as well (0)
+//   cDefect n          倒戈: n more Nationalist points removed (C_SPEC.defect, 2)
+//   cDefectAny true    倒戈 after any 圍點打援 on T (打點 or 打援, whatever it removed), T still with Nationalist
+//                      points and a marker (false: 打點 that removed at least 1)
+//   cHandover "half" | "one"   和平易手: X ≥ half the Nationalist points there (rounded up) / X ≥ 1 (absent: X ≥ them)
+//   cFreePlant n       after each turn's deal the Communists may plant n markers free, one question each (0)
+//   cRealMandate n     at each turn's 結算, 民心 n toward the Communists for every real marker on the board; the
+//                      log says how many, never where (0)
+//   cLeakCapital false 洩密 reads T and R only, not the Nationalists' capital (true)
+const C_KEYS = ["cPurgeSplit", "cCaught", "cLeakBonus", "cDefect", "cDefectAny", "cHandover", "cFreePlant", "cRealMandate", "cLeakCapital"];
+function cSpecBuild(o) {
+  const num = (k, d, lo) => {
+    if (o[k] === undefined) return d;
+    if (!Number.isInteger(o[k]) || o[k] < lo) fail(`${k}: ${o[k]} (an integer, at least ${lo})`);
+    return o[k];
+  };
+  const bool = (k, d) => {
+    if (o[k] === undefined) return d;
+    if (typeof o[k] !== "boolean") fail(`${k}: ${o[k]} (true or false)`);
+    return o[k];
+  };
+  if (o.cHandover !== undefined && o.cHandover !== "half" && o.cHandover !== "one") fail(`cHandover: ${o.cHandover} ("half" or "one")`);
+  return {
+    purgeSplit: bool("cPurgeSplit", false), caught: num("cCaught", C_SPEC.caughtFake.mandate, 0), leakBonus: num("cLeakBonus", 0, 0),
+    defect: num("cDefect", C_SPEC.defect, 1), defectAny: bool("cDefectAny", false), handover: o.cHandover ?? null,
+    freePlant: num("cFreePlant", 0, 0), realMandate: num("cRealMandate", 0, 0), leakCapital: bool("cLeakCapital", true),
+  };
+}
+const C_DEFAULT = cSpecBuild({});
+const cSpecCache = new WeakMap();
+// C's numbers for this game: today's (`C_DEFAULT`) unless one of #41's keys is given.
+export function cSpecOf(st) {
+  const o = st.options;
+  if (!o || !C_KEYS.some((k) => o[k] !== undefined)) return C_DEFAULT;
+  let s = cSpecCache.get(o);
+  if (!s) { s = cSpecBuild(o); cSpecCache.set(o, s); }
+  return s;
+}
+// The ops a 和平易手 on `id` needs (#41 `cHandover`; today: the Nationalist points there).
+export function handoverNeed(st, id) {
+  const n = pointsOf(st, KMT, id), h = cSpecOf(st).handover;
+  return h === "half" ? Math.ceil(n / 2) : h === "one" ? Math.min(1, n) : n;
+}
+// The cities a marker may go on now (佈線's rule): Nationalist points there, fewer than perCity markers.
+function plantCities(st) { return SPACES.filter((s) => cityWithKmt(st, s.id) && molesAt(st, s.id).length < C_SPEC.perCity).map((s) => s.id); }
 function newMoles() {
   return { hand: C_SPEC.start.slice(), pool: [0, 1].map((i) => C_SPEC.markers[i] - C_SPEC.start[i]), out: 0, at: {}, reform4: false };
 }
@@ -790,6 +841,8 @@ function moleRefusal(st, side, ops, choice) {
   if (!mechC(st)) return "政工: mechanism C is off (內線)";
   const kinds = C_KINDS.filter((k) => choice[k] != null);
   if (kinds.length !== 1 || choice.target != null || choice.power != null) return "政工: one of plant, handover, purge";
+  // #41 `cPurgeSplit`: a 肅諜's `points` (the rest of the ops, placed); nothing else names points.
+  if (choice.points != null && !(kinds[0] === "purge" && cSpecOf(st).purgeSplit && Array.isArray(choice.points))) return "政工: points only with a 肅諜 under cPurgeSplit";
   const m = st.moles;
   if (kinds[0] === "plant") {
     if (side !== CCP) return "佈線: only the Communists";
@@ -814,7 +867,7 @@ function moleRefusal(st, side, ops, choice) {
     if (!SPACE[t]) return `和平易手: unknown space ${t}`;
     if (!isolatedCities(st).includes(t)) return `和平易手: ${t} is not a 孤城`;
     if (!molesAt(st, t).includes(true)) return `和平易手: no real marker on ${t}`;
-    if (ops < pointsOf(st, KMT, t)) return `和平易手: ${ops} ops, ${pointsOf(st, KMT, t)} Nationalist points on ${t}`;
+    if (ops < handoverNeed(st, t)) return `和平易手: ${ops} ops, ${pointsOf(st, KMT, t)} Nationalist points on ${t}`;
     return null;
   }
   if (side !== KMT) return "肅諜: only the Nationalists";
@@ -863,11 +916,14 @@ function molePolitics(st, side, ops, choice) {
     let caught = false;
     for (const f of flipped) { if (f.real) m.out++; else { m.hand[1]++; caught = true; } }
     log(st, { type: "purge", side, ops, flipped });
-    // 抓錯: once a 肅諜 (owner 裁決 #39: the centrists under E, else 民心).
-    if (caught) {
-      if (mechE(st)) moveCentrists(st, C_SPEC.caughtFake.centrists, "purge");
-      else vp(st, CCP, C_SPEC.caughtFake.mandate);
+    // 抓錯: once a 肅諜 (owner 裁決 #39: the centrists under E, else 民心). #41 `cCaught`: n of either (today 1).
+    const spec = cSpecOf(st);
+    if (caught && spec.caught > 0) {
+      if (mechE(st)) moveCentrists(st, spec === C_DEFAULT ? C_SPEC.caughtFake.centrists : spec.caught, "purge");
+      else vp(st, CCP, spec === C_DEFAULT ? C_SPEC.caughtFake.mandate : spec.caught);
     }
+    // #41 `cPurgeSplit`: the rest of the ops placed (an empty or absent list places nothing).
+    if (spec.purgeSplit && st.winner == null && Array.isArray(choice.points) && choice.points.length) placePoints(st, side, choice.points, ops - choice.purge.length);
   }
   checkMarkers(st);
 }
@@ -878,8 +934,8 @@ export function moleOptions(st, side, ops) {
   if (!mechC(st) || !st.moles || !(ops >= 1)) return out;
   const m = st.moles;
   if (side === CCP) {
-    if (m.hand && moleHandCount(m) > 0) out.plant = SPACES.filter((s) => cityWithKmt(st, s.id) && molesAt(st, s.id).length < C_SPEC.perCity).map((s) => s.id);
-    out.handover = isolatedCities(st).filter((id) => molesAt(st, id).includes(true) && ops >= pointsOf(st, KMT, id));
+    if (m.hand && moleHandCount(m) > 0) out.plant = plantCities(st);
+    out.handover = isolatedCities(st).filter((id) => molesAt(st, id).includes(true) && ops >= handoverNeed(st, id));
   } else out.purge = Object.keys(m.at).filter((id) => cityWithKmt(st, id));
   return out;
 }
@@ -890,15 +946,35 @@ function moleOpen(st, side, ops) {
   const m = st.moles;
   if (side === KMT) return Object.keys(m.at).some((id) => cityWithKmt(st, id));
   if (moleHandCount(m) > 0 && SPACES.some((s) => cityWithKmt(st, s.id) && molesAt(st, s.id).length < C_SPEC.perCity)) return true;
-  return isolatedCities(st).some((id) => molesAt(st, id).length > 0 && ops >= pointsOf(st, KMT, id));
+  return isolatedCities(st).some((id) => molesAt(st, id).length > 0 && ops >= handoverNeed(st, id));
 }
 // 洩密's places for an attack on T answered with `response`: T, the R of 增援 / 突圍, the Nationalists' capital
 // (BE's reading of 南京 / 國軍的首都, flagged on #39), those with a marker.
 function leakCities(st, T, response) {
   const R = String(response).split(":")[1];
   const out = [];
-  for (const id of [T, R, homeCapital(st, KMT)]) if (id && !out.includes(id) && molesAt(st, id).length) out.push(id);
+  // #41 `cLeakCapital: false`: T and R only.
+  for (const id of cSpecOf(st).leakCapital ? [T, R, homeCapital(st, KMT)] : [T, R]) if (id && !out.includes(id) && molesAt(st, id).length) out.push(id);
   return out;
+}
+// #41 `cFreePlant`: after the deal, the Communists may plant `step.n` markers, one question each: "no", or
+// "real:<city>" / "fake:<city>" for every city a marker may go on (listed from public facts alone, like 洩密's:
+// a kind the hand lacks is refused by `validateChoice`). "no" ends the step. The log is 佈線's (`free: true`).
+function freePlantStep(st, step) {
+  const m = st.moles;
+  while (step.n > 0 && st.winner == null && m && m.hand && m.hand[0] + m.hand[1] > 0) {
+    const cities = plantCities(st);
+    if (!cities.length) break;
+    if (!step.choices.length) return ask(st, { ...step, side: CCP }, { kind: "option", tag: "plant", options: [{ id: "no" }, ...cities.flatMap((id) => [{ id: `real:${id}` }, { id: `fake:${id}` }])] });
+    const pick = String(step.choices.shift());
+    if (pick === "no") break;
+    const [kind, id] = pick.split(":");
+    m.hand[kind === "real" ? 0 : 1]--;
+    (m.at[id] ||= []).push(kind === "real");
+    log(st, { type: "plant", side: CCP, ops: 0, free: true, at: [id] });
+    step.n--;
+  }
+  return true;
 }
 // #40: the Communists were asked (洩密 / 倒戈) and answered no. Public: the Nationalists see the question put
 // and passed over (orchestrator 裁決 #40, 2); the entry names the places asked about and how many markers each
@@ -1976,8 +2052,11 @@ function siegeStep(st, step) {
     if (pick !== "no") {
       const [plan, id] = pick.split(":");
       revealReal(st, id);
-      log(st, { type: "leak", side: CCP, target: T, space: id, from: step.plan, plan });
+      // #41 `cLeakBonus`: this attack's ops +n as well (the entry names it only when there is one).
+      const bonus = cSpecOf(st).leakBonus;
+      log(st, { type: "leak", side: CCP, target: T, space: id, from: step.plan, plan, ...(bonus ? { bonus } : {}) });
       step.plan = plan;
+      if (bonus) step.ops += bonus;
     } else moleNo(st, "leak", T, leakCities(st, T, step.response));
     siegeAnswered(st, step, step.response);
   }
@@ -1997,7 +2076,8 @@ function siegeStep(st, step) {
   // #39, mechanism C, 倒戈: the result is in; 打點 removed at least 1 at T, T still has Nationalist points
   // (orchestrator 裁決 #39, reading 5: none left, nothing is asked), and a marker, real or not, is still there
   // (one on a city the Communists now control has gone home first): the Communists are asked.
-  if (step.stage === "end" && mechC(st) && step.plan === "point" && step.removedAtT > 0) {
+  // #41 `cDefectAny`: after any 圍點打援 on T (the same conditions on T otherwise).
+  if (step.stage === "end" && mechC(st) && (cSpecOf(st).defectAny || (step.plan === "point" && step.removedAtT > 0))) {
     molesHome(st);
     if (molesAt(st, T).length && pointsOf(st, KMT, T) > 0) step.stage = "defect";
   }
@@ -2005,7 +2085,7 @@ function siegeStep(st, step) {
     if (!step.choices.length) return ask(st, { ...step, side: CCP }, { kind: "option", tag: "defect", target: T, options: [{ id: "no" }, { id: "defect" }] });
     if (step.choices.shift() === "defect") {
       revealReal(st, T);
-      log(st, { type: "defect", side: CCP, target: T, removed: loseKmtPoints(st, T, C_SPEC.defect, "defect") });
+      log(st, { type: "defect", side: CCP, target: T, removed: loseKmtPoints(st, T, cSpecOf(st).defect, "defect") }); // #41 `cDefect`
     } else moleNo(st, "defect", T, [T]);
     step.stage = "end";
   }
@@ -2323,7 +2403,7 @@ export function forcedCard(st, side) {
 // cards.js / board.js, or to what the engine does with a given options object.
 // A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
 // and a replay uses the recorded options exactly (`replay`).
-export const RULES_VERSION = "2026-10-10-2"; // #40: under `mechanismC` the log has one public entry more, `moleNo` (the Communists were asked 洩密 / 倒戈 and said no: the places and how many markers each held, never which are real; orchestrator 裁決 #40, 2); the rules and the defaults unchanged, a game without the option plays and logs as before, byte for byte ("2026-10-10" was #39: new option `mechanismC` (mechanism C, 內線: `C_SPEC`, `molesAt` / `moleHand` / `molePool`, 佈線 / 和平易手 / 肅諜 as 政工, 洩密 / 倒戈 in 圍點打援); the defaults unchanged: not a key of DEFAULT_OPTIONS, an absent or false option plays as before, byte for byte ("2026-10-08-2" was #38: what `mechanismE: true` plays changed (owner 裁決 #37): E_SPEC is #37's ME-cap1+ops1+early (印鈔 +1, at most once a turn, 通膨 2 / 4 / 6 / 8); `ePrintPerTurn: null` is no cap; the default (E off) is unchanged ("2026-10-08" was #37: E's numbers as options under `mechanismE` (`ePrintOps`, `ePrintStep`, `ePrintPerTurn`, `eInflation`, `ePeg`, `eRadical`, `eLeftism`, `eCentristsVp`; `eSpecOf`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's E ("2026-10-07" was #35: mechanism E as the option `mechanismE` (通膨 / 印鈔 / 平抑, 左傾 / 激進土改 / 還鄉團, 中間派; `E_SPEC`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05-3" was #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01")))))))))))))
+export const RULES_VERSION = "2026-10-12"; // #41: C's levers as options under `mechanismC` (`cPurgeSplit`, `cCaught`, `cLeakBonus`, `cDefect`, `cDefectAny`, `cHandover`, `cFreePlant`, `cRealMandate`, `cLeakCapital`; `cSpecOf`, `handoverNeed`; the log's `moleMandate`, 佈線's `free`, the pending tag `plant`, the plan step `freePlant`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's C ("2026-10-10-2" was #40: under `mechanismC` the log has one public entry more, `moleNo` (the Communists were asked 洩密 / 倒戈 and said no: the places and how many markers each held, never which are real; orchestrator 裁決 #40, 2); the rules and the defaults unchanged, a game without the option plays and logs as before, byte for byte ("2026-10-10" was #39: new option `mechanismC` (mechanism C, 內線: `C_SPEC`, `molesAt` / `moleHand` / `molePool`, 佈線 / 和平易手 / 肅諜 as 政工, 洩密 / 倒戈 in 圍點打援); the defaults unchanged: not a key of DEFAULT_OPTIONS, an absent or false option plays as before, byte for byte ("2026-10-08-2" was #38: what `mechanismE: true` plays changed (owner 裁決 #37): E_SPEC is #37's ME-cap1+ops1+early (印鈔 +1, at most once a turn, 通膨 2 / 4 / 6 / 8); `ePrintPerTurn: null` is no cap; the default (E off) is unchanged ("2026-10-08" was #37: E's numbers as options under `mechanismE` (`ePrintOps`, `ePrintStep`, `ePrintPerTurn`, `eInflation`, `ePeg`, `eRadical`, `eLeftism`, `eCentristsVp`; `eSpecOf`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's E ("2026-10-07" was #35: mechanism E as the option `mechanismE` (通膨 / 印鈔 / 平抑, 左傾 / 激進土改 / 還鄉團, 中間派; `E_SPEC`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05-3" was #33: D's numbers as options under `mechanismD` (`dGray`, `dAttitude`, `dThreshold`, `dMieVp`, `dSealVp`, `dFreeBar`, `dSettle`, `dIntegrateMax`); new options, the defaults unchanged: none is a key of DEFAULT_OPTIONS and an absent one plays today's D ("2026-10-05-2" was #31: mechanism D's core as the option `mechanismD` (gray, attitudes, 政工 = 整編 / 統戰, 易幟 and 整編完成 by D's rules, `grayOrder`); not a default, an absent or false option plays as before, byte for byte ("2026-10-05" was #28: mechanism B is the default rules (owner 裁決 #28): `mechanismB: true` in DEFAULT_OPTIONS; bumped although only DEFAULT_OPTIONS changed, because what a new default game plays out to changed (orchestrator brief #28) ("2026-10-04-2" was #26: mechanism B as the option `mechanismB` (`SIEGE`, `siegeNeeded`, `besieged`; an absent or false option plays as before) ("2026-10-04" was #24: P10 is the rules (owner 裁決 #23 and #24, 2026-10-04): `ERAS`, `SITUATION_CAMPAIGN`, `MANDATE_WIN` / `MANDATE_FROM` / `MANDATE_CAP`, SETUP's `freeHeld` / `freeAlso`, and `sealNeeds` / `sealPerTurn` in DEFAULT_OPTIONS; an absent mandate or 時局 option now plays as P10 ("2026-10-03-3" was #23 round four: `sealPerTurn`, `mandateCapUntil`, `mandateFrom` per side; an absent key plays as before ("2026-10-03-2" was #23 round three: `mandateWin`, `mandateFrom`, `mandateEarly`, `mandateCap`; "2026-10-03" was #23 round two: `sealFrom`, `mieNeeds`; "2026-10-02-2" was #23: the tuning options (`setupPoints`, `setupFree`, `setupFreeBar`, `setupOrder`, `eraRounds`, `regionValues`, `supportStart`, `supportSchedule`, `aidCap`, `situationCampaign`, `attritionLosses`, `sealNeeds`, `adjacency`, `withdrawalKmt`); none is a default, an absent key plays as before ("2026-10-02" was #13: the switches `situations`, `rounds`, `garrison`, i.e. what the engine does with an options object that names them; an absent key plays as before ("2026-10-01-8" was #8: the 21 events of 決戰期, `campaignBan`'s `who`, `turnEndVp`, `noAttrition`; "2026-10-01-7" was #7: the 22 events of 易勢期, a `campaign` effect's `spaceKind`; "2026-10-01-6" was #6: the 24 events of 接收期, 馬歇爾調處's pairing, `campaignBan`; "2026-10-01-5" was #5: baseScoring, base areas count as 要衝 when a region scores; "2026-10-01-4" was #4: the two aid cards replace the Nine Cauldrons, 美援's airlift, 美軍駐華; "2026-10-01-3" was #3: homeLockSide; "2026-10-01-2" was #2: 時局, asymmetric rounds, support tracks; #1 was "2026-10-01"))))))))))))))
 // A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
   return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
@@ -2371,7 +2451,7 @@ function startGame(seed, options) {
   // #35, mechanism E: the three tracks, only with the option.
   if (mechE(st)) { eSpecOf(st); st.mechE = newMechE(); } // #37: eSpecOf refuses a malformed E option here
   // #39, mechanism C: the markers, only with the option.
-  if (mechC(st)) st.moles = newMoles();
+  if (mechC(st)) { cSpecOf(st); st.moles = newMoles(); } // #41: cSpecOf refuses a malformed C option here
   if (tune(st, "supportStart")) st.support = st.options.supportStart.slice();
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   // CIVIL WAR: the first era's deck is drawn from; the other two wait in
@@ -2448,6 +2528,7 @@ function exec(st, step) {
     case "startTurn": return startTurn(st), true;
     case "situation": return situationStep(st, step);
     case "deal": return dealHands(st), true;
+    case "freePlant": return freePlantStep(st, step); // #41
     case "constitution": return constitutionStep(st, step);
     case "headline": return resolveHeadlines(st), true;
     case "event": {
@@ -2651,6 +2732,8 @@ function startTurn(st) {
   // #39, mechanism C: 易勢期 and 決戰期 each bring the Communists 1 real and 1 fake marker.
   if (st.moles && C_GAIN_TURNS[st.turn]) moleGain(st, C_GAIN_TURNS[st.turn]);
   st.plan.splice(1, 0, { do: "situation", stage: "start", choices: [] }, { do: "deal" });
+  // #41 `cFreePlant`: the free 佈線 right after the deal (only with the option: no step otherwise).
+  if (st.moles && cSpecOf(st).freePlant > 0) st.plan.splice(3, 0, { do: "freePlant", n: cSpecOf(st).freePlant, choices: [] });
 }
 function dealHands(st) {
   const { hand } = eraLimits(st);
@@ -2851,6 +2934,12 @@ function endTurnChecks(st) {
     vp(st, c > 0 ? CCP : KMT, Math.abs(c));
     if (st.winner != null) return;
   }
+  // #41 `cRealMandate`: 民心 n toward the Communists for every real marker on the board; public, the count only.
+  if (st.moles && cSpecOf(st).realMandate > 0) {
+    const n = Object.values(st.moles.at).reduce((t, l) => t + l.filter((x) => x).length, 0), v = n * cSpecOf(st).realMandate;
+    log(st, { type: "moleMandate", n, vp: v });
+    if (v > 0) { vp(st, CCP, v); if (st.winner != null) return; }
+  }
   // #8, 金圓券: 民心 owed at this turn's 結算 (`turnEndVp`, `until: "turn"`), paid
   // here, once, before 「本回合的效果結束」 takes the effect away.
   for (const e of st.effects.filter((x) => x.kind === "turnEndVp")) {
@@ -3023,6 +3112,8 @@ function validateChoice(st, p, choice) {
         const id = p.tag === "leak" ? String(choice).split(":")[1] : p.target;
         if (!molesAt(st, id).includes(true)) fail(`${p.tag}: no real marker on ${id}`);
       }
+      // #41, the free 佈線: the hand must hold a marker of the kind named.
+      if (st.moles && p.tag === "plant" && choice !== "no" && !(st.moles.hand[String(choice).startsWith("real:") ? 0 : 1] > 0)) fail(`plant: the hand holds no ${String(choice).split(":")[0]} marker`);
       return choice;
     }
     case "ops": {
@@ -3292,6 +3383,11 @@ export function view(st, side) {
     v.moles = { hand: null, handCount: moleHandCount(m), pool: m.pool.slice(), out: m.out, at: Object.fromEntries(Object.entries(m.at).map(([id, l]) => [id, l.map(() => null)])), reform4: m.reform4 };
     const blind = (x) => { if (x && typeof x === "object" && Array.isArray(x.plant)) x.plant = x.plant.map((e) => ({ at: e && e.at })); };
     for (const p of v.plan || []) { blind(p.payload); for (const c of Array.isArray(p.choices) ? p.choices : []) blind(c); }
+    // #41, the free 佈線: its question lists real / fake per city, which only the Communists may read (the list is
+    // public facts, but a pending answer in the plan would name a kind): the cities alone.
+    const cityOnly = (id) => String(id).replace(/^(real|fake):/, "plant:");
+    if (v.pending && v.pending.tag === "plant") v.pending.options = [...new Set(v.pending.options.map((o) => cityOnly(o.id)))].map((id) => ({ id }));
+    for (const p of v.plan || []) if (p.do === "freePlant" && Array.isArray(p.choices)) p.choices = p.choices.map(cityOnly);
   }
   if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
   if (side == null) {

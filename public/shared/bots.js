@@ -729,9 +729,37 @@ export const C_W = {
 const turnsLeft = (st) => Math.max(1, st.options.turns - Math.max(1, st.turn) + 1);
 const binom = (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return r; };
 const ccpNext = (st, id) => E.adjOf(st, id).some((a) => E.controller(st, a) === CCP);
+// #41: C's levers (`E.cSpecOf`). A lever that changes what a real marker does when it is turned up (洩密 +n,
+// 倒戈's reach or size, 和平易手's price, 洩密 without the capital) changes what one is worth standing on a city:
+// per class, the change measured by the #40 probe re-run under the option against the same probe with no option
+// (tuning/41/probe-worth.mjs; tuning/41/report.txt has the runs). Several levers: the changes added up. A lever
+// value not measured has no entry and is refused (an unpriced lever would be a guess). `cRealMandate` is exact:
+// 民心 is 1 to 1 in the evaluation, so a real marker on the board is worth n more a turn (this turn's 結算 included).
+export const C_W_OPT = {};
+const C_CLASSES = ["capital", "open", "isolated", "real"];
+const cWorthMemo = new WeakMap();
+// The worth per turn left of a real marker on a city, by class (C_W's capital / open / isolated / real), and
+// `board`, what every real one on the board adds a turn (`cRealMandate`). Today's C: C_W itself.
+export function cWorth(st) {
+  const sp = E.cSpecOf(st);
+  if (!(sp.leakBonus || sp.defect !== E.C_SPEC.defect || sp.defectAny || sp.handover || !sp.leakCapital || sp.realMandate)) return C_W;
+  if (cWorthMemo.has(sp)) return cWorthMemo.get(sp);
+  const w = { ...C_W, board: sp.realMandate };
+  const on = [["cLeakBonus", sp.leakBonus, 0], ["cDefect", sp.defect, E.C_SPEC.defect], ["cDefectAny", sp.defectAny, false], ["cHandover", sp.handover, null], ["cLeakCapital", sp.leakCapital, true]];
+  for (const [k, v, d] of on) {
+    if (v === d) continue;
+    const delta = C_W_OPT[`${k}:${v}`];
+    if (!delta) throw new Error(`cWorth: ${k} ${v} is not priced (tuning/41/probe-worth.mjs)`);
+    for (const c of C_CLASSES) w[c] = Math.max(0, w[c] + (delta[c] || 0));
+  }
+  cWorthMemo.set(sp, w);
+  return w;
+}
 // What a real marker on `id` is worth to the Communists (`iso`: the 孤城 now, a Set).
 function realWorth(st, id, cap, iso) {
-  return turnsLeft(st) * (id === cap ? C_W.capital : iso.has(id) ? C_W.isolated : ccpNext(st, id) ? C_W.open : C_W.real);
+  const w = cWorth(st);
+  if (w === C_W) return turnsLeft(st) * (id === cap ? C_W.capital : iso.has(id) ? C_W.isolated : ccpNext(st, id) ? C_W.open : C_W.real);
+  return turnsLeft(st) * ((id === cap ? w.capital : iso.has(id) ? w.isolated : ccpNext(st, id) ? w.open : w.real) + w.board);
 }
 // The markers' worth to the Communists, read with their truth (a guess, or the Communists' own state).
 function cValue(st) {
@@ -756,12 +784,15 @@ function cValue(st) {
 // planted together on one city, so alike to them), the "no"s as events over groups, the fakes they know are in
 // the hand. Replays the log's C entries; then the counts are made those of the view (a position laid out by
 // hand has markers no entry put there: they are a group with no history).
+// #41 `cRealMandate`: the turn's 結算 says how many real markers the board holds (`moleMandate`): an event over
+// every group then on the board, "exactly n real among them" (`counts`). A real one turned up from a group in it:
+// n − 1; a group gone home (or out of step with the view): the event is forgotten (what went home is not known).
 function moleTrack(view) {
   const m = view.moles;
-  let groups = [], events = [], knownFake = 0;
+  let groups = [], events = [], knownFake = 0, counts = [];
   const on = (id) => groups.filter((g) => g.at === id);
   const declines = (g) => events.reduce((t, e) => t + (e.set.has(g) ? 1 : 0), 0);
-  const drop = (g) => { groups = groups.filter((x) => x !== g); events = events.filter((e) => !e.set.has(g)); };
+  const drop = (g) => { groups = groups.filter((x) => x !== g); events = events.filter((e) => !e.set.has(g)); counts = counts.filter((e) => !e.set.has(g)); };
   // A real one turned up: from the group most likely to hold one (fewest "no"s, the newest on a tie). A "no"
   // over that group was said with a real marker among those asked: its likelihood is a constant, it goes.
   const real = (id) => {
@@ -769,7 +800,8 @@ function moleTrack(view) {
     if (!gs.length) return;
     const g = gs.reduce((a, b) => (declines(b) <= declines(a) ? b : a));
     events = events.filter((e) => !e.set.has(g));
-    if (--g.n <= 0) groups = groups.filter((x) => x !== g);
+    for (const e of counts) if (e.set.has(g)) e.n--;
+    if (--g.n <= 0) { groups = groups.filter((x) => x !== g); for (const e of counts) e.set.delete(g); }
   };
   // A fake turned up (肅諜): from the group most likely to hold one (most "no"s, the oldest on a tie). The "no"s
   // stand: "a real among those asked" is "a real among the others". It goes to the hand.
@@ -777,7 +809,7 @@ function moleTrack(view) {
     const gs = on(id);
     if (gs.length) {
       const g = gs.reduce((a, b) => (declines(b) > declines(a) ? b : a));
-      if (--g.n <= 0) { groups = groups.filter((x) => x !== g); for (const e of events) e.set.delete(g); events = events.filter((e) => e.set.size); }
+      if (--g.n <= 0) { groups = groups.filter((x) => x !== g); for (const e of events) e.set.delete(g); events = events.filter((e) => e.set.size); for (const e of counts) e.set.delete(g); }
     }
     knownFake++;
   };
@@ -808,11 +840,12 @@ function moleTrack(view) {
         if (set.size) events.push({ q: C_W.q[l.tag] ?? 1, set });
         break;
       }
+      case "moleMandate": counts.push({ n: l.n, set: new Set(groups) }); break; // #41
       default: break;
     }
   }
   for (const id of new Set([...groups.map((g) => g.at), ...Object.keys(m.at)])) sync(id, (m.at[id] || []).length);
-  return { groups, events, knownFake: Math.min(knownFake, m.handCount || 0) };
+  return { groups, events, knownFake: Math.min(knownFake, m.handCount || 0), counts };
 }
 // The posterior over how many real markers each group (and the hand) holds, given exactly R real in play.
 // { groups, hand, R, N, configs: [{ k: [per group], kh, w }], total, p: [per group], belief: { city: [p, …] } }.
@@ -824,12 +857,16 @@ export function molePosterior(view) {
   const N = gs.reduce((s, g) => s + g.n, 0) + h;
   const R = Math.max(0, Math.min(N, E.C_SPEC.markers[0] - m.pool[0] - m.out));
   const ev = tr.events.map((e) => ({ q: e.q, idx: [...e.set].map((g) => gs.indexOf(g)).filter((i) => i >= 0) }));
-  const configs = [], k = new Array(gs.length).fill(0);
-  let total = 0;
+  // #41: the counts (`cRealMandate`): a config whose groups do not hold exactly n real is out. Should none be left
+  // (a position laid out by hand, out of step with the log), the walk is made again without them.
+  let cn = (tr.counts || []).map((e) => ({ n: e.n, idx: [...e.set].map((g) => gs.indexOf(g)).filter((i) => i >= 0) }));
+  let configs = [], total = 0;
+  const k = new Array(gs.length).fill(0);
   const walk = (j, left, w) => {
     if (j === gs.length) {
       let wt = w * binom(h - f, left);
       if (!wt) return;
+      for (const e of cn) if (e.idx.reduce((t, i) => t + k[i], 0) !== e.n) return;
       for (const e of ev) if (e.idx.some((i) => k[i] > 0)) wt *= e.q;
       if (!(wt > 0)) return;
       configs.push({ k: k.slice(), kh: left, w: wt }); total += wt;
@@ -839,6 +876,7 @@ export function molePosterior(view) {
     k[j] = 0;
   };
   walk(0, R, 1);
+  if (!(total > 0) && cn.length) { cn = []; configs = []; walk(0, R, 1); }
   const p = gs.map((g, j) => (total > 0 ? configs.reduce((t, c) => t + c.w * c.k[j], 0) / (total * g.n) : N ? R / N : 0));
   const belief = {};
   for (const id of Object.keys(m.at)) belief[id] = gs.flatMap((g, j) => (g.at === id ? new Array(g.n).fill(p[j]) : []));
@@ -933,9 +971,11 @@ export function purgeValue(view, cities) {
   if (ids.some((id) => !view.moles.at[id] || count[id] > view.moles.at[id].length)) return null;
   const cap = E.homeCapital(view, KMT), iso = new Set(E.isolatedCities(view)), left = turnsLeft(view);
   const worth = ids.map((id) => realWorth(view, id, cap, iso)), fakeMove = left * (C_W.fake - C_W.handFake);
-  let caught = E.C_SPEC.caughtFake.mandate;
+  // #41 `cCaught`: the engine's own price (today C_SPEC.caughtFake, 1 and 1).
+  const cs = E.cSpecOf(view), cm = cs.caught === E.C_SPEC.caughtFake.mandate && cs.caught === E.C_SPEC.caughtFake.centrists ? null : cs.caught;
+  let caught = cm ?? E.C_SPEC.caughtFake.mandate;
   if (mechE(view)) {
-    const sp = E.eSpecOf(view), c = E.centristsOf(view), to = clampC(sp, c + E.C_SPEC.caughtFake.centrists);
+    const sp = E.eSpecOf(view), c = E.centristsOf(view), to = clampC(sp, c + (cm ?? E.C_SPEC.caughtFake.centrists));
     caught = (to - c) * sp.centristsVp * eSettlements(view);
   }
   let v = 0;
@@ -1022,8 +1062,23 @@ function moleChoices(st, side, mo, ops, rng, post) {
   if (side === CCP) {
     if (mo.plant.length && rng) { const plant = plantPayload(st, mo.plant, ops, rng); if (plant) out.push({ plant }); }
     for (const t of mo.handover) out.push({ handover: t });
-  } else for (const purge of purgeLists(st, mo.purge, ops, post)) out.push({ purge });
+  } else {
+    // #41 `cPurgeSplit`: the rest of the ops go to 扶植, the bot's own placement for that many ops.
+    const split = E.cSpecOf(st).purgeSplit;
+    for (const purge of purgeLists(st, mo.purge, ops, post)) {
+      const points = split && ops > purge.length ? greedyPlacement(st, side, ops - purge.length) : null;
+      out.push(points && points.length ? { purge, points } : { purge });
+    }
+  }
   return out;
+}
+// #41, the free 佈線 (`cFreePlant`), the Communists' answer: one marker as a 佈線 of 1 op would place it
+// (`plantPayload`: the kind drawn from the hand, the place by its list), against "no", by the evaluation.
+function plantAnswer(st, p, who, rng) {
+  const cities = [...new Set(p.options.filter((o) => o.id !== "no").map((o) => String(o.id).split(":")[1]))];
+  const pick = st.moles && st.moles.hand && cities.length ? plantPayload(st, cities, 1, rng) : null;
+  if (!pick) return "no";
+  return bestOf(st, who, ["no", `${pick[0].real ? "real" : "fake"}:${pick[0].at}`], rng);
 }
 // 洩密 / 倒戈, the Communists' answer: "no", or a place whose marker is real, the best by the evaluation (turning
 // a real one up costs its worth, `cValue`).
@@ -1442,6 +1497,7 @@ export function answer(st, p, who, rng) {
     // 收手 (realign-own): go on while the next attempt gains on average.
     // Mechanism C (#40): 洩密 / 倒戈 by the evaluation (`moleAnswer`; #39 answered "no").
     case "option": if (p.tag === "leak" || p.tag === "defect") return moleAnswer(st, p, who, rng);
+      if (p.tag === "plant") return plantAnswer(st, p, who, rng); // #41 `cFreePlant`
       if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
       return bestOf(st, who, p.options.map((o) => o.id), rng);
     case "ops": return bestOps(st, who, p.ops, p.allowed, rng, p.card, null, p);
