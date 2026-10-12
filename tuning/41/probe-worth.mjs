@@ -1,7 +1,7 @@
 // #41: what a real marker standing on a city is worth a turn, by class, under the options named: #40's probe
 // (tuning/40/probe-gains.mjs), the same method, re-run per lever so that the bot's price of a lever that changes
 // what a real marker does (洩密 +n, 倒戈's reach and size, 和平易手's price, 洩密 without the capital) is measured,
-// not guessed. The bot reads the difference against the same probe with no option (bots.js `C_W_OPT`).
+// not guessed. The bot reads p and G per class from it (bots.js `C_ONCE`, `C_ONCE_OPT`; #41 round 2: one use).
 //   node tuning/41/probe-worth.mjs <first seed> <games> [options JSON] [C_W JSON]
 // Per game: at the first action round of every turn, the real markers on the board by class (capital, else a
 // 孤城, else a city next to a space the Communists control = open, else other: bots.js `realWorth`'s order).
@@ -11,7 +11,7 @@
 // "no", max(0, ·) -- the Communists may always say no. For every action round of theirs with a 和平易手 legal: the
 // best 和平易手 against the best of the rest (`B.scoreCandidates`), plus the worth the evaluation charged for the
 // real marker it turns up (`B.cWorth`), max(0, ·). Worth of a class = the gains there / its real-marker turns.
-// The lever's own price is set to "no change" while it is measured (`C_W_OPT[key] = {}`), as #40 measured with
+// The lever's own price is set to "no change" while it is measured (`C_ONCE_OPT[key] = C_ONCE.base`), as #40 measured with
 // C_W's first shape: the gain is read without the markers' worth, so the price does not enter it except through
 // where the bot plants.
 import * as E from "../../public/shared/engine.js";
@@ -22,7 +22,7 @@ const options = { mechanismC: true, ...(process.argv[4] ? JSON.parse(process.arg
 if (process.argv[5]) Object.assign(B.C_W, JSON.parse(process.argv[5]));
 const sp = E.cSpecOf({ options });
 for (const [k, v, d] of [["cLeakBonus", sp.leakBonus, 0], ["cDefect", sp.defect, E.C_SPEC.defect], ["cDefectAny", sp.defectAny, false], ["cHandover", sp.handover, null], ["cLeakCapital", sp.leakCapital, true]]) {
-  if (v !== d && !B.C_W_OPT[`${k}:${v}`]) B.C_W_OPT[`${k}:${v}`] = {};
+  if (v !== d && !B.C_ONCE_OPT[`${k}:${v}`]) B.C_ONCE_OPT[`${k}:${v}`] = B.C_ONCE.base;
 }
 const K = ["capital", "isolated", "open", "other"];
 const zero = () => Object.fromEntries(K.map((k) => [k, 0]));
@@ -61,8 +61,7 @@ for (let seed = first; seed < first + games; seed++) {
         const sc = B.scoreCandidates(E.view(st, CCP), CCP, E.makeRng(seed * 11 + n));
         const h = sc.find((x) => x.a.handover), o = sc.find((x) => !x.a.handover);
         if (h) {
-          const id = h.a.handover, w = B.cWorth(st);
-          const worth = Math.max(1, st.options.turns - st.turn + 1) * (w.isolated + (w.board || 0));
+          const id = h.a.handover, worth = B.realWorthOf(st, id); // #41 round 2: the bot's own price of that marker
           const g = h.v - (o ? o.v : h.v) + worth;
           out.handoverRounds++;
           out.gains.isolated += Math.max(0, g);

@@ -22,20 +22,25 @@ export function sum(name) {
     tot.games += o.games; tot.handoverRounds += o.handoverRounds; tot.handoverGain += o.handoverGain; tot.rows.push(...o.rows);
     for (const c of K) for (const x of ["markerTurns", "gains", "asks"]) tot[x][c] = (tot[x][c] || 0) + o[x][c];
   }
-  tot.wins = {};
+  tot.wins = {}; tot.chances = {};
   for (const c of K) {
     const mine = tot.rows.filter((r) => (r.tag === "handover" ? c === "isolated" : r.klass === c));
     tot.wins[c] = mine.filter((r) => r.gain >= WIN).length;
     tot.gains[c] = mine.filter((r) => r.gain < WIN).reduce((t, r) => t + Math.max(0, r.gain), 0);
+    tot.chances[c] = mine.filter((r) => r.gain < WIN && r.gain > 0.01).length; // #41 round 2: the uses that beat "no"
   }
   tot.worth = Object.fromEntries(K.map((c) => [c, tot.markerTurns[c] ? tot.gains[c] / tot.markerTurns[c] : 0]));
+  // #41 round 2 (orchestrator 裁決 #41): a real marker is used once. p = the chances a turn that beat "no" (capped at 1),
+  // G = the mean gain of those; the bot prices one standing L turns as G × (1 − (1 − p)^L) (bots.js `realOnce`).
+  tot.p = Object.fromEntries(K.map((c) => [c, tot.markerTurns[c] ? Math.min(1, tot.chances[c] / tot.markerTurns[c]) : 0]));
+  tot.G = Object.fromEntries(K.map((c) => [c, tot.chances[c] ? tot.gains[c] / tot.chances[c] : 0]));
   return tot;
 }
 export function show(name, t) {
   const L = [`${name}: ${t.games} 局;和平易手可以做的行動回合 ${t.handoverRounds}、好處合計 ${t.handoverGain.toFixed(2)}`];
   for (const c of K) {
     const g = t.rows.filter((r) => r.klass === c && r.tag !== "handover").map((r) => r.gain);
-    L.push(`  ${c.padEnd(8)} 真標記回合 ${String(t.markerTurns[c]).padStart(4)}  被問 ${String(t.asks[c]).padStart(4)}(有好處 ${g.filter((x) => x > 0.01).length})  好處合計 ${t.gains[c].toFixed(2).padStart(8)}(另有定勝負的 ${t.wins[c]} 次)  每回合 ${t.worth[c].toFixed(3)}`);
+    L.push(`  ${c.padEnd(8)} 真標記回合 ${String(t.markerTurns[c]).padStart(4)}  被問 ${String(t.asks[c]).padStart(4)}(有好處 ${g.filter((x) => x > 0.01).length})  好處合計 ${t.gains[c].toFixed(2).padStart(8)}(另有定勝負的 ${t.wins[c]} 次)  每回合 ${t.worth[c].toFixed(3)}  p ${t.p[c].toFixed(4)}  G ${t.G[c].toFixed(2)}`);
   }
   return L.join("\n");
 }
