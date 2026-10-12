@@ -691,3 +691,9 @@ mcc("MC-mand1+leak1", "MC-mand1 + MC-leak1", ["MC-mand1", "MC-leak1"]);
 mcc("MC-plant1+mand1+leak1", "MC-plant1 + MC-mand1 + MC-leak1", ["MC-plant1", "MC-mand1", "MC-leak1"]);
 mcc("MC-plant1+mand1+split", "MC-plant1 + MC-mand1 + MC-split", ["MC-plant1", "MC-mand1", "MC-split"]);
 mcc("MC-plant1+leak1+split", "MC-plant1 + MC-leak1 + MC-split", ["MC-plant1", "MC-leak1", "MC-split"]);
+// Round 2 read so far: 肅諜 ≥ 0.5 wherever MC-leak1 or MC-mand1 is with MC-plant1, but the real markers used stay
+// at 0.11–0.37 a game (goal 3 wants 0.5); MC-mand1 lowers them (a real one standing is worth more than one used).
+// Two more toward goal 3: the other two uses made easier over MC-plant1 + MC-leak1, and two free markers a turn.
+mc("MC-plant2", "每回合發牌之後,共軍可以免費佈 2 個標記(不花牌)", "同 MC-plant1,多一個(#40 槓桿 6)", { cFreePlant: 2 });
+mcc("MC-plant1+leak1+defectAny+handHalf", "MC-plant1 + MC-leak1 + MC-defectAny + MC-handHalf", ["MC-plant1", "MC-leak1", "MC-defectAny", "MC-handHalf"]);
+mcc("MC-plant2+leak1", "MC-plant2 + MC-leak1", ["MC-plant2", "MC-leak1"]);
