@@ -19,7 +19,8 @@ const same = (a, b) => { const r = spawnSync(process.execPath, ["tuning/41/same.
 
 P("== A. 不給新選項 = 今天的 C(C 開、--seed=1、300 局;tuning/41/same.mjs)");
 for (const f of files(`${R}/same`).filter((f) => f !== "C-main-s1-300.txt.state.json")) P(`${f.replace(".txt.state.json", "")} vs C-main(origin/main ad31d53):${same(`${R}/same/${f}`, `${R}/same/C-main-s1-300.txt.state.json`)}`);
-if (existsSync(`${R}/screen/MC-caught0-s1-300.txt.state.json`)) P(`(比對會紅:C-main vs MC-caught0 → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-caught0-s1-300.txt.state.json`)})`);
+if (existsSync(`${R}/screen/MC-split-s1-300.txt.state.json`)) P(`(比對會紅:C-main vs MC-split → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-split-s1-300.txt.state.json`)})`);
+if (existsSync(`${R}/screen/MC-caught0-s1-300.txt.state.json`)) P(`(MC-caught0 和今天的 C 是同樣的 300 局:沒有一局肅諜,抓錯的代價從來沒有被讀到 → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-caught0-s1-300.txt.state.json`)})`);
 P();
 
 const offS = existsSync(`${R}/screen/off-s1-300.txt.state.json`) ? readBatch("C 關", `${R}/screen/off-s1-300.txt.state.json`) : null;
@@ -53,7 +54,7 @@ if (fin.length) {
   P();
 }
 P("== D. 真標記每回合值多少(tuning/41/probe-run.mjs,480 局、種子 41000–41479、每一組都開免費佈線 1、手上的真標記值 0)");
-const arms = ["base", "leak1", "defectAny", "handHalf", "leakTR"].filter((n) => existsSync(`${R}/probe/${n}-0.txt`));
+const arms = ["base", "leak1", "defectAny", "defect3", "handHalf", "handOne", "leakTR"].filter((n) => existsSync(`${R}/probe/${n}-0.txt`));
 const base = arms.includes("base") ? sum("base") : null;
 for (const n of arms) {
   const t = sum(n);

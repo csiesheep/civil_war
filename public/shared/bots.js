@@ -743,6 +743,8 @@ export const C_W_OPT = {
   "cDefectAny:true": { capital: 0.02, open: 0.05, isolated: 0.84, real: 0.01 },
   "cHandover:half": { capital: 0.01, open: 0.03, isolated: 0.1, real: 0 },
   "cLeakCapital:false": { capital: -0.44, open: 0.03, isolated: 0.08, real: 0 },
+  "cDefect:3": { capital: 0, open: 0.09, isolated: 0.01, real: 0 },
+  "cHandover:one": { capital: -0.06, open: 0.03, isolated: 0.22, real: 0 },
 };
 const C_CLASSES = ["capital", "open", "isolated", "real"];
 const cWorthMemo = new WeakMap();
