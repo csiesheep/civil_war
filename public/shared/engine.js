@@ -841,8 +841,9 @@ function moleRefusal(st, side, ops, choice) {
   if (!mechC(st)) return "政工: mechanism C is off (內線)";
   const kinds = C_KINDS.filter((k) => choice[k] != null);
   if (kinds.length !== 1 || choice.target != null || choice.power != null) return "政工: one of plant, handover, purge";
-  // #41 `cPurgeSplit`: a 肅諜's `points` (the rest of the ops, placed); nothing else names points.
-  if (choice.points != null && !(kinds[0] === "purge" && cSpecOf(st).purgeSplit && Array.isArray(choice.points))) return "政工: points only with a 肅諜 under cPurgeSplit";
+  // #41 `cPurgeSplit`: a 肅諜's `points` (the rest of the ops, placed), a list. Without the option a `points` key is
+  // ignored, as it was before #41 (no payload that played before is refused now).
+  if (kinds[0] === "purge" && cSpecOf(st).purgeSplit && choice.points != null && !Array.isArray(choice.points)) return "肅諜: points must be a list";
   const m = st.moles;
   if (kinds[0] === "plant") {
     if (side !== CCP) return "佈線: only the Communists";
