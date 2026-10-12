@@ -11,6 +11,7 @@ import { readdirSync, existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { readBatch, block, row } from "./goals.mjs";
 import { sum, show } from "./probe-run.mjs";
+import { holdSum } from "./hold-sum.mjs";
 
 const R = "tuning/41/runs";
 const P = (s = "") => console.log(s);
@@ -23,9 +24,13 @@ if (existsSync(`${R}/screen/MC-split-s1-300.txt.state.json`)) P(`(比對會紅:C
 if (existsSync(`${R}/screen/MC-caught0-s1-300.txt.state.json`)) P(`(MC-caught0 和今天的 C 是同樣的 300 局:沒有一局肅諜,抓錯的代價從來沒有被讀到 → ${same(`${R}/same/C-main-s1-300.txt.state.json`, `${R}/screen/MC-caught0-s1-300.txt.state.json`)})`);
 P();
 
+const ORDER = ["C(今天)", "MC-split", "MC-caught0", "MC-leak1", "MC-defectAny", "MC-handHalf", "MC-plant1", "MC-mand1", "MC-leakTR",
+  "MC-plant1+leak1", "MC-plant1+mand1", "MC-mand1+leak1", "MC-plant1+mand1+leak1", "MC-plant1+mand1+split", "MC-plant1+leak1+split",
+  "MC-plant1+leak1+defectAny+handHalf", "MC-plant2", "MC-plant2+leak1"];
 const offS = existsSync(`${R}/screen/off-s1-300.txt.state.json`) ? readBatch("C 關", `${R}/screen/off-s1-300.txt.state.json`) : null;
 const screen = [readBatch("C(今天)", `${R}/same/C-main-s1-300.txt.state.json`),
-  ...files(`${R}/screen`).filter((f) => !f.startsWith("off-")).map((f) => readBatch(f.replace(/-s1-300\.txt\.state\.json$/, ""), `${R}/screen/${f}`))];
+  ...files(`${R}/screen`).filter((f) => !f.startsWith("off-")).map((f) => readBatch(f.replace(/-s1-300\.txt\.state\.json$/, ""), `${R}/screen/${f}`))]
+  .sort((a, b) => (ORDER.indexOf(a.name) + 1 || 99) - (ORDER.indexOf(b.name) + 1 || 99));
 P("== B. 篩選(--seed=1、300 局、普通對普通;括號是減掉 C 關同一批的共軍勝率,個百分點)");
 P("   [G1 十項 ≥ 8 含曲線且共軍 35–65%;G2 肅諜每局 ≥ 0.5;G3 翻真標記每局 ≥ 0.5;G4 肅諜翻到的假 ≥ 20% 且回合末信念的 Brier < 先驗]");
 P("   欄:共軍勝率、十項、肅諜 / 局、翻真 / 局、肅諜翻到的假的比例 / 翻開的個數、Brier 信念 / 先驗、每局秒數");
@@ -61,6 +66,9 @@ for (const n of arms) {
   P(show(n, t));
   if (base && n !== "base") P(`  減掉 base:${["capital", "open", "isolated", "other"].map((c) => `${c} ${(t.worth[c] - base.worth[c] >= 0 ? "+" : "")}${(t.worth[c] - base.worth[c]).toFixed(3)}`).join("、")}`);
 }
+P();
+P("== F. 共軍為什麼留著真標記(tuning/41/probe-hold.mjs:MC-plant1+leak1 的選項、bot 自己的價格,280 局、種子 43000–43279)");
+if (existsSync(`${R}/probe/hold-plant1leak1-0.txt`)) P(holdSum("hold-plant1leak1"));
 P();
 P("== E. 每一批的細節(C 的各批,再來是 B 的每一批)");
 for (const x of fin) { P(block(x.b, readBatch(`C 關 s${x.seed}`, `tuning/40/runs/off-s${x.seed}.txt.state.json`))); P(); }
