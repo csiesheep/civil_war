@@ -735,7 +735,15 @@ const ccpNext = (st, id) => E.adjOf(st, id).some((a) => E.controller(st, a) === 
 // (tuning/41/probe-worth.mjs; tuning/41/report.txt has the runs). Several levers: the changes added up. A lever
 // value not measured has no entry and is refused (an unpriced lever would be a guess). `cRealMandate` is exact:
 // 民心 is 1 to 1 in the evaluation, so a real marker on the board is worth n more a turn (this turn's 結算 included).
-export const C_W_OPT = {};
+// tuning/41/runs/probe/ (480 games an arm, seeds 41000–41479, the free 佈線 on in every arm, a hand worth 0), the
+// lever's arm minus the base arm, per class, to 0.01 (the probe's "other" is C_W's `real`). Changes under ~0.05 are
+// within the probe's noise (the arms play different games once the lever acts); they are written as measured.
+export const C_W_OPT = {
+  "cLeakBonus:1": { capital: 2.31, open: 0.24, isolated: 0.34, real: 0 },
+  "cDefectAny:true": { capital: 0.02, open: 0.05, isolated: 0.84, real: 0.01 },
+  "cHandover:half": { capital: 0.01, open: 0.03, isolated: 0.1, real: 0 },
+  "cLeakCapital:false": { capital: -0.44, open: 0.03, isolated: 0.08, real: 0 },
+};
 const C_CLASSES = ["capital", "open", "isolated", "real"];
 const cWorthMemo = new WeakMap();
 // The worth per turn left of a real marker on a city, by class (C_W's capital / open / isolated / real), and
