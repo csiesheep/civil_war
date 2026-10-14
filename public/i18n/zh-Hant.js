@@ -62,13 +62,10 @@ const T = {
     returnHome: "還鄉團",
     generic: "請選擇",
   },
-  // the rule table of 圍點打援 (mechanism B), shown under the Nationalists' answers until the engine gives a dry run (#45)
+  // under the Nationalists' answer to a 圍點打援: the hint, and (preview) the engine's dry run of each plan (E.siegePreview)
   rules: {
     siege: {
-      pick: "共軍已經暗選「打點」或「打援」,你答完才翻開。選一個回應,下面會說明兩種情況。",
-      hold: "打點:守軍被移除(最多等於攻擊力),剩下的攻擊力放成紅。打援:沒有損失;這座城被圍到回合結算、視同孤城,共軍下次打它 +{bonus}。",
-      reinforce: "從鄰近的城把 1 到 {max} 點藍移進這座城。打點:攻擊力減少 {f}×增援點數,再打守軍(減到 0,共軍失 {loss} 點)。打援:援軍被殲(至多等於攻擊力),共軍繳獲 +{cap}。",
-      breakout: "這座城的藍全撤到相鄰處。打點:空城歸共軍(紅 +攻擊力)。打援:撤走的藍損失一半({half}%,進位,至多等於攻擊力),城若空了共軍 +{cap}。",
+      pick: "共軍已經暗選「打點」或「打援」,你答完才翻開。選一個回應,下面會算出兩種情況各會怎樣。",
     },
     sweep: "據守:共軍的點被移除(最多等於攻擊力),剩下的攻擊力放成藍。撤:共軍在這裡的點移到相鄰的鄉(放不下的消失),國軍放攻擊力那麼多的藍。",
   },
@@ -86,6 +83,11 @@ const T = {
     wait: "請稍候,等對手下完。",
     gameOver: "終局",
     levelLine: "你是{side};對手強度:{level}。",
+  },
+  preview: {
+    if: "若是{plan}:",
+    mandate: "民心 {n}",
+    over: "對局結束,{side}勝",
   },
   hud: {
     turn: "第 {n} 回合",

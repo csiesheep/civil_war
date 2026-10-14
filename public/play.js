@@ -112,6 +112,25 @@ class Session {
   mode() { const m = this._mode(); return m ? { kind: m.kind, legal: m.L, ...(m.p ? { pending: m.p } : {}) } : null; }
   choices() { return this._choiceList().map((c) => ({ ...c })); }
   // While a 扶植 is being built: { ops, spent, left, points } from E.placeTargets (the page shows "n points left"); else null.
+  // While the Nationalists answer a 圍點打援 (the human is them): what answering `id` leads to under each hidden plan, from
+  // E.siegePreview (the engine's dry run, their view): { point, relief }, each { changes, mandate, besieged, winner, reason }.
+  preview(id) {
+    const m = this._mode();
+    if (!m || m.kind !== "pending" || m.p.tag !== "siege" || this.side !== KMT) return null;
+    if (!this._prev || this._prev.ver !== this.ver) this._prev = { ver: this.ver, by: {} };
+    if (id in this._prev.by) return this._prev.by[id];
+    let out = null;
+    try {
+      const r = E.siegePreview(this.st, id);
+      out = {};
+      for (const plan of E.SIEGE_PLANS) {
+        const v = r[plan];
+        out[plan] = { changes: infDiff(this.st.inf, v.inf), mandate: v.mandate - this.st.mandate, besieged: E.besieged(v, m.p.target), winner: v.winner, reason: v.reason };
+      }
+    } catch { out = null; }
+    this._prev.by[id] = out;
+    return out;
+  }
   builder() {
     const m = this._mode(), d = this.draft;
     if (!m || (m.kind === "action" && !d.card)) return null;

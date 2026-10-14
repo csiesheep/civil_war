@@ -389,7 +389,7 @@ function pendingPanel(sess, cs, v) {
   if (p.kind === "option") {
     kids.push(h("div", { class: "grid2" }, cs.filter((c) => c.kind === "option").map((c) => h("button", { class: "btn opt" + (c.selected ? " on" : "") + (sess.side === 1 ? " kmtsel" : ""), "aria-pressed": c.selected ? "true" : "false", onclick: () => tap(c.id) }, c.label))));
     const sel = cs.find((c) => c.kind === "option" && c.selected);
-    if (p.tag === "siege") kids.push(h("div", { class: "rules" }, siegeRules(sel ? sel.option.split(":")[0] : null)));
+    if (p.tag === "siege") kids.push(h("div", { class: "rules" }, siegePreview(sess, sel ? sel.option : null)));
     if (p.tag === "sweep") kids.push(h("div", { class: "rules" }, t("rules.sweep")));
   } else if (p.kind === "card") {
     kids.push(h("div", { class: "note" }, t("panel.pickCards", { min: p.min ?? 1, max: p.n ?? 1 })));
@@ -408,12 +408,19 @@ function pendingPanel(sess, cs, v) {
   kids.push(h("div", { class: "row" }, cancelBtn(cs), confirmBtn(cs, sess)));
   return h("div", { class: "panel" }, kids);
 }
-function siegeRules(kind) {
-  const S2 = E.SIEGE;
-  const parts = [];
-  if (!kind) return [t("rules.siege.pick")];
-  for (const kk of [kind]) parts.push(h("div", {}, h("b", {}, t("opt.siege." + kk + "Name") + ":"), t("rules.siege." + kk, { f: S2.reinforceFactor, max: S2.reinforceMax, loss: S2.failLoss, cap: S2.capture, bonus: S2.siegeBonus, half: Math.round(S2.breakoutLoss * 100) })));
-  return parts;
+// What answering with `id` leads to under each plan the Communists may hold: the engine's dry run (E.siegePreview, via the session).
+function siegePreview(sess, id) {
+  if (!id) return [t("rules.siege.pick")];
+  const pv = sess.preview(id);
+  if (!pv) return [];
+  return ["point", "relief"].map((plan) => {
+    const r = pv[plan], parts = [];
+    if (r.changes.length) parts.push(infText(r.changes));
+    if (r.mandate) parts.push(t("preview.mandate", { n: r.mandate > 0 ? t("hud.ccpAhead", { n: r.mandate }) : t("hud.kmtAhead", { n: -r.mandate }) }));
+    if (r.besieged) parts.push(t("log.besieged"));
+    if (r.winner != null) parts.push(t("preview.over", { side: T.side[r.winner] }));
+    return h("div", {}, h("b", {}, t("preview.if", { plan: t("c.plan." + plan) }) + " "), parts.join(";") || t("log.nothing"));
+  });
 }
 
 function footer(sess) {
@@ -528,11 +535,11 @@ function menuSheet(sess) {
 
 // ---------- the end ----------
 function mandateCurve(v) {
-  // Rebuilt from the log's 民心 entries, one point per turn. view.mandateByTurn (#45) replaces this once it has landed.
-  const last = Math.max(...v.log.map((e) => e.t));
-  const pts = [{ t: 0, m: 0 }];
+  // view.mandateByTurn (#45): [t] = the mandate at the opening (t = 0) and after each turn's 結算; the last cell of a finished game is where it ended.
+  const by = v.mandateByTurn || [];
+  const pts = [];
   let m = 0;
-  for (let k = 1; k <= last; k++) { for (const e of v.log) if (e.t === k && e.type === "vp") m = e.mandate; pts.push({ t: k, m }); }
+  for (let k = 0; k < Math.max(by.length, 1); k++) { if (by[k] != null) m = by[k]; pts.push({ t: k, m }); }
   return pts;
 }
 function curveChart(v) {

@@ -207,7 +207,7 @@ button { font: inherit; color: inherit; margin: 0; cursor: pointer; }
 .stepper .nm small { display: block; font-weight: 500; font-size: 11px; color: var(--ink2); }
 .btn.sq { width: 44px; padding: 0; font-size: 22px; line-height: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { min-height: 32px; padding: 0 8px; border: 1.5px solid var(--ink); border-radius: 16px; background: var(--card); font-size: 13px; font-weight: 700; }
+.chip { min-height: 44px; padding: 0 8px; border: 1.5px solid var(--ink); border-radius: 16px; background: var(--card); font-size: 13px; font-weight: 700; }
 .chip.on { background: var(--ink); color: #F3F5EE; }
 .tag.amber { background: var(--amber); }
 
