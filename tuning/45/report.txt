@@ -1,0 +1,58 @@
+#45 BE 報告:圍點打援的乾跑預覽(E.siegePreview)、每回合的民心(mandateByTurn)
+分支 be/45-ui-readings,從 origin/orch/45-acceptance(8b627b0)開;origin/main = 77802b9。
+
+一 做了什麼(public/shared/engine.js,+37 行,只有加)
+- E.siegePreview(st, response):st.pending 必須是國軍的 tag "siege"、st.plan[0] 是 stage "respond" 的 siege 步驟,否則丟錯。
+  對 SIEGE_PLANS(point, relief)各做一次:clone({ ...st, actions: undefined }),把 plan[0].plan 換成這一個,
+  apply(那一份, choose KMT response)(和真的回答同一扇門:不合法的回應一樣被拒),view(之後, KMT),拿掉 final。
+  回 { point, relief }。st 只被 clone。真的暗牌從來不讀:被蓋掉;actions(那一筆 play 帶著真的 siege)不帶進去。
+  停在下一個要人決定的地方(誰的都一樣),或對局結束(winner / reason 在,final 拿掉:見 五)。
+- st.mandateByTurn:startGame 建 [];startTurn 從 0 到 1 時寫 [0];endTurn 在 probe.turnEnd 之前寫 [t];
+  win() 寫 [st.turn] = 結束時的民心(結算裡分出勝負時 endTurn 在 probe 之前就 return)。舊存檔:寫的那一刻才建。
+  view 原樣帶出(它本來就 clone 整個狀態)。沒有決定、沒有亂數讀它。RULES_VERSION 沒動。
+
+二 數字(修正前 → 修正後)
+  VERDICT   223 / 0 / 3  →  226 / 0 / 0
+  BOTS      37 / 0 / 0(修正後)
+  FUZZ      局數 2000 / 結束 2000 / 報錯或卡住 0 / 重播 200 局、不一致 0 / 動作 298709
+  FUZZ-CELLS 控制組 9 個 / 有問題的 0 個 / 每個 300 局
+  SIM       7 / 0 / 0
+  ART       14 / 0 / 0
+  身分:tests/sim.js 300 --cell=full --seed=1 --jobs=10,main(origin/main 77802b9 的 git archive)vs 分支:
+    tuning/42/same-all.mjs  SAME games 300: 315 leaves (sum + errors + more, union of keys), 0 differ in a float's last digits
+    紅一次:tuning/42/tamper.mjs 把分支的 sum.mandateByTurn.1.sum −318 → −317:
+      DIFFER 1 of 315 leaves ... sum.mandateByTurn.1.sum: -318 vs -317(exit 1)
+    狀態檔在 tuning/45/runs/。
+
+三 探針 tuning/45/probe.mjs(bot 對局,5 個 cell:default、D、C、E、D+C+E)
+  每一次國軍回答圍點打援、每一個回應:(a) st 前後 JSON 相同;(b) 真的暗牌那一邊 = E.view(E.apply(st, 回應), 國軍) 去掉 final;
+  (c) 同一個局面把暗牌翻過來(plan 步驟和 actions 裡那一筆)預覽一模一樣;(d) 沒有 final / actions。
+  每一個經過的局面:mandateByTurn = [0..turn−1],結束時 [0..turn];每一格 = log 裡 turn ≤ t 的最後一筆 vp 的 mandate(沒有就 0)。
+  期望值從 log 和真的走法來,不從被測的兩個讀數。
+  easy 40 局 × 5 cell(種子 1..40):PROBE OK fails 0。預覽 730 / 752 / 632 / 641 / 563 次;
+    停在:共軍 −1/+1(siegeLoss/siegeCapture)、C 的洩密 274 + 100、D 的 grayOrder 9 + 7、國軍事件、回合結算的棄牌、下一張牌;
+    預覽走到對局結束 4 + 3 + 2 次(default / D / C)。mandateByTurn 檢查了 30756 個局面、200 局的結尾。
+  normal 6 局 × 5 cell(種子 101..106):PROBE OK fails 0(預覽 169 次,其中 C 的洩密 86)。
+
+四 證偽(一次一個,在 git archive HEAD 的拷貝 tuning/45/fals 裡做;tuning/45/falsify.mjs <n> [probe];每次還原後逐位元組相同)
+  1  預覽不 clone(const s = st;每個計畫寫進 st 自己的 plan 步驟,打點、再打援):
+     第 17 組 **綠**:VERDICT 通過 226 / 失敗 0 / 尚未實作 0。原因:第一條的局面暗牌是打援,預覽最後寫進去的也是打援。
+     探針紅:「FAIL default: seed 1: preview of hold changed st」(5 局 × 5 cell 共 438 條)。已在 issue 回報(harness 的洞)。
+  1b 同上、計畫倒過來(打點留在 st):第 17 組紅「預覽之後原局面沒變: 期望 true，實際 false」,VERDICT 225 / 1 / 0。
+  2  預覽不換暗牌(只回真的那一邊):紅兩條
+     「固守:打點 / 打援之後 濟南 紅/藍: 期望 "1/0 0/3"，實際 "0/3 0/3"」
+     「兩個局面的預覽一樣: 期望 true，實際 false」,VERDICT 224 / 2 / 0;探針「plan flipped, preview of hold differs」等 404 條。
+  3  mandateByTurn 晚一回合記(第 t 回合結算寫 [t−1]):
+     紅「第 1 回合結算之後的那一格(對 E.probe.turnEnd 記下的民心): 期望 -1，實際 undefined」,VERDICT 225 / 1 / 0;
+     探針「seed 1 turn 2 phase situation: mandateByTurn [6], log says [0,6]」等 3408 條。
+
+五 還開著的裁決(issue 第一則留言問了,寫這份時還沒有回覆)
+  預覽走到對局結束時,原樣的 E.view 會帶 final(種子、牌堆順序、兩邊手牌;種子 + 行動 = 整局重放)。真的對局不一定結束,
+  所以我照「不洩漏」拿掉了 final(winner / reason / log 留著)。要原樣的 E.view 就是刪掉 siegePreview 裡的 delete v.final 一行。
+  這在真的對局裡會發生:easy 40 局 × 3 cell 有 9 次預覽走到對局結束。
+
+六 沒驗到的
+  - 頁面怎麼用這兩個讀數(#44 的 FE)。
+  - 舊存檔(沒有 mandateByTurn 的狀態)只在程式上處理(寫的那一刻才建陣列),沒有拿真的舊存檔跑過。
+  - 身分只比了預設規則 300 局、種子 1..300;D / C / E 開著的 sim 沒有比 main(fuzz 的 9 個控制組有跑,乾淨)。
+  - 第 17 組的洞(證偽 1)我沒有改 tests/。
