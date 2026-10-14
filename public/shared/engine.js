@@ -1449,7 +1449,13 @@ export function eventWouldCollapse(st, side, cardId) {
 export function win(st, side, reason) {
   if (st.winner != null) return;
   st.winner = side; st.reason = reason; st.phase = "over"; st.pending = null; st.plan = [];
+  markMandate(st, st.turn); // #45: the game's last turn holds the mandate it ended on
   log(st, { type: "over", winner: side, reason });
+}
+// #45: `st.mandateByTurn[t]` = the mandate now. A state from before #45 gets the list when it is first written.
+function markMandate(st, t) {
+  if (!Array.isArray(st.mandateByTurn)) st.mandateByTurn = [];
+  st.mandateByTurn[t] = st.mandate;
 }
 export function vp(st, side, n) {
   if (!n || st.winner != null) return;
@@ -2421,6 +2427,10 @@ function startGame(seed, options) {
     seed, rngState: 0, options, rulesVersion: RULES_VERSION,
     turn: 0, era: null, phase: "setup", round: 0, rounds: [0, 0], actor: CCP, phasing: CCP,
     inf: {}, mandate: 0, weariness: 5,
+    // #45: the mandate at the opening ([0], once turn 1's free placement is done) and after each turn's
+    // 結算 ([t]); the last cell is the mandate at the end once the game is over (`markMandate`). A reading
+    // for the page: no decision and no random draw reads it.
+    mandateByTurn: [],
     // #2: [蘇聯支持, 美國支持]; and the once-a-turn uses of a 時局, reset by startTurn.
     support: SUPPORT_START.slice(), situationUsed: { truce: false, jump: false },
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
@@ -2632,6 +2642,7 @@ function exec(st, step) {
         if (pick) discardCard(st, side, pick);
         step.sides.shift();
       }
+      markMandate(st, st.turn); // #45: after this turn's 結算, where the probe reads it
       if (probe.turnEnd) probe.turnEnd(st);
       if (st.turn >= st.options.turns) finalScoring(st);
       else st.plan.push({ do: "startTurn" });
@@ -2711,6 +2722,7 @@ function logEventEnd(st, step, a) {
 }
 
 function startTurn(st) {
+  if (st.turn === 0) markMandate(st, 0); // #45: the opening, after turn 1's free placement (setup steps before this one)
   st.turn++;
   const era = eraOf(st.turn);
   if (era.id !== st.era) {
@@ -3432,6 +3444,31 @@ export function view(st, side) {
     if (Array.isArray(st.actions)) v.final.actions = clone(st.actions);
   }
   return v;
+}
+
+// #45: 圍點打援, dry run. The Nationalists are asked to answer an attack on a city
+// (`st.pending`: theirs, tag "siege"); this is what `response` would lead to
+// under each plan the Communists may hold face down: { point, relief }, each the
+// Nationalists' view of the state after, run on to the next decision (whoever's:
+// the Communists' −1 / +1, D's order, C's 洩密 / 倒戈, the next card, the 結算's
+// discard) or to the end of the game, as `apply` does. `st` is not changed.
+// The real plan is never read: each copy has its plan step's plan overwritten and
+// its recorded actions (whose play names the real plan) dropped, so two states
+// that differ only in the plan preview the same (orchestrator 裁決 #45).
+// A copy that reaches the end of the game is not the real end: its view has no
+// `final` (the seed, the draw pile and both hands), only `winner` and `reason`.
+export function siegePreview(st, response) {
+  const p = st.pending, step = st.plan && st.plan[0];
+  if (!p || p.who !== KMT || p.tag !== "siege" || !step || step.do !== "siege" || step.stage !== "respond") fail("siegePreview: the Nationalists are not answering a 圍點打援");
+  const out = {};
+  for (const plan of SIEGE_PLANS) {
+    const s = clone({ ...st, actions: undefined });
+    s.plan[0].plan = plan;
+    const v = view(apply(s, { type: "choose", side: KMT, choice: response }), KMT);
+    delete v.final;
+    out[plan] = v;
+  }
+  return out;
 }
 
 // CIVIL WAR: Zongheng's export module (the download's JSON) is not copied yet.
