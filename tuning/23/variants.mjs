@@ -34,6 +34,14 @@ export const VARIANTS = {
   // crashing: 洩密 / 倒戈 "no", no 佈線, no 肅諜), so this measures the engine with C on, not C's balance.
   // (A plain name, not the `C…` combinations named at the head of this file.)
   C: { what: "機制 C(內線:佈線、洩密、倒戈、和平易手、肅諜)開著", why: "M2b 第 4 批(#39 引擎;bot 還不會用 C)", options: { mechanismC: true } },
+  // #42: since #42 `C` plays #41's MC-mand1+leak1 (owner 裁決 #41 ①: 洩密 +1;結算時場上每一個真標記民心往共軍 1).
+  // `C-41` is the C of #39 / #40 / #41 written with #41's options (no +1, no 民心 at 結算); it plays as `C` did
+  // before #42 (tuning/42/report.txt: the same 300 games as #41's C-s1-300).
+  "C-41": {
+    what: "#39–#41 的機制 C:洩密只換打點或打援、行動點不加;結算時真標記不動民心",
+    why: "#42 之前的 C(owner 採用 #41 的 MC-mand1+leak1 之前),拿來和 #39 / #40 / #41 的模擬比對",
+    options: { mechanismC: true, cLeakBonus: 0, cRealMandate: 0 },
+  },
 
   // ---- 證偽:荒謬變體(第四節 2)
   "X-ccp+5": {
@@ -657,6 +665,9 @@ mec("ME-cap1+ops1+early", "ME-cap1 + ME-ops1 + ME-early", ["ME-cap1", "ME-ops1",
 // ---- #41: C's levers (owner 裁決 #41: 「調一輪 C 的規則」; tuning/40/report.txt 〇). Every `MC-…` is laid over the
 // variant C ({ mechanismC: true }) and uses only #41's options (engine.js, `cSpecOf`); a later part's key wins.
 // `what` is the rulebook sentence, `why` its reason (the owner's note C, #40's report, or history).
+// #42: the C under them is now #41's MC-mand1+leak1 (`cLeakBonus` 1 and `cRealMandate` 1 are C_SPEC's defaults), so
+// every `MC-…` below is laid over the new C (MC-leak1, MC-mand1 and MC-mand1+leak1 now play as `C` does); their
+// options are left as #41 wrote them. #41's games were played over the C before (`C-41`).
 const MC = {};
 const mc = (name, what, why, options) => { MC[name] = { what, why, options }; VARIANTS[name] = { what, why, options: { mechanismC: true, ...options } }; };
 const mcc = (name, what, parts) => {

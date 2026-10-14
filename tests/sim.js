@@ -166,10 +166,12 @@ export function playGame(seed, { ccp = "normal", kmt = "normal", options = {} } 
 //   end: where the markers are at the end (on the board real / fake, in the hand, out, in the pool).
 const cCal = () => ({ n: 0, real: 0, p: 0, brier: 0, brierPrior: 0, bins: {}, binsPrior: {} });
 // #41: `free` (the free 佈線 of cFreePlant: real / fake, also in plantAt / plantClass) and `mandate` (民心 from
-// cRealMandate) only with those options, so a game without them sums as before.
+// cRealMandate) only when the game plays them, so a game without them sums as before. #42: read from the engine's
+// C numbers for these options (`E.cSpecOf`), not from the options: `cRealMandate` is 1 when absent since #42.
 function newC(options = {}) {
+  const sp = E.cSpecOf({ options });
   return {
-    ...(options.cFreePlant ? { free: { real: 0, fake: 0 } } : {}), ...(options.cRealMandate ? { mandate: 0 } : {}),
+    ...(sp.freePlant > 0 ? { free: { real: 0, fake: 0 } } : {}), ...(sp.realMandate > 0 ? { mandate: 0 } : {}),
     plant: { plays: 0, real: 0, fake: 0 }, plantAt: {}, plantClass: {}, purge: { plays: 0, real: 0, fake: 0, caught: 0 }, purgeAt: {},
     leak: 0, defect: 0, handover: 0, no: { leak: 0, defect: 0 }, home: 0, gains: {},
     asked: { leak: { real: 0, realNo: 0, none: 0 }, defect: { real: 0, realNo: 0, none: 0 } },
