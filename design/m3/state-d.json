@@ -1,0 +1,7708 @@
+{
+ "meta": {
+  "seed": 27,
+  "moment": "D",
+  "side": 0
+ },
+ "view": {
+  "options": {
+   "cap": 2,
+   "seals": 5,
+   "mie": 3,
+   "homeLock": 4,
+   "luoyi": 0,
+   "turns": 8,
+   "scoringSplit": "homes",
+   "sealAt": "cap",
+   "tie": "kmt",
+   "reach": "ts",
+   "emperor": "win-lead",
+   "lobby": "realign-own",
+   "homeFall": "move",
+   "supply": true,
+   "homeLockSide": "opponent",
+   "aid": true,
+   "baseScoring": true,
+   "situations": true,
+   "rounds": "asymmetric",
+   "garrison": true,
+   "sealNeeds": "all",
+   "sealPerTurn": 1,
+   "mechanismB": true
+  },
+  "rulesVersion": "2026-10-13",
+  "turn": 8,
+  "era": "decisive",
+  "phase": "over",
+  "round": 4,
+  "rounds": [
+   4,
+   4
+  ],
+  "actor": 1,
+  "phasing": 1,
+  "inf": {
+   "beiman": [
+    0,
+    5
+   ],
+   "jizhong": [
+    3,
+    0
+   ],
+   "chasui": [
+    0,
+    4
+   ],
+   "taihang": [
+    4,
+    1
+   ],
+   "jinzhong": [
+    4,
+    0
+   ],
+   "jiluyu": [
+    4,
+    0
+   ],
+   "luzhong": [
+    3,
+    5
+   ],
+   "huaihai": [
+    0,
+    0
+   ],
+   "dabieshan": [
+    4,
+    0
+   ],
+   "shanbei": [
+    5,
+    1
+   ],
+   "tianjin": [
+    5,
+    0
+   ],
+   "beiping": [
+    1,
+    0
+   ],
+   "taiyuan": [
+    0,
+    2
+   ],
+   "jinan": [
+    1,
+    5
+   ],
+   "xuzhou": [
+    3,
+    0
+   ],
+   "zhengzhou": [
+    2,
+    0
+   ],
+   "xian": [
+    0,
+    1
+   ],
+   "lanzhou": [
+    3,
+    0
+   ],
+   "wuhan": [
+    0,
+    3
+   ],
+   "nanjing": [
+    1,
+    5
+   ],
+   "shanghai": [
+    1,
+    4
+   ],
+   "guangzhou": [
+    1,
+    1
+   ],
+   "guilin": [
+    1,
+    0
+   ],
+   "kunming": [
+    0,
+    5
+   ],
+   "siping": [
+    4,
+    2
+   ],
+   "changchun": [
+    1,
+    0
+   ],
+   "shenyang": [
+    4,
+    0
+   ],
+   "jinzhou": [
+    3,
+    0
+   ],
+   "liaoxi": [
+    4,
+    0
+   ]
+  },
+  "mandate": 20,
+  "weariness": 5,
+  "support": [
+   3,
+   0
+  ],
+  "situationUsed": {
+   "truce": false,
+   "jump": false
+  },
+  "reform": [
+   2,
+   2
+  ],
+  "reformUsed": [
+   0,
+   0
+  ],
+  "reformFirst": {
+   "1": 0,
+   "2": 0
+  },
+  "perkUsed": [
+   false,
+   false
+  ],
+  "mie": {
+   "ma": true
+  },
+  "seals": {
+   "sui": true,
+   "dian": true
+  },
+  "mieVp": {
+   "ma": true
+  },
+  "sealVp": {
+   "sui": true,
+   "dian": true
+  },
+  "luoyiYields": false,
+  "aidUsed": [
+   true,
+   false
+  ],
+  "discard": [
+   "clearing_the_outskirts",
+   "score_rear",
+   "stalled_siege",
+   "stalins_advice",
+   "chiang_steps_down",
+   "siege_of_changchun",
+   "score_north",
+   "score_northwest",
+   "soviet_removals"
+  ],
+  "removed": [
+   "arms_embargo",
+   "sino_soviet_treaty",
+   "soviet_arms",
+   "siping_taken",
+   "japanese_garrisons",
+   "into_manchuria",
+   "zhangjiakou_taken",
+   "gao_shuxun",
+   "shangdang_campaign",
+   "may_fourth_directive",
+   "kunming_incident",
+   "surrender_order",
+   "league_banned",
+   "central_shanxi_campaign",
+   "land_law",
+   "airlift",
+   "shandong_offensive",
+   "chen_cheng",
+   "menglianggu",
+   "national_assembly",
+   "reorganisation_conference",
+   "dabie_march",
+   "northern_shaanxi",
+   "hu_takes_yanan",
+   "xiong_xianghui",
+   "yangtze_crossing",
+   "pcc_resolutions",
+   "jiawang_defection"
+  ],
+  "hands": [
+   [
+    "june_truce",
+    "guningtou",
+    "amethyst_incident",
+    "china_aid_act"
+   ],
+   null
+  ],
+  "headline": [
+   "clearing_the_outskirts",
+   "score_rear"
+  ],
+  "effects": [],
+  "forced": [
+   null,
+   null
+  ],
+  "revealed": [
+   false,
+   false
+  ],
+  "pending": null,
+  "plan": [],
+  "winner": 0,
+  "reason": "mandate",
+  "log": [
+   {
+    "i": 1,
+    "t": 0,
+    "r": 0,
+    "type": "setup",
+    "side": 0,
+    "points": [
+     "jizhong",
+     "jizhong",
+     "chasui"
+    ]
+   },
+   {
+    "i": 2,
+    "t": 0,
+    "r": 0,
+    "type": "setup",
+    "side": 1,
+    "points": [
+     "jinan",
+     "taiyuan",
+     "tianjin",
+     "tianjin"
+    ]
+   },
+   {
+    "i": 3,
+    "t": 1,
+    "r": 0,
+    "type": "turn",
+    "turn": 1,
+    "era": "takeover"
+   },
+   {
+    "i": 4,
+    "t": 1,
+    "r": 0,
+    "type": "situation",
+    "id": "surrender"
+   },
+   {
+    "i": 5,
+    "t": 1,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "inflation",
+     "score_north"
+    ],
+    "first": 0
+   },
+   {
+    "i": 6,
+    "t": 1,
+    "r": 1,
+    "type": "event",
+    "card": "inflation",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 7,
+    "t": 1,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "inflation",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "jinan",
+      0,
+      -1
+     ],
+     [
+      "xuzhou",
+      0,
+      -1
+     ],
+     [
+      "zhengzhou",
+      0,
+      -1
+     ]
+    ]
+   },
+   {
+    "i": 8,
+    "t": 1,
+    "r": 1,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 2,
+     "bg": 1,
+     "ids": [
+      "jizhong",
+      "taihang"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    },
+    "kmt": {
+     "spaces": 3,
+     "bg": 2,
+     "ids": [
+      "tianjin",
+      "beiping",
+      "taiyuan"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    }
+   },
+   {
+    "i": 9,
+    "t": 1,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": -5,
+    "mandate": -3
+   },
+   {
+    "i": 10,
+    "t": 1,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "marshall_mission",
+    "use": "place",
+    "pair": "reorganisation_conference"
+   },
+   {
+    "i": 11,
+    "t": 1,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "chasui",
+     "beiman",
+     "beiman",
+     "huaihai"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 12,
+    "t": 1,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "american_aid",
+    "use": "place"
+   },
+   {
+    "i": 13,
+    "t": 1,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "jinan",
+     "xuzhou",
+     "zhengzhou",
+     "beiping"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 14,
+    "t": 1,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "takeover_officials",
+    "use": "campaign"
+   },
+   {
+    "i": 15,
+    "t": 1,
+    "r": 2,
+    "type": "campaign",
+    "side": 0,
+    "target": "dabieshan",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 16,
+    "t": 1,
+    "r": 2,
+    "type": "event",
+    "card": "takeover_officials",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 17,
+    "t": 1,
+    "r": 2,
+    "type": "vp",
+    "side": 0,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 18,
+    "t": 1,
+    "r": 2,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 4,
+    "to": 3
+   },
+   {
+    "i": 19,
+    "t": 1,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "takeover_officials",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "beiping",
+      0,
+      1
+     ],
+     [
+      "taiyuan",
+      0,
+      1
+     ],
+     [
+      "jinan",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 20,
+    "t": 1,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "airlift",
+    "use": "place"
+   },
+   {
+    "i": 21,
+    "t": 1,
+    "r": 2,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai",
+     "jinzhong"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 22,
+    "t": 1,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_arms",
+    "use": "place"
+   },
+   {
+    "i": 23,
+    "t": 1,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "jinzhong"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 24,
+    "t": 1,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "arms_embargo",
+    "use": "place"
+   },
+   {
+    "i": 25,
+    "t": 1,
+    "r": 3,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai",
+     "jinzhong"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 26,
+    "t": 1,
+    "r": 3,
+    "type": "event",
+    "card": "arms_embargo",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 27,
+    "t": 1,
+    "r": 3,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 3,
+    "to": 2
+   },
+   {
+    "i": 28,
+    "t": 1,
+    "r": 3,
+    "type": "eventEnd",
+    "card": "arms_embargo",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "fx": {
+     "add": [
+      "arms_embargo"
+     ],
+     "rm": []
+    }
+   },
+   {
+    "i": 29,
+    "t": 1,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 30,
+    "t": 1,
+    "r": 4,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 1,
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 31,
+    "t": 1,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "soviets_delay",
+    "use": "lobby"
+   },
+   {
+    "i": 32,
+    "t": 1,
+    "r": 4,
+    "type": "lobby",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1,
+    "mode": "realign-own",
+    "own": 2,
+    "attempts": 1,
+    "removed": 2,
+    "lost": 0
+   },
+   {
+    "i": 33,
+    "t": 1,
+    "r": 4,
+    "type": "realign",
+    "side": 1,
+    "target": "huaihai",
+    "k": 1,
+    "roll": [
+     2,
+     2
+    ],
+    "mod": [
+     2,
+     4
+    ],
+    "adj": [
+     [
+      "dabieshan"
+     ],
+     [
+      "xuzhou",
+      "nanjing",
+      "zhengzhou"
+     ]
+    ],
+    "more": [
+     true,
+     false
+    ],
+    "home": [
+     false,
+     true
+    ],
+    "lose": 0,
+    "n": 2
+   },
+   {
+    "i": 34,
+    "t": 1,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "chongqing_talks",
+    "use": "campaign"
+   },
+   {
+    "i": 35,
+    "t": 1,
+    "r": 5,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 36,
+    "t": 1,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "soviet_removals",
+    "use": "campaign"
+   },
+   {
+    "i": 37,
+    "t": 1,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1
+   },
+   {
+    "i": 38,
+    "t": 1,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 39,
+    "t": 1,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "sino_soviet_treaty",
+    "use": "place"
+   },
+   {
+    "i": 40,
+    "t": 1,
+    "r": 6,
+    "type": "event",
+    "card": "sino_soviet_treaty",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 41,
+    "t": 1,
+    "r": 6,
+    "type": "support",
+    "side": 0,
+    "delta": -1,
+    "from": 1,
+    "to": 0
+   },
+   {
+    "i": 42,
+    "t": 1,
+    "r": 6,
+    "type": "vp",
+    "side": 1,
+    "n": 1,
+    "mandate": -3
+   },
+   {
+    "i": 43,
+    "t": 1,
+    "r": 6,
+    "type": "eventEnd",
+    "card": "sino_soviet_treaty",
+    "side": 1,
+    "by": 0,
+    "effect": true
+   },
+   {
+    "i": 44,
+    "t": 1,
+    "r": 6,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "siping"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 45,
+    "t": 1,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "return_to_nanjing",
+    "use": "campaign"
+   },
+   {
+    "i": 46,
+    "t": 1,
+    "r": 6,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1
+   },
+   {
+    "i": 47,
+    "t": 1,
+    "r": 6,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 48,
+    "t": 1,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "score_northeast",
+    "use": "event"
+   },
+   {
+    "i": 49,
+    "t": 1,
+    "r": 7,
+    "type": "score",
+    "region": "northeast",
+    "ccp": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "beiman"
+     ],
+     "level": "domination",
+     "base": 6,
+     "bonus": 1,
+     "total": 7
+    },
+    "kmt": {
+     "spaces": 0,
+     "bg": 0,
+     "ids": [],
+     "level": "none",
+     "base": 0,
+     "bonus": 0,
+     "total": 0
+    }
+   },
+   {
+    "i": 50,
+    "t": 1,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": 7,
+    "mandate": 4
+   },
+   {
+    "i": 51,
+    "t": 1,
+    "r": 7,
+    "type": "play",
+    "side": 1,
+    "card": "score_east",
+    "use": "event"
+   },
+   {
+    "i": 52,
+    "t": 1,
+    "r": 7,
+    "type": "score",
+    "region": "east",
+    "ccp": {
+     "spaces": 2,
+     "bg": 1,
+     "ids": [
+      "jiluyu",
+      "dabieshan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    },
+    "kmt": {
+     "spaces": 3,
+     "bg": 2,
+     "ids": [
+      "jinan",
+      "xuzhou",
+      "zhengzhou"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    }
+   },
+   {
+    "i": 53,
+    "t": 1,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": -5,
+    "mandate": -1
+   },
+   {
+    "i": 54,
+    "t": 1,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 55,
+    "t": 1,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 56,
+    "t": 1,
+    "r": 7,
+    "type": "endTurn",
+    "turn": 1,
+    "weariness": 5
+   },
+   {
+    "i": 57,
+    "t": 2,
+    "r": 0,
+    "type": "turn",
+    "turn": 2,
+    "era": "takeover"
+   },
+   {
+    "i": 58,
+    "t": 2,
+    "r": 0,
+    "type": "situation",
+    "id": "truce"
+   },
+   {
+    "i": 59,
+    "t": 2,
+    "r": 0,
+    "type": "withdrawal",
+    "side": 1,
+    "points": [
+     "changchun",
+     "changchun",
+     "shenyang",
+     "jinzhou"
+    ]
+   },
+   {
+    "i": 60,
+    "t": 2,
+    "r": 0,
+    "type": "reshuffle",
+    "n": 13
+   },
+   {
+    "i": 61,
+    "t": 2,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "soviet_arms",
+     "score_north"
+    ],
+    "first": 0
+   },
+   {
+    "i": 62,
+    "t": 2,
+    "r": 1,
+    "type": "event",
+    "card": "soviet_arms",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 63,
+    "t": 2,
+    "r": 1,
+    "type": "support",
+    "side": 0,
+    "delta": 1,
+    "from": 0,
+    "to": 1
+   },
+   {
+    "i": 64,
+    "t": 2,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "soviet_arms",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "inf": [
+     [
+      "beiman",
+      2,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 65,
+    "t": 2,
+    "r": 1,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 3,
+     "bg": 1,
+     "ids": [
+      "jizhong",
+      "chasui",
+      "taihang"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    },
+    "kmt": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "tianjin",
+      "beiping",
+      "taiyuan",
+      "jinzhong"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    }
+   },
+   {
+    "i": 66,
+    "t": 2,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": -5,
+    "mandate": -3
+   },
+   {
+    "i": 67,
+    "t": 2,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "marshall_mission",
+    "use": "place",
+    "pair": "surrender_order"
+   },
+   {
+    "i": 68,
+    "t": 2,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "siping",
+     "shenyang"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 69,
+    "t": 2,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "january_truce",
+    "use": "place"
+   },
+   {
+    "i": 70,
+    "t": 2,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai",
+     "liaoxi"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 71,
+    "t": 2,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "siping_taken",
+    "use": "place"
+   },
+   {
+    "i": 72,
+    "t": 2,
+    "r": 2,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "jinzhong"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 73,
+    "t": 2,
+    "r": 2,
+    "type": "event",
+    "card": "siping_taken",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 74,
+    "t": 2,
+    "r": 2,
+    "type": "campaign",
+    "side": 1,
+    "target": "siping",
+    "ops": 4,
+    "removed": 2,
+    "placed": 2
+   },
+   {
+    "i": 75,
+    "t": 2,
+    "r": 2,
+    "type": "truceBroken",
+    "side": 1
+   },
+   {
+    "i": 76,
+    "t": 2,
+    "r": 2,
+    "type": "vp",
+    "side": 0,
+    "n": 2,
+    "mandate": -1
+   },
+   {
+    "i": 77,
+    "t": 2,
+    "r": 2,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 2,
+    "to": 1
+   },
+   {
+    "i": 78,
+    "t": 2,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "siping_taken",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "siping",
+      -2,
+      2
+     ]
+    ]
+   },
+   {
+    "i": 79,
+    "t": 2,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "june_truce",
+    "use": "place"
+   },
+   {
+    "i": 80,
+    "t": 2,
+    "r": 2,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 81,
+    "t": 2,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "japanese_garrisons",
+    "use": "campaign"
+   },
+   {
+    "i": 82,
+    "t": 2,
+    "r": 3,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 1,
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 83,
+    "t": 2,
+    "r": 3,
+    "type": "event",
+    "card": "japanese_garrisons",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 84,
+    "t": 2,
+    "r": 3,
+    "type": "eventEnd",
+    "card": "japanese_garrisons",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "fx": {
+     "add": [
+      "japanese_garrisons"
+     ],
+     "rm": []
+    }
+   },
+   {
+    "i": 85,
+    "t": 2,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "kunming_incident",
+    "use": "place"
+   },
+   {
+    "i": 86,
+    "t": 2,
+    "r": 3,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 87,
+    "t": 2,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "pcc_resolutions",
+    "use": "campaign"
+   },
+   {
+    "i": 88,
+    "t": 2,
+    "r": 4,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 89,
+    "t": 2,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "into_manchuria",
+    "use": "campaign"
+   },
+   {
+    "i": 90,
+    "t": 2,
+    "r": 4,
+    "type": "sweep",
+    "side": 1,
+    "target": "chasui",
+    "ops": 3
+   },
+   {
+    "i": 91,
+    "t": 2,
+    "r": 4,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "chasui",
+    "ops": 3,
+    "response": "stand",
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 92,
+    "t": 2,
+    "r": 4,
+    "type": "event",
+    "card": "into_manchuria",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 93,
+    "t": 2,
+    "r": 4,
+    "type": "eventEnd",
+    "card": "into_manchuria",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "siping",
+      2,
+      0
+     ],
+     [
+      "liaoxi",
+      1,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 94,
+    "t": 2,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "zhangjiakou_taken",
+    "use": "campaign"
+   },
+   {
+    "i": 95,
+    "t": 2,
+    "r": 5,
+    "type": "siege",
+    "side": 0,
+    "target": "tianjin",
+    "ops": 3
+   },
+   {
+    "i": 96,
+    "t": 2,
+    "r": 5,
+    "type": "siegeResult",
+    "side": 0,
+    "target": "tianjin",
+    "ops": 3,
+    "plan": "point",
+    "response": "breakout",
+    "to": "jinzhou",
+    "moved": 4,
+    "placed": 3
+   },
+   {
+    "i": 97,
+    "t": 2,
+    "r": 5,
+    "type": "tire",
+    "to": 4,
+    "by": 0
+   },
+   {
+    "i": 98,
+    "t": 2,
+    "r": 5,
+    "type": "event",
+    "card": "zhangjiakou_taken",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 99,
+    "t": 2,
+    "r": 5,
+    "type": "eventEnd",
+    "card": "zhangjiakou_taken",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "inf": [
+     [
+      "chasui",
+      -1,
+      2
+     ]
+    ]
+   },
+   {
+    "i": 100,
+    "t": 2,
+    "r": 5,
+    "type": "seal",
+    "state": "sui"
+   },
+   {
+    "i": 101,
+    "t": 2,
+    "r": 5,
+    "type": "vp",
+    "side": 1,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 102,
+    "t": 2,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "gao_shuxun",
+    "use": "campaign"
+   },
+   {
+    "i": 103,
+    "t": 2,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "dabieshan",
+    "ops": 2
+   },
+   {
+    "i": 104,
+    "t": 2,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "dabieshan",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 105,
+    "t": 2,
+    "r": 5,
+    "type": "event",
+    "card": "gao_shuxun",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 106,
+    "t": 2,
+    "r": 5,
+    "type": "eventEnd",
+    "card": "gao_shuxun",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "jiluyu",
+      1,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 107,
+    "t": 2,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 108,
+    "t": 2,
+    "r": 6,
+    "type": "siege",
+    "side": 0,
+    "target": "xuzhou",
+    "ops": 1
+   },
+   {
+    "i": 109,
+    "t": 2,
+    "r": 6,
+    "type": "siegeResult",
+    "side": 0,
+    "target": "xuzhou",
+    "ops": 1,
+    "plan": "point",
+    "response": "breakout",
+    "to": "luzhong",
+    "moved": 3,
+    "placed": 1
+   },
+   {
+    "i": 110,
+    "t": 2,
+    "r": 6,
+    "type": "tire",
+    "to": 3,
+    "by": 0
+   },
+   {
+    "i": 111,
+    "t": 2,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "shangdang_campaign",
+    "use": "campaign"
+   },
+   {
+    "i": 112,
+    "t": 2,
+    "r": 6,
+    "type": "event",
+    "card": "shangdang_campaign",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 113,
+    "t": 2,
+    "r": 6,
+    "type": "eventEnd",
+    "card": "shangdang_campaign",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "inf": [
+     [
+      "taihang",
+      1,
+      0
+     ],
+     [
+      "jinzhong",
+      0,
+      -2
+     ]
+    ]
+   },
+   {
+    "i": 114,
+    "t": 2,
+    "r": 6,
+    "type": "sweep",
+    "side": 1,
+    "target": "jiluyu",
+    "ops": 2
+   },
+   {
+    "i": 115,
+    "t": 2,
+    "r": 6,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "jiluyu",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 116,
+    "t": 2,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "score_east",
+    "use": "event"
+   },
+   {
+    "i": 117,
+    "t": 2,
+    "r": 7,
+    "type": "score",
+    "region": "east",
+    "ccp": {
+     "spaces": 1,
+     "bg": 0,
+     "ids": [
+      "huaihai"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 0,
+     "total": 4
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 1,
+     "ids": [
+      "jinan",
+      "zhengzhou"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 1,
+     "total": 9
+    }
+   },
+   {
+    "i": 118,
+    "t": 2,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": -5,
+    "mandate": -3
+   },
+   {
+    "i": 119,
+    "t": 2,
+    "r": 7,
+    "type": "play",
+    "side": 1,
+    "card": "may_fourth_directive",
+    "use": "campaign"
+   },
+   {
+    "i": 120,
+    "t": 2,
+    "r": 7,
+    "type": "event",
+    "card": "may_fourth_directive",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 121,
+    "t": 2,
+    "r": 7,
+    "type": "reform",
+    "side": 0,
+    "box": 1
+   },
+   {
+    "i": 122,
+    "t": 2,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 123,
+    "t": 2,
+    "r": 7,
+    "type": "eventEnd",
+    "card": "may_fourth_directive",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "fx": {
+     "add": [
+      "may_fourth_directive"
+     ],
+     "rm": []
+    }
+   },
+   {
+    "i": 124,
+    "t": 2,
+    "r": 7,
+    "type": "sweep",
+    "side": 1,
+    "target": "beiman",
+    "ops": 3
+   },
+   {
+    "i": 125,
+    "t": 2,
+    "r": 7,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "beiman",
+    "ops": 3,
+    "response": "withdraw",
+    "points": [
+     "siping",
+     "siping",
+     "siping",
+     "siping",
+     "siping"
+    ],
+    "moved": 2,
+    "lost": 3,
+    "placed": 3
+   },
+   {
+    "i": 126,
+    "t": 2,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 127,
+    "t": 2,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 128,
+    "t": 2,
+    "r": 7,
+    "type": "attrition",
+    "losses": {
+     "changchun": 1
+    }
+   },
+   {
+    "i": 129,
+    "t": 2,
+    "r": 7,
+    "type": "endTurn",
+    "turn": 2,
+    "weariness": 4
+   },
+   {
+    "i": 130,
+    "t": 3,
+    "r": 0,
+    "type": "turn",
+    "turn": 3,
+    "era": "takeover"
+   },
+   {
+    "i": 131,
+    "t": 3,
+    "r": 0,
+    "type": "situation",
+    "id": "general_offensive"
+   },
+   {
+    "i": 132,
+    "t": 3,
+    "r": 0,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 1,
+    "to": 0
+   },
+   {
+    "i": 133,
+    "t": 3,
+    "r": 0,
+    "type": "reshuffle",
+    "n": 8
+   },
+   {
+    "i": 134,
+    "t": 3,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "score_north",
+     "kunming_incident"
+    ],
+    "first": 1
+   },
+   {
+    "i": 135,
+    "t": 3,
+    "r": 1,
+    "type": "event",
+    "card": "kunming_incident",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 136,
+    "t": 3,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "kunming_incident",
+    "side": 1,
+    "by": 1,
+    "effect": true,
+    "inf": [
+     [
+      "kunming",
+      0,
+      3
+     ]
+    ]
+   },
+   {
+    "i": 137,
+    "t": 3,
+    "r": 1,
+    "type": "seal",
+    "state": "dian"
+   },
+   {
+    "i": 138,
+    "t": 3,
+    "r": 1,
+    "type": "vp",
+    "side": 1,
+    "n": 1,
+    "mandate": -3
+   },
+   {
+    "i": 139,
+    "t": 3,
+    "r": 1,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 3,
+     "bg": 2,
+     "ids": [
+      "tianjin",
+      "jizhong",
+      "taihang"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 2,
+     "total": 6
+    },
+    "kmt": {
+     "spaces": 3,
+     "bg": 1,
+     "ids": [
+      "beiping",
+      "chasui",
+      "taiyuan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    }
+   },
+   {
+    "i": 140,
+    "t": 3,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 141,
+    "t": 3,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "january_truce",
+    "use": "place"
+   },
+   {
+    "i": 142,
+    "t": 3,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "jinzhong",
+     "jiluyu",
+     "changchun"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 143,
+    "t": 3,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "reorganisation_conference",
+    "use": "place"
+   },
+   {
+    "i": 144,
+    "t": 3,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "jinzhong",
+     "jiluyu"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 145,
+    "t": 3,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "june_truce",
+    "use": "place"
+   },
+   {
+    "i": 146,
+    "t": 3,
+    "r": 2,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "dabieshan",
+     "dabieshan"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 147,
+    "t": 3,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "pcc_resolutions",
+    "use": "campaign"
+   },
+   {
+    "i": 148,
+    "t": 3,
+    "r": 2,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 3
+   },
+   {
+    "i": 149,
+    "t": 3,
+    "r": 2,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 3,
+    "response": "stand",
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 150,
+    "t": 3,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_removals",
+    "use": "place"
+   },
+   {
+    "i": 151,
+    "t": 3,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "huaihai"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 152,
+    "t": 3,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "takeover_officials",
+    "use": "place"
+   },
+   {
+    "i": 153,
+    "t": 3,
+    "r": 3,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 154,
+    "t": 3,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "surrender_order",
+    "use": "place"
+   },
+   {
+    "i": 155,
+    "t": 3,
+    "r": 4,
+    "type": "event",
+    "card": "surrender_order",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 156,
+    "t": 3,
+    "r": 4,
+    "type": "eventEnd",
+    "card": "surrender_order",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "taiyuan",
+      0,
+      1
+     ],
+     [
+      "lanzhou",
+      0,
+      1
+     ],
+     [
+      "guilin",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 157,
+    "t": 3,
+    "r": 4,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "liaoxi",
+     "liaoxi"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 158,
+    "t": 3,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "return_to_nanjing",
+    "use": "place"
+   },
+   {
+    "i": 159,
+    "t": 3,
+    "r": 4,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "dabieshan"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 160,
+    "t": 3,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "soviets_delay",
+    "use": "place"
+   },
+   {
+    "i": 161,
+    "t": 3,
+    "r": 5,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "dabieshan",
+     "jiluyu"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 162,
+    "t": 3,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "inflation",
+    "use": "place"
+   },
+   {
+    "i": 163,
+    "t": 3,
+    "r": 5,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 164,
+    "t": 3,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "chongqing_talks",
+    "use": "campaign"
+   },
+   {
+    "i": 165,
+    "t": 3,
+    "r": 6,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 166,
+    "t": 3,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "score_east",
+    "use": "event"
+   },
+   {
+    "i": 167,
+    "t": 3,
+    "r": 6,
+    "type": "score",
+    "region": "east",
+    "ccp": {
+     "spaces": 3,
+     "bg": 1,
+     "ids": [
+      "jiluyu",
+      "huaihai",
+      "dabieshan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 1,
+     "ids": [
+      "jinan",
+      "zhengzhou"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    }
+   },
+   {
+    "i": 168,
+    "t": 3,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 169,
+    "t": 3,
+    "r": 7,
+    "type": "campaign",
+    "side": 0,
+    "target": "jinzhong",
+    "ops": 1,
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 170,
+    "t": 3,
+    "r": 7,
+    "type": "play",
+    "side": 1,
+    "card": "score_northeast",
+    "use": "event"
+   },
+   {
+    "i": 171,
+    "t": 3,
+    "r": 7,
+    "type": "score",
+    "region": "northeast",
+    "ccp": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "siping",
+      "liaoxi"
+     ],
+     "level": "presence",
+     "base": 3,
+     "bonus": 0,
+     "total": 3
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 2,
+     "ids": [
+      "beiman",
+      "jinzhou"
+     ],
+     "level": "presence",
+     "base": 3,
+     "bonus": 2,
+     "total": 5
+    }
+   },
+   {
+    "i": 172,
+    "t": 3,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": -2,
+    "mandate": -3
+   },
+   {
+    "i": 173,
+    "t": 3,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 174,
+    "t": 3,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 175,
+    "t": 3,
+    "r": 7,
+    "type": "attrition",
+    "losses": {
+     "changchun": 1,
+     "shenyang": 1,
+     "beiping": 1,
+     "taiyuan": 1,
+     "jinan": 1,
+     "zhengzhou": 1,
+     "xian": 1,
+     "lanzhou": 1
+    }
+   },
+   {
+    "i": 176,
+    "t": 3,
+    "r": 7,
+    "type": "endTurn",
+    "turn": 3,
+    "weariness": 5
+   },
+   {
+    "i": 177,
+    "t": 4,
+    "r": 7,
+    "type": "era",
+    "era": "turning"
+   },
+   {
+    "i": 178,
+    "t": 4,
+    "r": 0,
+    "type": "turn",
+    "turn": 4,
+    "era": "turning"
+   },
+   {
+    "i": 179,
+    "t": 4,
+    "r": 0,
+    "type": "situation",
+    "id": "focused_offensive"
+   },
+   {
+    "i": 180,
+    "t": 4,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "redeployment",
+     "league_banned"
+    ],
+    "first": 0
+   },
+   {
+    "i": 181,
+    "t": 4,
+    "r": 1,
+    "type": "event",
+    "card": "redeployment",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 182,
+    "t": 4,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "redeployment",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "jizhong",
+      -2,
+      0
+     ],
+     [
+      "taihang",
+      -2,
+      0
+     ],
+     [
+      "jinan",
+      1,
+      0
+     ],
+     [
+      "xian",
+      1,
+      0
+     ],
+     [
+      "nanjing",
+      1,
+      0
+     ],
+     [
+      "shanghai",
+      1,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 183,
+    "t": 4,
+    "r": 1,
+    "type": "event",
+    "card": "league_banned",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 184,
+    "t": 4,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 185,
+    "t": 4,
+    "r": 1,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 0,
+    "to": 0
+   },
+   {
+    "i": 186,
+    "t": 4,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "league_banned",
+    "side": 1,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "tianjin",
+      -1,
+      0
+     ],
+     [
+      "jinan",
+      -1,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 187,
+    "t": 4,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "dabie_march",
+    "use": "place"
+   },
+   {
+    "i": 188,
+    "t": 4,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "tianjin",
+     "jinan"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 189,
+    "t": 4,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "hu_takes_yanan",
+    "use": "place"
+   },
+   {
+    "i": 190,
+    "t": 4,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "dabieshan",
+     "xian",
+     "zhengzhou"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 191,
+    "t": 4,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 192,
+    "t": 4,
+    "r": 2,
+    "type": "campaign",
+    "side": 0,
+    "target": "dabieshan",
+    "ops": 1,
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 193,
+    "t": 4,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "central_shanxi_campaign",
+    "use": "place"
+   },
+   {
+    "i": 194,
+    "t": 4,
+    "r": 2,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "dabieshan",
+     "nanjing"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 195,
+    "t": 4,
+    "r": 2,
+    "type": "event",
+    "card": "central_shanxi_campaign",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 196,
+    "t": 4,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "central_shanxi_campaign",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "inf": [
+     [
+      "jinzhong",
+      0,
+      -2
+     ]
+    ]
+   },
+   {
+    "i": 197,
+    "t": 4,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "xiong_xianghui",
+    "use": "place"
+   },
+   {
+    "i": 198,
+    "t": 4,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "dabieshan"
+    ],
+    "spent": 1
+   },
+   {
+    "i": 199,
+    "t": 4,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "sleeper",
+    "use": "campaign"
+   },
+   {
+    "i": 200,
+    "t": 4,
+    "r": 3,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2
+   },
+   {
+    "i": 201,
+    "t": 4,
+    "r": 3,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 202,
+    "t": 4,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "wedemeyer_mission",
+    "use": "place"
+   },
+   {
+    "i": 203,
+    "t": 4,
+    "r": 4,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "lanzhou"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 204,
+    "t": 4,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "china_aid_act",
+    "use": "place"
+   },
+   {
+    "i": 205,
+    "t": 4,
+    "r": 4,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai",
+     "jinan"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 206,
+    "t": 4,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "may_twentieth",
+    "use": "campaign"
+   },
+   {
+    "i": 207,
+    "t": 4,
+    "r": 5,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 2,
+    "removed": 1,
+    "placed": 1
+   },
+   {
+    "i": 208,
+    "t": 4,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "yellow_river",
+    "use": "campaign"
+   },
+   {
+    "i": 209,
+    "t": 4,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 3
+   },
+   {
+    "i": 210,
+    "t": 4,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 3,
+    "response": "stand",
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 211,
+    "t": 4,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "score_rear",
+    "use": "event"
+   },
+   {
+    "i": 212,
+    "t": 4,
+    "r": 6,
+    "type": "score",
+    "region": "rear",
+    "ccp": {
+     "spaces": 0,
+     "bg": 0,
+     "ids": [],
+     "level": "none",
+     "base": 0,
+     "bonus": 0,
+     "total": 0
+    },
+    "kmt": {
+     "spaces": 5,
+     "bg": 1,
+     "ids": [
+      "wuhan",
+      "nanjing",
+      "guangzhou",
+      "guilin",
+      "kunming"
+     ],
+     "level": "domination",
+     "base": 2,
+     "bonus": 1,
+     "total": 3
+    }
+   },
+   {
+    "i": 213,
+    "t": 4,
+    "r": 6,
+    "type": "vp",
+    "side": 0,
+    "n": -3,
+    "mandate": -3
+   },
+   {
+    "i": 214,
+    "t": 4,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "land_law",
+    "use": "campaign"
+   },
+   {
+    "i": 215,
+    "t": 4,
+    "r": 6,
+    "type": "event",
+    "card": "land_law",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 216,
+    "t": 4,
+    "r": 6,
+    "type": "reform",
+    "side": 0,
+    "box": 2
+   },
+   {
+    "i": 217,
+    "t": 4,
+    "r": 6,
+    "type": "eventEnd",
+    "card": "land_law",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "liaoxi",
+      1,
+      0
+     ],
+     [
+      "jizhong",
+      1,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 218,
+    "t": 4,
+    "r": 6,
+    "type": "sweep",
+    "side": 1,
+    "target": "tianjin",
+    "ops": 1
+   },
+   {
+    "i": 219,
+    "t": 4,
+    "r": 6,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "tianjin",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 220,
+    "t": 4,
+    "r": 6,
+    "type": "tire",
+    "to": 4,
+    "by": 1
+   },
+   {
+    "i": 221,
+    "t": 4,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "airlift",
+    "use": "place"
+   },
+   {
+    "i": 222,
+    "t": 4,
+    "r": 7,
+    "type": "event",
+    "card": "airlift",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 223,
+    "t": 4,
+    "r": 7,
+    "type": "eventEnd",
+    "card": "airlift",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "taiyuan",
+      0,
+      1
+     ],
+     [
+      "shanghai",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 224,
+    "t": 4,
+    "r": 7,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "tianjin",
+     "huaihai",
+     "huaihai"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 225,
+    "t": 4,
+    "r": 8,
+    "type": "play",
+    "side": 0,
+    "card": "score_northwest",
+    "use": "event"
+   },
+   {
+    "i": 226,
+    "t": 4,
+    "r": 8,
+    "type": "score",
+    "region": "northwest",
+    "ccp": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "shanbei"
+     ],
+     "level": "presence",
+     "base": 2,
+     "bonus": 1,
+     "total": 3
+    },
+    "kmt": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "xian"
+     ],
+     "level": "presence",
+     "base": 2,
+     "bonus": 1,
+     "total": 3
+    }
+   },
+   {
+    "i": 227,
+    "t": 4,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 228,
+    "t": 4,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 229,
+    "t": 4,
+    "r": 8,
+    "type": "attrition",
+    "losses": {
+     "beiping": 1,
+     "taiyuan": 1,
+     "jinan": 1,
+     "zhengzhou": 1,
+     "xian": 1,
+     "lanzhou": 1
+    }
+   },
+   {
+    "i": 230,
+    "t": 4,
+    "r": 8,
+    "type": "endTurn",
+    "turn": 4,
+    "weariness": 5
+   },
+   {
+    "i": 231,
+    "t": 5,
+    "r": 0,
+    "type": "turn",
+    "turn": 5,
+    "era": "turning"
+   },
+   {
+    "i": 232,
+    "t": 5,
+    "r": 0,
+    "type": "situation",
+    "id": "counteroffensive"
+   },
+   {
+    "i": 233,
+    "t": 5,
+    "r": 0,
+    "type": "support",
+    "side": 0,
+    "delta": 1,
+    "from": 1,
+    "to": 2
+   },
+   {
+    "i": 234,
+    "t": 5,
+    "r": 0,
+    "type": "reshuffle",
+    "n": 24
+   },
+   {
+    "i": 235,
+    "t": 5,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "inflation",
+     "shandong_offensive"
+    ],
+    "first": 1
+   },
+   {
+    "i": 236,
+    "t": 5,
+    "r": 1,
+    "type": "event",
+    "card": "shandong_offensive",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 237,
+    "t": 5,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "shandong_offensive",
+    "side": 1,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "jinan",
+      0,
+      2
+     ],
+     [
+      "luzhong",
+      -2,
+      0
+     ]
+    ]
+   },
+   {
+    "i": 238,
+    "t": 5,
+    "r": 1,
+    "type": "event",
+    "card": "inflation",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 239,
+    "t": 5,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "inflation",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "wuhan",
+      0,
+      -1
+     ],
+     [
+      "nanjing",
+      0,
+      -1
+     ],
+     [
+      "shanghai",
+      0,
+      -1
+     ],
+     [
+      "guangzhou",
+      0,
+      -1
+     ],
+     [
+      "guilin",
+      0,
+      -1
+     ],
+     [
+      "kunming",
+      0,
+      -1
+     ]
+    ]
+   },
+   {
+    "i": 240,
+    "t": 5,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "chen_cheng",
+    "use": "campaign"
+   },
+   {
+    "i": 241,
+    "t": 5,
+    "r": 1,
+    "type": "event",
+    "card": "chen_cheng",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 242,
+    "t": 5,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "chen_cheng",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "inf": [
+     [
+      "changchun",
+      0,
+      1
+     ],
+     [
+      "shenyang",
+      0,
+      2
+     ]
+    ]
+   },
+   {
+    "i": 243,
+    "t": 5,
+    "r": 1,
+    "type": "siege",
+    "side": 0,
+    "target": "jinzhou",
+    "ops": 2
+   },
+   {
+    "i": 244,
+    "t": 5,
+    "r": 1,
+    "type": "siegeResult",
+    "side": 0,
+    "target": "jinzhou",
+    "ops": 2,
+    "plan": "relief",
+    "response": "hold",
+    "besieged": true
+   },
+   {
+    "i": 245,
+    "t": 5,
+    "r": 1,
+    "type": "tire",
+    "to": 4,
+    "by": 0
+   },
+   {
+    "i": 246,
+    "t": 5,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "american_divisions",
+    "use": "place"
+   },
+   {
+    "i": 247,
+    "t": 5,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "huaihai",
+     "xian"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 248,
+    "t": 5,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "winter_offensive",
+    "use": "place"
+   },
+   {
+    "i": 249,
+    "t": 5,
+    "r": 2,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "xian"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 250,
+    "t": 5,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "menglianggu",
+    "use": "place"
+   },
+   {
+    "i": 251,
+    "t": 5,
+    "r": 2,
+    "type": "event",
+    "card": "menglianggu",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 252,
+    "t": 5,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "menglianggu",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "huaihai",
+      0,
+      -1
+     ]
+    ]
+   },
+   {
+    "i": 253,
+    "t": 5,
+    "r": 2,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "dabieshan",
+     "xian"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 254,
+    "t": 5,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "stalled_siege",
+    "use": "place"
+   },
+   {
+    "i": 255,
+    "t": 5,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "zhengzhou",
+     "zhengzhou",
+     "zhengzhou"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 256,
+    "t": 5,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "marshall_mission",
+    "use": "campaign"
+   },
+   {
+    "i": 257,
+    "t": 5,
+    "r": 3,
+    "type": "sweep",
+    "side": 1,
+    "target": "tianjin",
+    "ops": 1
+   },
+   {
+    "i": 258,
+    "t": 5,
+    "r": 3,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "tianjin",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 259,
+    "t": 5,
+    "r": 3,
+    "type": "tire",
+    "to": 3,
+    "by": 1
+   },
+   {
+    "i": 260,
+    "t": 5,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "place"
+   },
+   {
+    "i": 261,
+    "t": 5,
+    "r": 4,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "tianjin",
+     "guangzhou"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 262,
+    "t": 5,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "northern_shaanxi",
+    "use": "campaign"
+   },
+   {
+    "i": 263,
+    "t": 5,
+    "r": 4,
+    "type": "event",
+    "card": "northern_shaanxi",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 264,
+    "t": 5,
+    "r": 4,
+    "type": "eventEnd",
+    "card": "northern_shaanxi",
+    "side": 0,
+    "by": 1,
+    "effect": true,
+    "fx": {
+     "add": [
+      "northern_shaanxi"
+     ],
+     "rm": []
+    }
+   },
+   {
+    "i": 265,
+    "t": 5,
+    "r": 4,
+    "type": "sweep",
+    "side": 1,
+    "target": "liaoxi",
+    "ops": 2
+   },
+   {
+    "i": 266,
+    "t": 5,
+    "r": 4,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "liaoxi",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 267,
+    "t": 5,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "truman_doctrine",
+    "use": "campaign"
+   },
+   {
+    "i": 268,
+    "t": 5,
+    "r": 5,
+    "type": "campaign",
+    "side": 0,
+    "target": "liaoxi",
+    "ops": 4,
+    "removed": 1,
+    "placed": 2
+   },
+   {
+    "i": 269,
+    "t": 5,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "mobilisation_order",
+    "use": "campaign"
+   },
+   {
+    "i": 270,
+    "t": 5,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "zhengzhou",
+    "ops": 2
+   },
+   {
+    "i": 271,
+    "t": 5,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "zhengzhou",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 272,
+    "t": 5,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "sleeper",
+    "use": "campaign"
+   },
+   {
+    "i": 273,
+    "t": 5,
+    "r": 6,
+    "type": "campaign",
+    "side": 0,
+    "target": "dabieshan",
+    "ops": 3,
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 274,
+    "t": 5,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "score_northeast",
+    "use": "event"
+   },
+   {
+    "i": 275,
+    "t": 5,
+    "r": 6,
+    "type": "score",
+    "region": "northeast",
+    "ccp": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "siping",
+      "liaoxi"
+     ],
+     "level": "presence",
+     "base": 3,
+     "bonus": 0,
+     "total": 3
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 2,
+     "ids": [
+      "beiman",
+      "jinzhou"
+     ],
+     "level": "presence",
+     "base": 3,
+     "bonus": 2,
+     "total": 5
+    }
+   },
+   {
+    "i": 276,
+    "t": 5,
+    "r": 6,
+    "type": "vp",
+    "side": 0,
+    "n": -2,
+    "mandate": -3
+   },
+   {
+    "i": 277,
+    "t": 5,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "score_rear",
+    "use": "event"
+   },
+   {
+    "i": 278,
+    "t": 5,
+    "r": 7,
+    "type": "score",
+    "region": "rear",
+    "ccp": {
+     "spaces": 0,
+     "bg": 0,
+     "ids": [],
+     "level": "none",
+     "base": 0,
+     "bonus": 0,
+     "total": 0
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "wuhan",
+      "kunming"
+     ],
+     "level": "presence",
+     "base": 1,
+     "bonus": 0,
+     "total": 1
+    }
+   },
+   {
+    "i": 279,
+    "t": 5,
+    "r": 7,
+    "type": "vp",
+    "side": 0,
+    "n": -1,
+    "mandate": -3
+   },
+   {
+    "i": 280,
+    "t": 5,
+    "r": 8,
+    "type": "play",
+    "side": 0,
+    "card": "national_assembly",
+    "use": "campaign"
+   },
+   {
+    "i": 281,
+    "t": 5,
+    "r": 8,
+    "type": "siege",
+    "side": 0,
+    "target": "jinzhou",
+    "ops": 3
+   },
+   {
+    "i": 282,
+    "t": 5,
+    "r": 8,
+    "type": "siegeResult",
+    "side": 0,
+    "target": "jinzhou",
+    "ops": 3,
+    "plan": "point",
+    "response": "hold",
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 283,
+    "t": 5,
+    "r": 8,
+    "type": "tire",
+    "to": 2,
+    "by": 0
+   },
+   {
+    "i": 284,
+    "t": 5,
+    "r": 8,
+    "type": "event",
+    "card": "national_assembly",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 285,
+    "t": 5,
+    "r": 8,
+    "type": "reform",
+    "side": 1,
+    "box": 1
+   },
+   {
+    "i": 286,
+    "t": 5,
+    "r": 8,
+    "type": "eventEnd",
+    "card": "national_assembly",
+    "side": 1,
+    "by": 0,
+    "effect": true
+   },
+   {
+    "i": 287,
+    "t": 5,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 288,
+    "t": 5,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 289,
+    "t": 5,
+    "r": 8,
+    "type": "attrition",
+    "losses": {
+     "changchun": 1,
+     "shenyang": 1,
+     "jinzhou": 1,
+     "beiping": 1,
+     "taiyuan": 1,
+     "jinan": 1,
+     "zhengzhou": 1,
+     "xian": 1,
+     "lanzhou": 1
+    }
+   },
+   {
+    "i": 290,
+    "t": 5,
+    "r": 8,
+    "type": "endTurn",
+    "turn": 5,
+    "weariness": 3
+   },
+   {
+    "i": 291,
+    "t": 6,
+    "r": 0,
+    "type": "turn",
+    "turn": 6,
+    "era": "turning"
+   },
+   {
+    "i": 292,
+    "t": 6,
+    "r": 0,
+    "type": "situation",
+    "id": "constitution"
+   },
+   {
+    "i": 293,
+    "t": 6,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "score_north",
+     "redeployment"
+    ],
+    "first": 1
+   },
+   {
+    "i": 294,
+    "t": 6,
+    "r": 1,
+    "type": "event",
+    "card": "redeployment",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 295,
+    "t": 6,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "redeployment",
+    "side": 1,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "shenyang",
+      0,
+      -1
+     ],
+     [
+      "jinzhou",
+      0,
+      -1
+     ],
+     [
+      "tianjin",
+      0,
+      1
+     ],
+     [
+      "beiping",
+      0,
+      -2
+     ],
+     [
+      "taihang",
+      0,
+      1
+     ],
+     [
+      "shanbei",
+      0,
+      1
+     ],
+     [
+      "xian",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 296,
+    "t": 6,
+    "r": 1,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "jizhong",
+      "jinzhong"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 0,
+     "total": 4
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "chasui",
+      "taiyuan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 0,
+     "total": 4
+    }
+   },
+   {
+    "i": 297,
+    "t": 6,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "reorganisation_conference",
+    "use": "place"
+   },
+   {
+    "i": 298,
+    "t": 6,
+    "r": 1,
+    "type": "event",
+    "card": "reorganisation_conference",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 299,
+    "t": 6,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "reorganisation_conference",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "inf": [
+     [
+      "taiyuan",
+      0,
+      1
+     ],
+     [
+      "lanzhou",
+      0,
+      1
+     ],
+     [
+      "guilin",
+      0,
+      1
+     ],
+     [
+      "kunming",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 300,
+    "t": 6,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "tianjin",
+     "shanbei",
+     "beiman"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 301,
+    "t": 6,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "yellow_river",
+    "use": "campaign"
+   },
+   {
+    "i": 302,
+    "t": 6,
+    "r": 1,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2
+   },
+   {
+    "i": 303,
+    "t": 6,
+    "r": 1,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 304,
+    "t": 6,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "january_truce",
+    "use": "place"
+   },
+   {
+    "i": 305,
+    "t": 6,
+    "r": 2,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "shenyang",
+     "shenyang"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 306,
+    "t": 6,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "dabie_march",
+    "use": "place"
+   },
+   {
+    "i": 307,
+    "t": 6,
+    "r": 2,
+    "type": "event",
+    "card": "dabie_march",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 308,
+    "t": 6,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "dabie_march",
+    "side": 0,
+    "by": 1,
+    "effect": false,
+    "why": "noChange"
+   },
+   {
+    "i": 309,
+    "t": 6,
+    "r": 2,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "beiman",
+     "huaihai"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 310,
+    "t": 6,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "hu_takes_yanan",
+    "use": "place"
+   },
+   {
+    "i": 311,
+    "t": 6,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "xian",
+     "taihang"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 312,
+    "t": 6,
+    "r": 3,
+    "type": "event",
+    "card": "hu_takes_yanan",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 313,
+    "t": 6,
+    "r": 3,
+    "type": "campaign",
+    "side": 1,
+    "target": "xian",
+    "ops": 6,
+    "removed": 3,
+    "placed": 0
+   },
+   {
+    "i": 314,
+    "t": 6,
+    "r": 3,
+    "type": "tire",
+    "to": 2,
+    "by": 0
+   },
+   {
+    "i": 315,
+    "t": 6,
+    "r": 3,
+    "type": "eventEnd",
+    "card": "hu_takes_yanan",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "xian",
+      -3,
+      0
+     ]
+    ],
+    "fx": {
+     "add": [],
+     "rm": [
+      "northern_shaanxi"
+     ]
+    }
+   },
+   {
+    "i": 316,
+    "t": 6,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "return_to_nanjing",
+    "use": "campaign"
+   },
+   {
+    "i": 317,
+    "t": 6,
+    "r": 3,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2
+   },
+   {
+    "i": 318,
+    "t": 6,
+    "r": 3,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 319,
+    "t": 6,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 320,
+    "t": 6,
+    "r": 4,
+    "type": "campaign",
+    "side": 0,
+    "target": "huaihai",
+    "ops": 2,
+    "removed": 1,
+    "placed": 1
+   },
+   {
+    "i": 321,
+    "t": 6,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "score_northwest",
+    "use": "event"
+   },
+   {
+    "i": 322,
+    "t": 6,
+    "r": 4,
+    "type": "score",
+    "region": "northwest",
+    "ccp": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "shanbei"
+     ],
+     "level": "presence",
+     "base": 2,
+     "bonus": 1,
+     "total": 3
+    },
+    "kmt": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "xian"
+     ],
+     "level": "presence",
+     "base": 2,
+     "bonus": 1,
+     "total": 3
+    }
+   },
+   {
+    "i": 323,
+    "t": 6,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "wedemeyer_mission",
+    "use": "place"
+   },
+   {
+    "i": 324,
+    "t": 6,
+    "r": 5,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "beiman"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 325,
+    "t": 6,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "xiong_xianghui",
+    "use": "campaign"
+   },
+   {
+    "i": 326,
+    "t": 6,
+    "r": 5,
+    "type": "event",
+    "card": "xiong_xianghui",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 327,
+    "t": 6,
+    "r": 5,
+    "type": "eventEnd",
+    "card": "xiong_xianghui",
+    "side": 0,
+    "by": 1,
+    "effect": true
+   },
+   {
+    "i": 328,
+    "t": 6,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1
+   },
+   {
+    "i": 329,
+    "t": 6,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 330,
+    "t": 6,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "takeover_officials",
+    "use": "place"
+   },
+   {
+    "i": 331,
+    "t": 6,
+    "r": 6,
+    "type": "event",
+    "card": "takeover_officials",
+    "side": 1,
+    "by": 0
+   },
+   {
+    "i": 332,
+    "t": 6,
+    "r": 6,
+    "type": "vp",
+    "side": 0,
+    "n": 1,
+    "mandate": -2
+   },
+   {
+    "i": 333,
+    "t": 6,
+    "r": 6,
+    "type": "support",
+    "side": 1,
+    "delta": -1,
+    "from": 0,
+    "to": 0
+   },
+   {
+    "i": 334,
+    "t": 6,
+    "r": 6,
+    "type": "eventEnd",
+    "card": "takeover_officials",
+    "side": 1,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "shenyang",
+      0,
+      1
+     ],
+     [
+      "tianjin",
+      0,
+      1
+     ],
+     [
+      "nanjing",
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "i": 335,
+    "t": 6,
+    "r": 6,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "huaihai",
+     "shenyang"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 336,
+    "t": 6,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "score_east",
+    "use": "event"
+   },
+   {
+    "i": 337,
+    "t": 6,
+    "r": 6,
+    "type": "score",
+    "region": "east",
+    "ccp": {
+     "spaces": 3,
+     "bg": 1,
+     "ids": [
+      "jiluyu",
+      "huaihai",
+      "dabieshan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 2,
+     "ids": [
+      "jinan",
+      "luzhong"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 2,
+     "total": 6
+    }
+   },
+   {
+    "i": 338,
+    "t": 6,
+    "r": 6,
+    "type": "vp",
+    "side": 0,
+    "n": -1,
+    "mandate": -3
+   },
+   {
+    "i": 339,
+    "t": 6,
+    "r": 7,
+    "type": "play",
+    "side": 0,
+    "card": "chongqing_talks",
+    "use": "place"
+   },
+   {
+    "i": 340,
+    "t": 6,
+    "r": 7,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "tianjin",
+     "jinzhou"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 341,
+    "t": 6,
+    "r": 8,
+    "type": "play",
+    "side": 0,
+    "card": "may_twentieth",
+    "use": "campaign"
+   },
+   {
+    "i": 342,
+    "t": 6,
+    "r": 8,
+    "type": "campaign",
+    "side": 0,
+    "target": "luzhong",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 343,
+    "t": 6,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 344,
+    "t": 6,
+    "r": 8,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 345,
+    "t": 6,
+    "r": 8,
+    "type": "attrition",
+    "losses": {
+     "shenyang": 1,
+     "tianjin": 1,
+     "taiyuan": 1,
+     "jinan": 1,
+     "xian": 1,
+     "lanzhou": 1
+    }
+   },
+   {
+    "i": 346,
+    "t": 6,
+    "r": 8,
+    "type": "endTurn",
+    "turn": 6,
+    "weariness": 3
+   },
+   {
+    "i": 347,
+    "t": 7,
+    "r": 8,
+    "type": "era",
+    "era": "decisive"
+   },
+   {
+    "i": 348,
+    "t": 7,
+    "r": 0,
+    "type": "turn",
+    "turn": 7,
+    "era": "decisive"
+   },
+   {
+    "i": 349,
+    "t": 7,
+    "r": 0,
+    "type": "situation",
+    "id": "decisive_battle"
+   },
+   {
+    "i": 350,
+    "t": 7,
+    "r": 0,
+    "type": "support",
+    "side": 0,
+    "delta": 1,
+    "from": 2,
+    "to": 3
+   },
+   {
+    "i": 351,
+    "t": 7,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "yangtze_crossing",
+     "pcc_resolutions"
+    ],
+    "first": 0
+   },
+   {
+    "i": 352,
+    "t": 7,
+    "r": 1,
+    "type": "event",
+    "card": "yangtze_crossing",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 353,
+    "t": 7,
+    "r": 1,
+    "type": "campaign",
+    "side": 0,
+    "target": "guilin",
+    "ops": 6,
+    "removed": 3,
+    "placed": 3
+   },
+   {
+    "i": 354,
+    "t": 7,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "yangtze_crossing",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "guilin",
+      3,
+      -3
+     ]
+    ]
+   },
+   {
+    "i": 355,
+    "t": 7,
+    "r": 1,
+    "type": "event",
+    "card": "pcc_resolutions",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 356,
+    "t": 7,
+    "r": 1,
+    "type": "reform",
+    "side": 1,
+    "box": 2
+   },
+   {
+    "i": 357,
+    "t": 7,
+    "r": 1,
+    "type": "support",
+    "side": 1,
+    "delta": 1,
+    "from": 0,
+    "to": 1
+   },
+   {
+    "i": 358,
+    "t": 7,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "pcc_resolutions",
+    "side": 1,
+    "by": 1,
+    "effect": true
+   },
+   {
+    "i": 359,
+    "t": 7,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "defection_at_the_front",
+    "use": "place"
+   },
+   {
+    "i": 360,
+    "t": 7,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "lanzhou",
+     "lanzhou"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 361,
+    "t": 7,
+    "r": 1,
+    "type": "mie",
+    "state": "ma"
+   },
+   {
+    "i": 362,
+    "t": 7,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": 2,
+    "mandate": -1
+   },
+   {
+    "i": 363,
+    "t": 7,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "beiping_talks",
+    "use": "place"
+   },
+   {
+    "i": 364,
+    "t": 7,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "luzhong",
+     "beiman",
+     "wuhan"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 365,
+    "t": 7,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "huaihai_campaign",
+    "use": "place"
+   },
+   {
+    "i": 366,
+    "t": 7,
+    "r": 2,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "luzhong",
+     "beiman"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 367,
+    "t": 7,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "airlift_to_cut_off_city",
+    "use": "event"
+   },
+   {
+    "i": 368,
+    "t": 7,
+    "r": 2,
+    "type": "event",
+    "card": "airlift_to_cut_off_city",
+    "side": 1,
+    "by": 1
+   },
+   {
+    "i": 369,
+    "t": 7,
+    "r": 2,
+    "type": "eventEnd",
+    "card": "airlift_to_cut_off_city",
+    "side": 1,
+    "by": 1,
+    "effect": true,
+    "chose": [
+     1
+    ],
+    "inf": [
+     [
+      "jinan",
+      0,
+      2
+     ]
+    ],
+    "fx": {
+     "add": [
+      "airlift_to_cut_off_city"
+     ],
+     "rm": []
+    }
+   },
+   {
+    "i": 370,
+    "t": 7,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "pingjin_campaign",
+    "use": "place"
+   },
+   {
+    "i": 371,
+    "t": 7,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "xuzhou",
+     "xuzhou",
+     "beiping"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 372,
+    "t": 7,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "jiawang_defection",
+    "use": "campaign"
+   },
+   {
+    "i": 373,
+    "t": 7,
+    "r": 3,
+    "type": "event",
+    "card": "jiawang_defection",
+    "side": 0,
+    "by": 1
+   },
+   {
+    "i": 374,
+    "t": 7,
+    "r": 3,
+    "type": "eventEnd",
+    "card": "jiawang_defection",
+    "side": 0,
+    "by": 1,
+    "effect": false,
+    "why": "noChange"
+   },
+   {
+    "i": 375,
+    "t": 7,
+    "r": 3,
+    "type": "sweep",
+    "side": 1,
+    "target": "beiman",
+    "ops": 2
+   },
+   {
+    "i": 376,
+    "t": 7,
+    "r": 3,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "beiman",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 377,
+    "t": 7,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_removals",
+    "use": "campaign"
+   },
+   {
+    "i": 378,
+    "t": 7,
+    "r": 4,
+    "type": "campaign",
+    "side": 0,
+    "target": "beiman",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 379,
+    "t": 7,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "fu_holds_the_north",
+    "use": "place"
+   },
+   {
+    "i": 380,
+    "t": 7,
+    "r": 4,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "beiman",
+     "luzhong",
+     "shanghai"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 381,
+    "t": 7,
+    "r": 5,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "place"
+   },
+   {
+    "i": 382,
+    "t": 7,
+    "r": 5,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "beiman",
+     "jinzhou",
+     "jinzhou"
+    ],
+    "spent": 4
+   },
+   {
+    "i": 383,
+    "t": 7,
+    "r": 5,
+    "type": "play",
+    "side": 1,
+    "card": "soviets_delay",
+    "use": "campaign"
+   },
+   {
+    "i": 384,
+    "t": 7,
+    "r": 5,
+    "type": "sweep",
+    "side": 1,
+    "target": "guilin",
+    "ops": 2
+   },
+   {
+    "i": 385,
+    "t": 7,
+    "r": 5,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "guilin",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 386,
+    "t": 7,
+    "r": 6,
+    "type": "play",
+    "side": 0,
+    "card": "new_consultative_conference",
+    "use": "campaign"
+   },
+   {
+    "i": 387,
+    "t": 7,
+    "r": 6,
+    "type": "campaign",
+    "side": 0,
+    "target": "luzhong",
+    "ops": 2,
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 388,
+    "t": 7,
+    "r": 6,
+    "type": "play",
+    "side": 1,
+    "card": "american_aid",
+    "use": "campaign"
+   },
+   {
+    "i": 389,
+    "t": 7,
+    "r": 6,
+    "type": "sweep",
+    "side": 1,
+    "target": "jiluyu",
+    "ops": 1
+   },
+   {
+    "i": 390,
+    "t": 7,
+    "r": 6,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "jiluyu",
+    "ops": 1,
+    "response": "stand",
+    "removed": 1,
+    "placed": 0
+   },
+   {
+    "i": 391,
+    "t": 7,
+    "r": 7,
+    "type": "play",
+    "side": 1,
+    "card": "gold_yuan",
+    "use": "campaign"
+   },
+   {
+    "i": 392,
+    "t": 7,
+    "r": 7,
+    "type": "sweep",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2
+   },
+   {
+    "i": 393,
+    "t": 7,
+    "r": 7,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "huaihai",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 394,
+    "t": 7,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 395,
+    "t": 7,
+    "r": 7,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 396,
+    "t": 7,
+    "r": 7,
+    "type": "endTurn",
+    "turn": 7,
+    "weariness": 4
+   },
+   {
+    "i": 397,
+    "t": 8,
+    "r": 0,
+    "type": "turn",
+    "turn": 8,
+    "era": "decisive"
+   },
+   {
+    "i": 398,
+    "t": 8,
+    "r": 0,
+    "type": "situation",
+    "id": "peace_talks"
+   },
+   {
+    "i": 399,
+    "t": 8,
+    "r": 0,
+    "type": "support",
+    "side": 1,
+    "delta": -2,
+    "from": 1,
+    "to": 0
+   },
+   {
+    "i": 400,
+    "t": 8,
+    "r": 0,
+    "type": "discard",
+    "side": 1,
+    "card": "fu_dongju",
+    "noEvent": true
+   },
+   {
+    "i": 401,
+    "t": 8,
+    "r": 0,
+    "type": "discard",
+    "side": 1,
+    "card": "ta_kung_pao",
+    "noEvent": true
+   },
+   {
+    "i": 402,
+    "t": 8,
+    "r": 0,
+    "type": "peace",
+    "step": "offer",
+    "cards": [
+     "fu_dongju",
+     "ta_kung_pao"
+    ]
+   },
+   {
+    "i": 403,
+    "t": 8,
+    "r": 0,
+    "type": "peace",
+    "step": "accept"
+   },
+   {
+    "i": 404,
+    "t": 8,
+    "r": 0,
+    "type": "reshuffle",
+    "n": 33
+   },
+   {
+    "i": 405,
+    "t": 8,
+    "r": 0,
+    "type": "headline",
+    "cards": [
+     "clearing_the_outskirts",
+     "score_rear"
+    ],
+    "first": 0
+   },
+   {
+    "i": 406,
+    "t": 8,
+    "r": 1,
+    "type": "event",
+    "card": "clearing_the_outskirts",
+    "side": 0,
+    "by": 0
+   },
+   {
+    "i": 407,
+    "t": 8,
+    "r": 1,
+    "type": "campaign",
+    "side": 0,
+    "target": "jiluyu",
+    "ops": 2,
+    "removed": 1,
+    "placed": 1
+   },
+   {
+    "i": 408,
+    "t": 8,
+    "r": 1,
+    "type": "eventEnd",
+    "card": "clearing_the_outskirts",
+    "side": 0,
+    "by": 0,
+    "effect": true,
+    "chose": [
+     0
+    ],
+    "inf": [
+     [
+      "jiluyu",
+      1,
+      -1
+     ]
+    ]
+   },
+   {
+    "i": 409,
+    "t": 8,
+    "r": 1,
+    "type": "score",
+    "region": "rear",
+    "ccp": {
+     "spaces": 0,
+     "bg": 0,
+     "ids": [],
+     "level": "none",
+     "base": 0,
+     "bonus": 0,
+     "total": 0
+    },
+    "kmt": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "wuhan",
+      "nanjing",
+      "shanghai",
+      "kunming"
+     ],
+     "level": "domination",
+     "base": 2,
+     "bonus": 2,
+     "total": 4
+    }
+   },
+   {
+    "i": 410,
+    "t": 8,
+    "r": 1,
+    "type": "vp",
+    "side": 0,
+    "n": -4,
+    "mandate": -5
+   },
+   {
+    "i": 411,
+    "t": 8,
+    "r": 1,
+    "type": "play",
+    "side": 0,
+    "card": "soviet_aid",
+    "use": "place"
+   },
+   {
+    "i": 412,
+    "t": 8,
+    "r": 1,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "guilin",
+     "guilin",
+     "zhengzhou"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 413,
+    "t": 8,
+    "r": 1,
+    "type": "play",
+    "side": 1,
+    "card": "stalled_siege",
+    "use": "place"
+   },
+   {
+    "i": 414,
+    "t": 8,
+    "r": 1,
+    "type": "place",
+    "side": 1,
+    "points": [
+     "luzhong",
+     "luzhong",
+     "beiman"
+    ],
+    "spent": 3
+   },
+   {
+    "i": 415,
+    "t": 8,
+    "r": 2,
+    "type": "play",
+    "side": 0,
+    "card": "stalins_advice",
+    "use": "campaign"
+   },
+   {
+    "i": 416,
+    "t": 8,
+    "r": 2,
+    "type": "siege",
+    "side": 0,
+    "target": "xian",
+    "ops": 2
+   },
+   {
+    "i": 417,
+    "t": 8,
+    "r": 2,
+    "type": "siegeResult",
+    "side": 0,
+    "target": "xian",
+    "ops": 2,
+    "plan": "point",
+    "response": "hold",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 418,
+    "t": 8,
+    "r": 2,
+    "type": "play",
+    "side": 1,
+    "card": "chiang_steps_down",
+    "use": "campaign"
+   },
+   {
+    "i": 419,
+    "t": 8,
+    "r": 2,
+    "type": "sweep",
+    "side": 1,
+    "target": "guilin",
+    "ops": 2
+   },
+   {
+    "i": 420,
+    "t": 8,
+    "r": 2,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "guilin",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 421,
+    "t": 8,
+    "r": 3,
+    "type": "play",
+    "side": 0,
+    "card": "siege_of_changchun",
+    "use": "place"
+   },
+   {
+    "i": 422,
+    "t": 8,
+    "r": 3,
+    "type": "place",
+    "side": 0,
+    "points": [
+     "luzhong"
+    ],
+    "spent": 2
+   },
+   {
+    "i": 423,
+    "t": 8,
+    "r": 3,
+    "type": "play",
+    "side": 1,
+    "card": "score_north",
+    "use": "event"
+   },
+   {
+    "i": 424,
+    "t": 8,
+    "r": 3,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "tianjin",
+      "jizhong",
+      "taihang",
+      "jinzhong"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    },
+    "kmt": {
+     "spaces": 2,
+     "bg": 0,
+     "ids": [
+      "chasui",
+      "taiyuan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 0,
+     "total": 4
+    }
+   },
+   {
+    "i": 425,
+    "t": 8,
+    "r": 3,
+    "type": "vp",
+    "side": 0,
+    "n": 6,
+    "mandate": 1
+   },
+   {
+    "i": 426,
+    "t": 8,
+    "r": 4,
+    "type": "play",
+    "side": 0,
+    "card": "score_northwest",
+    "use": "event"
+   },
+   {
+    "i": 427,
+    "t": 8,
+    "r": 4,
+    "type": "score",
+    "region": "northwest",
+    "ccp": {
+     "spaces": 2,
+     "bg": 1,
+     "ids": [
+      "shanbei",
+      "lanzhou"
+     ],
+     "level": "domination",
+     "base": 3,
+     "bonus": 1,
+     "total": 4
+    },
+    "kmt": {
+     "spaces": 0,
+     "bg": 0,
+     "ids": [],
+     "level": "none",
+     "base": 0,
+     "bonus": 0,
+     "total": 0
+    }
+   },
+   {
+    "i": 428,
+    "t": 8,
+    "r": 4,
+    "type": "vp",
+    "side": 0,
+    "n": 4,
+    "mandate": 5
+   },
+   {
+    "i": 429,
+    "t": 8,
+    "r": 4,
+    "type": "play",
+    "side": 1,
+    "card": "soviet_removals",
+    "use": "campaign"
+   },
+   {
+    "i": 430,
+    "t": 8,
+    "r": 4,
+    "type": "sweep",
+    "side": 1,
+    "target": "beiman",
+    "ops": 2
+   },
+   {
+    "i": 431,
+    "t": 8,
+    "r": 4,
+    "type": "sweepResult",
+    "side": 1,
+    "target": "beiman",
+    "ops": 2,
+    "response": "stand",
+    "removed": 2,
+    "placed": 0
+   },
+   {
+    "i": 432,
+    "t": 8,
+    "r": 4,
+    "type": "capitalCheck",
+    "whose": 0,
+    "capital": "shanbei",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 433,
+    "t": 8,
+    "r": 4,
+    "type": "capitalCheck",
+    "whose": 1,
+    "capital": "nanjing",
+    "heldBy": null,
+    "result": "safe"
+   },
+   {
+    "i": 434,
+    "t": 8,
+    "r": 4,
+    "type": "attrition",
+    "losses": {
+     "tianjin": 1,
+     "taiyuan": 1,
+     "xian": 1
+    }
+   },
+   {
+    "i": 435,
+    "t": 8,
+    "r": 4,
+    "type": "endTurn",
+    "turn": 8,
+    "weariness": 5
+   },
+   {
+    "i": 436,
+    "t": 8,
+    "r": 4,
+    "type": "score",
+    "region": "north",
+    "ccp": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "tianjin",
+      "jizhong",
+      "taihang",
+      "jinzhong"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    },
+    "kmt": {
+     "spaces": 1,
+     "bg": 0,
+     "ids": [
+      "chasui"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 0,
+     "total": 4
+    }
+   },
+   {
+    "i": 437,
+    "t": 8,
+    "r": 4,
+    "type": "vp",
+    "side": 0,
+    "n": 6,
+    "mandate": 11
+   },
+   {
+    "i": 438,
+    "t": 8,
+    "r": 4,
+    "type": "score",
+    "region": "east",
+    "ccp": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "jiluyu",
+      "xuzhou",
+      "zhengzhou",
+      "dabieshan"
+     ],
+     "level": "domination",
+     "base": 8,
+     "bonus": 2,
+     "total": 10
+    },
+    "kmt": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "jinan"
+     ],
+     "level": "presence",
+     "base": 4,
+     "bonus": 1,
+     "total": 5
+    }
+   },
+   {
+    "i": 439,
+    "t": 8,
+    "r": 4,
+    "type": "vp",
+    "side": 0,
+    "n": 5,
+    "mandate": 16
+   },
+   {
+    "i": 440,
+    "t": 8,
+    "r": 4,
+    "type": "score",
+    "region": "northeast",
+    "ccp": {
+     "spaces": 4,
+     "bg": 2,
+     "ids": [
+      "siping",
+      "shenyang",
+      "liaoxi",
+      "jinzhou"
+     ],
+     "level": "domination",
+     "base": 6,
+     "bonus": 2,
+     "total": 8
+    },
+    "kmt": {
+     "spaces": 1,
+     "bg": 1,
+     "ids": [
+      "beiman"
+     ],
+     "level": "presence",
+     "base": 3,
+     "bonus": 1,
+     "total": 4
+    }
+   },
+   {
+    "i": 441,
+    "t": 8,
+    "r": 4,
+    "type": "vp",
+    "side": 0,
+    "n": 4,
+    "mandate": 20
+   },
+   {
+    "i": 442,
+    "t": 8,
+    "r": 4,
+    "type": "over",
+    "winner": 0,
+    "reason": "mandate"
+   }
+  ],
+  "capital": [
+   "shanbei",
+   "nanjing"
+  ],
+  "logSeq": 442,
+  "sealTurn": {
+   "turn": 3,
+   "n": 1
+  },
+  "drawCount": 27,
+  "laterCounts": {},
+  "handCounts": [
+   4,
+   4
+  ],
+  "homeCapitals": [
+   {
+    "side": 0,
+    "capital": "shanbei",
+    "heldBy": null
+   },
+   {
+    "side": 1,
+    "capital": "nanjing",
+    "heldBy": null
+   }
+  ],
+  "final": {
+   "hands": [
+    [
+     "june_truce",
+     "guningtou",
+     "amethyst_incident",
+     "china_aid_act"
+    ],
+    [
+     "liaoshen_campaign",
+     "peaceful_changeover",
+     "supplies_run_short",
+     "chongqing_talks"
+    ]
+   ],
+   "draw": [
+    "huaihai_campaign",
+    "winter_offensive",
+    "score_northeast",
+    "ta_kung_pao",
+    "defection_at_the_front",
+    "return_to_nanjing",
+    "fu_dongju",
+    "soviets_delay",
+    "yellow_river",
+    "redeployment",
+    "american_divisions",
+    "beiping_talks",
+    "inflation",
+    "sleeper",
+    "mobilisation_order",
+    "wedemeyer_mission",
+    "may_twentieth",
+    "airlift_to_cut_off_city",
+    "marshall_mission",
+    "takeover_officials",
+    "truman_doctrine",
+    "score_east",
+    "fu_holds_the_north",
+    "january_truce",
+    "pingjin_campaign",
+    "new_consultative_conference",
+    "gold_yuan"
+   ],
+   "later": {},
+   "discard": [
+    "clearing_the_outskirts",
+    "score_rear",
+    "stalled_siege",
+    "stalins_advice",
+    "chiang_steps_down",
+    "siege_of_changchun",
+    "score_north",
+    "score_northwest",
+    "soviet_removals"
+   ],
+   "removed": [
+    "arms_embargo",
+    "sino_soviet_treaty",
+    "soviet_arms",
+    "siping_taken",
+    "japanese_garrisons",
+    "into_manchuria",
+    "zhangjiakou_taken",
+    "gao_shuxun",
+    "shangdang_campaign",
+    "may_fourth_directive",
+    "kunming_incident",
+    "surrender_order",
+    "league_banned",
+    "central_shanxi_campaign",
+    "land_law",
+    "airlift",
+    "shandong_offensive",
+    "chen_cheng",
+    "menglianggu",
+    "national_assembly",
+    "reorganisation_conference",
+    "dabie_march",
+    "northern_shaanxi",
+    "hu_takes_yanan",
+    "xiong_xianghui",
+    "yangtze_crossing",
+    "pcc_resolutions",
+    "jiawang_defection"
+   ],
+   "seed": 27,
+   "inf": {
+    "beiman": [
+     0,
+     5
+    ],
+    "jizhong": [
+     3,
+     0
+    ],
+    "chasui": [
+     0,
+     4
+    ],
+    "taihang": [
+     4,
+     1
+    ],
+    "jinzhong": [
+     4,
+     0
+    ],
+    "jiluyu": [
+     4,
+     0
+    ],
+    "luzhong": [
+     3,
+     5
+    ],
+    "huaihai": [
+     0,
+     0
+    ],
+    "dabieshan": [
+     4,
+     0
+    ],
+    "shanbei": [
+     5,
+     1
+    ],
+    "tianjin": [
+     5,
+     0
+    ],
+    "beiping": [
+     1,
+     0
+    ],
+    "taiyuan": [
+     0,
+     2
+    ],
+    "jinan": [
+     1,
+     5
+    ],
+    "xuzhou": [
+     3,
+     0
+    ],
+    "zhengzhou": [
+     2,
+     0
+    ],
+    "xian": [
+     0,
+     1
+    ],
+    "lanzhou": [
+     3,
+     0
+    ],
+    "wuhan": [
+     0,
+     3
+    ],
+    "nanjing": [
+     1,
+     5
+    ],
+    "shanghai": [
+     1,
+     4
+    ],
+    "guangzhou": [
+     1,
+     1
+    ],
+    "guilin": [
+     1,
+     0
+    ],
+    "kunming": [
+     0,
+     5
+    ],
+    "siping": [
+     4,
+     2
+    ],
+    "changchun": [
+     1,
+     0
+    ],
+    "shenyang": [
+     4,
+     0
+    ],
+    "jinzhou": [
+     3,
+     0
+    ],
+    "liaoxi": [
+     4,
+     0
+    ]
+   },
+   "reform": [
+    2,
+    2
+   ],
+   "weariness": 5,
+   "seals": {
+    "sui": true,
+    "dian": true
+   },
+   "mie": {
+    "ma": true
+   },
+   "actions": [
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "jizhong",
+      "jizhong",
+      "chasui"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "jinan",
+      "taiyuan",
+      "tianjin",
+      "tianjin"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "inflation",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "score_north",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "east",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "marshall_mission",
+     "pair": "reorganisation_conference",
+     "use": "place",
+     "points": [
+      "chasui",
+      "beiman",
+      "beiman",
+      "huaihai"
+     ],
+     "why": "place:marshall_mission"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "american_aid",
+     "use": "place",
+     "points": [
+      "jinan",
+      "xuzhou",
+      "zhengzhou",
+      "beiping"
+     ],
+     "why": "place:american_aid"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "takeover_officials",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "dabieshan",
+     "why": "campaign:takeover_officials"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "beiping",
+      "taiyuan",
+      "jinan"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "airlift",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "jinzhong"
+     ],
+     "why": "place:airlift"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_arms",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "jinzhong"
+     ],
+     "why": "place:soviet_arms"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "arms_embargo",
+     "use": "place",
+     "order": "opsFirst",
+     "points": [
+      "huaihai",
+      "jinzhong"
+     ],
+     "why": "place:arms_embargo"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "soviets_delay",
+     "use": "lobby",
+     "target": "huaihai",
+     "why": "lobby:soviets_delay"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "chongqing_talks",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:chongqing_talks"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "soviet_removals",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:soviet_removals"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "sino_soviet_treaty",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:sino_soviet_treaty"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "place",
+      "points": [
+       "huaihai",
+       "siping"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "return_to_nanjing",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:return_to_nanjing"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_northeast",
+     "use": "event",
+     "why": "event:score_northeast"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_east",
+     "use": "event",
+     "why": "event:score_east"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "changchun",
+      "changchun",
+      "shenyang",
+      "jinzhou"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "soviet_arms",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "score_north",
+     "why": "headline"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "marshall_mission",
+     "pair": "surrender_order",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "siping",
+      "shenyang"
+     ],
+     "why": "place:marshall_mission"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "january_truce",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "liaoxi"
+     ],
+     "why": "place:january_truce"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "siping_taken",
+     "use": "place",
+     "order": "opsFirst",
+     "points": [
+      "huaihai",
+      "jinzhong"
+     ],
+     "why": "place:siping_taken"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "siping"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "june_truce",
+     "use": "place",
+     "points": [
+      "huaihai"
+     ],
+     "why": "place:june_truce"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "japanese_garrisons",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "huaihai",
+     "why": "campaign:japanese_garrisons"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "changchun"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "kunming_incident",
+     "use": "place",
+     "points": [
+      "huaihai"
+     ],
+     "why": "place:kunming_incident"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "pcc_resolutions",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:pcc_resolutions"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "into_manchuria",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "chasui",
+     "why": "campaign:into_manchuria"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "liaoxi",
+      "siping",
+      "siping"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "zhangjiakou_taken",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "tianjin",
+     "siege": "point",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold",
+       "breakout:jinzhou",
+       "breakout:beiping"
+      ],
+      "values": [
+       [
+        23.85156958776508,
+        15.153962126801185,
+        24.565830577333053
+       ],
+       [
+        -15.047351602570211,
+        -5.760502789823978,
+        20.828400769969694
+       ]
+      ],
+      "mix": {
+       "point": 1,
+       "relief": 0
+      },
+      "against": {
+       "hold": 0,
+       "breakout:jinzhou": 1,
+       "breakout:beiping": 0
+      },
+      "value": 15.153962126801185
+     },
+     "why": "campaign:zhangjiakou_taken"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "breakout:jinzhou",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold",
+       "breakout:jinzhou",
+       "breakout:beiping"
+      ],
+      "values": [
+       [
+        -27.391350399999993,
+        -17.741350399999998,
+        -26.9626528
+       ],
+       [
+        11.230713600000003,
+        2.7032800000000003,
+        -24.3413504
+       ]
+      ],
+      "mix": {
+       "hold": 0,
+       "breakout:jinzhou": 1,
+       "breakout:beiping": 0
+      },
+      "against": {
+       "point": 1,
+       "relief": 0
+      },
+      "value": -17.741350399999998
+     },
+     "why": "siege"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "gao_shuxun",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "dabieshan",
+     "why": "campaign:gao_shuxun"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "jiluyu"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "campaign",
+     "target": "xuzhou",
+     "siege": "point",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold",
+       "breakout:luzhong"
+      ],
+      "values": [
+       [
+        -7.360494138517077,
+        -9.880083163278417
+       ],
+       [
+        -21.70697414763399,
+        -9.578999102864893
+       ]
+      ],
+      "mix": {
+       "point": 0.8279857993587795,
+       "relief": 0.17201420064122053
+      },
+      "against": {
+       "hold": 0.02055523082092764,
+       "breakout:luzhong": 0.9794447691790724
+      },
+      "value": -9.828292429300573
+     },
+     "why": "campaign:soviet_aid"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "breakout:luzhong",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold",
+       "breakout:luzhong"
+      ],
+      "values": [
+       [
+        -0.8815487999999988,
+        2.1684512
+       ],
+       [
+        7.317187200000002,
+        2.1684512
+       ]
+      ],
+      "mix": {
+       "hold": 0,
+       "breakout:luzhong": 1
+      },
+      "against": {
+       "point": 1,
+       "relief": 0
+      },
+      "value": 2.1684512
+     },
+     "why": "siege"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "shangdang_campaign",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:shangdang_campaign"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "jiluyu"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_east",
+     "use": "event",
+     "why": "event:score_east"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "may_fourth_directive",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:may_fourth_directive"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "beiman"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "withdraw",
+     "why": "option"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "siping",
+      "siping",
+      "siping",
+      "siping",
+      "siping"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "score_north",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "kunming_incident",
+     "why": "headline"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "january_truce",
+     "use": "place",
+     "points": [
+      "jinzhong",
+      "jiluyu",
+      "changchun"
+     ],
+     "why": "place:january_truce"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "reorganisation_conference",
+     "use": "place",
+     "points": [
+      "jinzhong",
+      "jiluyu"
+     ],
+     "why": "place:reorganisation_conference"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "june_truce",
+     "use": "place",
+     "points": [
+      "dabieshan",
+      "dabieshan"
+     ],
+     "why": "place:june_truce"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "pcc_resolutions",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:pcc_resolutions"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_removals",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "huaihai"
+     ],
+     "why": "place:soviet_removals"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "takeover_officials",
+     "use": "place",
+     "points": [
+      "huaihai"
+     ],
+     "why": "place:takeover_officials"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "surrender_order",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:surrender_order"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "guilin",
+      "taiyuan",
+      "lanzhou"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "place",
+      "points": [
+       "huaihai",
+       "liaoxi",
+       "liaoxi"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "return_to_nanjing",
+     "use": "place",
+     "points": [
+      "dabieshan"
+     ],
+     "why": "place:return_to_nanjing"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviets_delay",
+     "use": "place",
+     "points": [
+      "dabieshan",
+      "jiluyu"
+     ],
+     "why": "place:soviets_delay"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "inflation",
+     "use": "place",
+     "points": [
+      "huaihai"
+     ],
+     "why": "place:inflation"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "chongqing_talks",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:chongqing_talks"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_east",
+     "use": "event",
+     "why": "event:score_east"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "campaign",
+     "target": "jinzhong",
+     "why": "campaign:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_northeast",
+     "use": "event",
+     "why": "event:score_northeast"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "redeployment",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "league_banned",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "jizhong",
+      "jizhong",
+      "taihang",
+      "taihang"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "jinan",
+      "xian",
+      "nanjing",
+      "shanghai"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "jinan",
+      "tianjin"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "dabie_march",
+     "use": "place",
+     "points": [
+      "tianjin",
+      "jinan"
+     ],
+     "why": "place:dabie_march"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "hu_takes_yanan",
+     "use": "place",
+     "points": [
+      "dabieshan",
+      "xian",
+      "zhengzhou"
+     ],
+     "why": "place:hu_takes_yanan"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "campaign",
+     "target": "dabieshan",
+     "why": "campaign:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "central_shanxi_campaign",
+     "use": "place",
+     "order": "opsFirst",
+     "points": [
+      "dabieshan",
+      "nanjing"
+     ],
+     "why": "place:central_shanxi_campaign"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "xiong_xianghui",
+     "use": "place",
+     "points": [
+      "dabieshan"
+     ],
+     "why": "place:xiong_xianghui"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "sleeper",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:sleeper"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "wedemeyer_mission",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "lanzhou"
+     ],
+     "why": "place:wedemeyer_mission"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "china_aid_act",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "jinan"
+     ],
+     "why": "place:china_aid_act"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "may_twentieth",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:may_twentieth"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "yellow_river",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:yellow_river"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_rear",
+     "use": "event",
+     "why": "event:score_rear"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "land_law",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:land_law"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "liaoxi",
+      "jizhong"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "tianjin"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "airlift",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:airlift"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "shanghai",
+      "taiyuan"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "place",
+      "points": [
+       "tianjin",
+       "huaihai",
+       "huaihai"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_northwest",
+     "use": "event",
+     "why": "event:score_northwest"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "inflation",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "shandong_offensive",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "jinan"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "rear",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "chen_cheng",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:chen_cheng"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "campaign",
+      "target": "jinzhou",
+      "siege": "relief"
+     },
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        33.8516
+       ],
+       [
+        38.637600000000006
+       ]
+      ],
+      "mix": {
+       "point": 0,
+       "relief": 1
+      },
+      "against": {
+       "hold": 1
+      },
+      "value": 38.637600000000006
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "hold",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        -37.2516
+       ],
+       [
+        -42.037600000000005
+       ]
+      ],
+      "mix": {
+       "hold": 1
+      },
+      "against": {
+       "point": 0,
+       "relief": 1
+      },
+      "value": -42.037600000000005
+     },
+     "why": "siege"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "american_divisions",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "xian"
+     ],
+     "why": "place:american_divisions"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "winter_offensive",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "xian"
+     ],
+     "why": "place:winter_offensive"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "menglianggu",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:menglianggu"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "huaihai"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "place",
+      "points": [
+       "dabieshan",
+       "xian"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "stalled_siege",
+     "use": "place",
+     "points": [
+      "zhengzhou",
+      "zhengzhou",
+      "zhengzhou"
+     ],
+     "why": "place:stalled_siege"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "marshall_mission",
+     "use": "campaign",
+     "target": "tianjin",
+     "why": "campaign:marshall_mission"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "place",
+     "points": [
+      "tianjin",
+      "guangzhou"
+     ],
+     "why": "place:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "northern_shaanxi",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:northern_shaanxi"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "liaoxi"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "truman_doctrine",
+     "use": "campaign",
+     "target": "liaoxi",
+     "why": "campaign:truman_doctrine"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "mobilisation_order",
+     "use": "campaign",
+     "target": "zhengzhou",
+     "why": "campaign:mobilisation_order"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "sleeper",
+     "use": "campaign",
+     "target": "dabieshan",
+     "why": "campaign:sleeper"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_northeast",
+     "use": "event",
+     "why": "event:score_northeast"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_rear",
+     "use": "event",
+     "why": "event:score_rear"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "national_assembly",
+     "use": "campaign",
+     "order": "opsFirst",
+     "target": "jinzhou",
+     "siege": "point",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        38.24351720947652
+       ],
+       [
+        33.45323629745891
+       ]
+      ],
+      "mix": {
+       "point": 1,
+       "relief": 0
+      },
+      "against": {
+       "hold": 1
+      },
+      "value": 38.24351720947652
+     },
+     "why": "campaign:national_assembly"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "hold",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        -39.089999999999996
+       ],
+       [
+        -34.846
+       ]
+      ],
+      "mix": {
+       "hold": 1
+      },
+      "against": {
+       "point": 1,
+       "relief": 0
+      },
+      "value": -39.089999999999996
+     },
+     "why": "siege"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "score_north",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "redeployment",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "shenyang",
+      "jinzhou",
+      "beiping",
+      "beiping"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "shanbei",
+      "xian",
+      "taihang",
+      "tianjin"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "reorganisation_conference",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:reorganisation_conference"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "place",
+      "points": [
+       "tianjin",
+       "shanbei",
+       "beiman"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "yellow_river",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:yellow_river"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "january_truce",
+     "use": "place",
+     "points": [
+      "huaihai",
+      "shenyang",
+      "shenyang"
+     ],
+     "why": "place:january_truce"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "dabie_march",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:dabie_march"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "place",
+      "points": [
+       "beiman",
+       "huaihai"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "hu_takes_yanan",
+     "use": "place",
+     "order": "opsFirst",
+     "points": [
+      "huaihai",
+      "xian",
+      "taihang"
+     ],
+     "why": "place:hu_takes_yanan"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "xian"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "return_to_nanjing",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:return_to_nanjing"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_northwest",
+     "use": "event",
+     "why": "event:score_northwest"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "wedemeyer_mission",
+     "use": "place",
+     "points": [
+      "beiman"
+     ],
+     "why": "place:wedemeyer_mission"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "xiong_xianghui",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:xiong_xianghui"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "huaihai"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "takeover_officials",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:takeover_officials"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "nanjing",
+      "shenyang",
+      "tianjin"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": {
+      "use": "place",
+      "points": [
+       "huaihai",
+       "shenyang"
+      ]
+     },
+     "why": "ops"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_east",
+     "use": "event",
+     "why": "event:score_east"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "chongqing_talks",
+     "use": "place",
+     "points": [
+      "tianjin",
+      "jinzhou"
+     ],
+     "why": "place:chongqing_talks"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "may_twentieth",
+     "use": "campaign",
+     "target": "luzhong",
+     "why": "campaign:may_twentieth"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "yangtze_crossing",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "pcc_resolutions",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "guilin"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "defection_at_the_front",
+     "use": "place",
+     "points": [
+      "lanzhou",
+      "lanzhou"
+     ],
+     "why": "place:defection_at_the_front"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "beiping_talks",
+     "use": "place",
+     "points": [
+      "luzhong",
+      "beiman",
+      "wuhan"
+     ],
+     "why": "place:beiping_talks"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "huaihai_campaign",
+     "use": "place",
+     "points": [
+      "luzhong",
+      "beiman"
+     ],
+     "why": "place:huaihai_campaign"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "airlift_to_cut_off_city",
+     "use": "event",
+     "why": "event:airlift_to_cut_off_city"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "jinan"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "pingjin_campaign",
+     "use": "place",
+     "points": [
+      "xuzhou",
+      "xuzhou",
+      "beiping"
+     ],
+     "why": "place:pingjin_campaign"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "jiawang_defection",
+     "use": "place",
+     "order": "eventFirst",
+     "why": "place:jiawang_defection"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": {
+      "use": "campaign",
+      "target": "beiman"
+     },
+     "why": "ops"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_removals",
+     "use": "campaign",
+     "target": "beiman",
+     "why": "campaign:soviet_removals"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "fu_holds_the_north",
+     "use": "place",
+     "points": [
+      "beiman",
+      "luzhong",
+      "shanghai"
+     ],
+     "why": "place:fu_holds_the_north"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "place",
+     "points": [
+      "beiman",
+      "jinzhou",
+      "jinzhou"
+     ],
+     "why": "place:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "soviets_delay",
+     "use": "campaign",
+     "target": "guilin",
+     "why": "campaign:soviets_delay"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "new_consultative_conference",
+     "use": "campaign",
+     "target": "luzhong",
+     "why": "campaign:new_consultative_conference"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "american_aid",
+     "use": "campaign",
+     "target": "jiluyu",
+     "why": "campaign:american_aid"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "gold_yuan",
+     "use": "campaign",
+     "target": "huaihai",
+     "why": "campaign:gold_yuan"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "offer",
+     "why": "option"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": [
+      "fu_dongju",
+      "ta_kung_pao"
+     ],
+     "why": "card"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "accept",
+     "why": "option"
+    },
+    {
+     "type": "headline",
+     "side": 0,
+     "card": "clearing_the_outskirts",
+     "why": "headline"
+    },
+    {
+     "type": "headline",
+     "side": 1,
+     "card": "score_rear",
+     "why": "headline"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": [
+      "jiluyu"
+     ],
+     "why": "points"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "soviet_aid",
+     "use": "place",
+     "points": [
+      "guilin",
+      "guilin",
+      "zhengzhou"
+     ],
+     "why": "place:soviet_aid"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "stalled_siege",
+     "use": "place",
+     "points": [
+      "luzhong",
+      "luzhong",
+      "beiman"
+     ],
+     "why": "place:stalled_siege"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "stalins_advice",
+     "use": "campaign",
+     "target": "xian",
+     "siege": "point",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        26.04299669901678
+       ],
+       [
+        17.545682467073668
+       ]
+      ],
+      "mix": {
+       "point": 1,
+       "relief": 0
+      },
+      "against": {
+       "hold": 1
+      },
+      "value": 26.04299669901678
+     },
+     "why": "campaign:stalins_advice"
+    },
+    {
+     "type": "choose",
+     "side": 1,
+     "choice": "hold",
+     "game": {
+      "rows": [
+       "point",
+       "relief"
+      ],
+      "cols": [
+       "hold"
+      ],
+      "values": [
+       [
+        -26.150000000000002
+       ],
+       [
+        -22.3
+       ]
+      ],
+      "mix": {
+       "hold": 1
+      },
+      "against": {
+       "point": 1,
+       "relief": 0
+      },
+      "value": -26.150000000000002
+     },
+     "why": "siege"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "chiang_steps_down",
+     "use": "campaign",
+     "target": "guilin",
+     "why": "campaign:chiang_steps_down"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "siege_of_changchun",
+     "use": "place",
+     "points": [
+      "luzhong"
+     ],
+     "why": "place:siege_of_changchun"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "score_north",
+     "use": "event",
+     "why": "event:score_north"
+    },
+    {
+     "type": "play",
+     "side": 0,
+     "card": "score_northwest",
+     "use": "event",
+     "why": "event:score_northwest"
+    },
+    {
+     "type": "play",
+     "side": 1,
+     "card": "soviet_removals",
+     "use": "campaign",
+     "target": "beiman",
+     "why": "campaign:soviet_removals"
+    },
+    {
+     "type": "choose",
+     "side": 0,
+     "choice": "stand",
+     "why": "option"
+    }
+   ]
+  }
+ },
+ "legal": {
+  "kind": "over"
+ }
+}
