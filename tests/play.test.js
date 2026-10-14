@@ -119,24 +119,39 @@ check(`玩家亂點(每次在當下的選項裡隨便點一個):${GAMES} 局都�
 });
 
 section("P4 存檔:重新整理之後接著玩");
-check("對局中途 toJSON → JSON → restoreSession:看到的一樣、選項一樣;兩邊再點同樣的 60 下,結果一樣", () => {
+check("對局後段(第 4、6、7 回合)、一個動作點到一半時 toJSON → JSON → restoreSession:看到的一樣、選項一樣;兩份用同樣的點擊下到終局,每一步都一樣", () => {
   const t = todo(); if (t) return t;
   if (typeof P.restoreSession !== "function") return "TODO: public/play.js 沒有 restoreSession";
+  // #44(FE 抓到的洞):原本的 P4 亂點 40 下,從來沒有離開第 1 回合,存檔漏掉後面才有的東西也看不出來。
+  // 現在用普通 bot 的決定換成點擊(和 P2 一樣)把對局推到第 N 回合,在一個要點好幾下的動作點到一半時存檔。
   const out = [];
-  for (const seed of [301, 302, 303]) {
-    const rng = E.makeRng(seed);
-    let s = P.createSession({ seed, side: seed % 2, level: "normal" });
-    for (let i = 0; i < 40 && !s.over(); i++) { const cs = s.choices(); s = s.tap(cs[rng.int(cs.length)].id) || s; }
-    let r = P.restoreSession(JSON.parse(JSON.stringify(s.toJSON())));
-    if (J(canon(r.view())) !== J(canon(s.view()))) return `失敗:種子 ${seed}:存檔再讀回來,看到的不一樣`;
-    if (J(r.choices().map((c) => c.id)) !== J(s.choices().map((c) => c.id))) return `失敗:種子 ${seed}:存檔再讀回來,選項不一樣`;
-    const r2 = E.makeRng(seed + 1);
-    for (let i = 0; i < 60 && !s.over(); i++) {
-      const cs = s.choices(); const id = cs[r2.int(cs.length)].id;
-      s = s.tap(id) || s; r = r.tap(id) || r;
-      if (J(canon(r.view())) !== J(canon(s.view()))) return `失敗:種子 ${seed}:讀回來之後第 ${i + 1} 下分岔了`;
+  for (const [seed, target] of [[301, 4], [302, 6], [303, 7]]) {
+    const side = seed % 2, rng = E.makeRng(seed * 31);
+    let s = P.createSession({ seed, side, level: "normal" });
+    let saved = null, guard = 0, plan = [];
+    // the taps still to do, from the bot's decision for the human seat
+    const next = () => { if (!plan.length) { const ids = s.tapsFor(strip(B.decide(s.view(), side, "normal", rng))); if (!ids || !ids.length) throw new Error(`點不出 bot 的決定(第 ${s.view().turn} 回合)`); plan = ids.slice(); } return plan.shift(); };
+    while (!s.over() && !saved) {
+      if (++guard > 5000) return `失敗:種子 ${seed}:5000 下還沒到第 ${target} 回合`;
+      const id = next();
+      s = s.tap(id) || s;
+      if (s.view().turn >= target && plan.length > 0) saved = JSON.parse(JSON.stringify(s.toJSON())); // 點到一半
     }
-    out.push(`種子 ${seed}:第 ${s.view().turn} 回合一樣`);
+    if (!saved) return `失敗:種子 ${seed}:對局在第 ${s.view().turn} 回合就結束了,沒有在第 ${target} 回合存到檔`;
+    let r = P.restoreSession(saved);
+    if (J(canon(r.view())) !== J(canon(s.view()))) return `失敗:種子 ${seed}:第 ${s.view().turn} 回合存檔再讀回來,看到的不一樣`;
+    if (J(r.choices().map((c) => c.id)) !== J(s.choices().map((c) => c.id))) return `失敗:種子 ${seed}:第 ${s.view().turn} 回合存檔再讀回來,選項不一樣`;
+    const at = s.view().turn;
+    let steps = 0;
+    while (!s.over()) {
+      if (++guard > 8000) return `失敗:種子 ${seed}:讀回來之後 8000 下還沒結束`;
+      const id = next();
+      s = s.tap(id) || s; r = r.tap(id) || r;
+      steps++;
+      if (J(canon(r.view())) !== J(canon(s.view()))) return `失敗:種子 ${seed}:第 ${at} 回合讀回來之後第 ${steps} 下分岔了(第 ${s.view().turn} 回合)`;
+    }
+    if (!r.over() || J(r.result()) !== J(s.result())) return `失敗:種子 ${seed}:讀回來的那一份沒有同樣結束(${J(r.result())} 對 ${J(s.result())})`;
+    out.push(`種子 ${seed}:第 ${at} 回合存、再下 ${steps} 下到終局一樣(${s.result().reason})`);
   }
   return ok(true, out.join("、"));
 });
