@@ -24,6 +24,7 @@
 | `public/art/` 與產生它的 prompt | artist |
 | `art/`(探索用的圖、contact sheet 與 prompt;**不在 `public/` 底下,所以不會被部署**) | artist(orchestrator 提案,2026-10-02;owner 還沒確認這一列) |
 | `tuning/`(調規則時的變體、模擬狀態檔與報告;不部署) | BE(orchestrator 提案,2026-10-02,#23;owner 還沒確認這一列) |
+| `design/`(畫面的 mockup 與產生它的腳本;**不在 `public/` 底下,所以不會被部署**) | FE(orchestrator 提案,2026-10-13,#43;owner 還沒確認這一列) |
 | `tests/*.test.js`、`tests/*-chunk.js`、`tests/siege-game.js`、`tests/targets.mjs`、`tests/driver.js`、`tests/harness.js`、`tools/`、`TEAM.md` | orchestrator |
 
 - 中文牌文在 `public/shared/cards.js`(BE 的檔案)裡:writer 改牌文是跨界修改,交付時點名。
