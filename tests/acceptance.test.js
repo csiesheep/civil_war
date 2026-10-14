@@ -4179,6 +4179,70 @@ check("拿標記:第 4 回合開始 1 真 1 假、第 7 回合開始 1 真 1 假
   );
 });
 
+section("17 畫面要的引擎讀數(#45:圍點打援的乾跑預覽、每回合的民心)");
+
+// #45。M3 ② 的頁面(#44)不重算規則;它要的兩個讀數由引擎給。orchestrator 裁決(#45,介面):
+//   - `E.siegePreview(st, response)`:國軍要回答圍點打援時(待決定是國軍的 siege 回應),假設國軍選 `response`,
+//     共軍的暗牌分別是打點、打援時各會怎樣:`{ point: view, relief: view }`,每個是 `E.view(之後的局面, 國軍)`,
+//     「之後」= 走到下一個要人決定的地方為止(和 E.apply 一樣)。不改 `st`;**和共軍真的選了什麼無關**(兩個只差暗牌的局面,
+//     預覽一模一樣),所以給國軍看不洩漏暗牌。
+//   - `view.mandateByTurn`:陣列,[0] = 開局(第 1 回合的免費放置之後)的民心,[t] = 第 t 回合結算之後的民心;還沒到的回合沒有。
+//     對局結束時,最後一個回合的那一格是結束時的民心。
+const pvTodo = () => (typeof E.siegePreview !== "function" ? "TODO: E.siegePreview 還沒有(#45)" : null);
+const mbTodo = (v) => (!v || !Array.isArray(v.mandateByTurn) ? "TODO: view.mandateByTurn 還沒有(#45)" : null);
+
+check("siegePreview:濟南藍 3、淮海戰役 4 點;國軍固守 → 打點 1/0、打援 0/3;不改原局面;照真的暗牌走下去的結果等於那一邊的預覽", () => {
+  const t = pvTodo(); if (t) return t;
+  const S = siegeRig();
+  const a = act(S, CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: "relief" });
+  const p = pendingIs(a, KMT, "option", "打濟南(打援)之後"); if (p !== true) return p;
+  const before = J(a);
+  const pv = E.siegePreview(a, "hold");
+  const real = choose(a, "hold");
+  return all(
+    eq(`${pv && pv.point && rb(pv.point, "jinan")} ${pv && pv.relief && rb(pv.relief, "jinan")}`, "1/0 0/3", "固守:打點 / 打援之後 濟南 紅/藍"),
+    eq(J(a) === before, true, "預覽之後原局面沒變"),
+    eq(rb(real, "jinan"), rb(pv.relief, "jinan"), "真的是打援:照走之後的濟南 = 打援那一邊的預覽"),
+    ok(true, `固守:打點 ${rb(pv.point, "jinan")}、打援 ${rb(pv.relief, "jinan")};真的打援之後 ${rb(real, "jinan")}`),
+  );
+});
+
+check("siegePreview 不洩漏暗牌:共軍暗選打點和打援的兩個局面,國軍對同一個回應看到的預覽一模一樣(增援徐州 1 點)", () => {
+  const t = pvTodo(); if (t) return t;
+  const go = (plan) => act(siegeRig(), CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: plan });
+  const P1 = go("point"), P2 = go("relief");
+  const a = E.siegePreview(P1, "reinforce:xuzhou:1"), b = E.siegePreview(P2, "reinforce:xuzhou:1");
+  return all(
+    eq(J(canon17(a)) === J(canon17(b)), true, "兩個局面的預覽一樣"),
+    ok(true, `增援 1:打點 濟南 ${rb(a.point, "jinan")} 徐州 ${rb(a.point, "xuzhou")};打援 濟南 ${rb(a.relief, "jinan")} 徐州 ${rb(a.relief, "xuzhou")}`),
+  );
+});
+
+check("mandateByTurn:[0] 是開局的民心;第 1 回合結算之後 [1] 是那時的民心;還沒到的回合沒有", () => {
+  const st = position({});
+  const t0 = mbTodo(E.view(st, CCP)); if (t0) return t0;
+  // 各留一張牌:兩邊手上都空了,引擎會自己把這一回合走完。
+  deal(st, CCP, ["score_north", "gao_shuxun"]); deal(st, KMT, ["score_east", "kunming_incident"]);
+  const S = toAction(st);
+  const v0 = E.view(S, CCP);
+  // 獨立的讀數:引擎在每回合結算完呼叫 E.probe.turnEnd(局面)(bots-chunk 用的那一個),在那一刻記下民心。
+  let m1 = null;
+  E.probe.turnEnd = (s) => { if (s.turn === 1) m1 = s.mandate; };
+  let s1;
+  try { s1 = atSettle(S); } finally { E.probe.turnEnd = null; }
+  const v1 = E.view(s1, CCP);
+  const pre = settled(s1, "結算"); if (pre !== true) return pre;
+  if (m1 == null) return "失敗:第 1 回合結算時 E.probe.turnEnd 沒有被呼叫(讀不到獨立的民心)";
+  return all(
+    eq(v0.mandateByTurn.length, 1, "第 1 回合行動中:mandateByTurn 的長度"),
+    eq(v0.mandateByTurn[0], 0, "開局那一格(規則書:開局民心 0;第 0 組驗過)"),
+    eq(v1.mandateByTurn[1], m1, "第 1 回合結算之後的那一格(對 E.probe.turnEnd 記下的民心)"),
+    ok(true, `開局 ${v0.mandateByTurn[0]};第 1 回合結算時 ${m1};mandateByTurn ${J(v1.mandateByTurn)}`),
+  );
+});
+
+function canon17(x) { return Array.isArray(x) ? x.map(canon17) : x && typeof x === "object" ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, canon17(x[k])])) : x; }
+
 // ---------------------------------------------------------------- verdict
 test("acceptance: the first guard", () => {
   const s = summary();
