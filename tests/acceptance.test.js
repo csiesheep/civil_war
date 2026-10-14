@@ -3969,7 +3969,10 @@ section("16 機制 C:內線(佈線、洩密、倒戈、和平易手、肅諜;選
 //   4. 第 1 回合受降時東北三城有了國方點數就可以佈線(照規則,不另外限制)。
 //   5. 倒戈只在 T 還有國方點數時問;T 已經空了不問(沒東西可移除;國方點數是公開的,不問不洩漏真假)。
 const MC = { mechanismC: true };
-const C_SPEC = { markers: [5, 5], start: [1, 2], perCity: 2, defect: 2, gains: { reform4: [2, 1], turning: [1, 1], decisive: [1, 1] }, caughtFake: { centrists: 1, mandate: 1 } };
+// #42(owner 裁決 #41,2026-10-13,原文「① 跑三批驗,過了就定為 C(建議)」;三批過了):C 多兩句——
+//   洩密:這次進攻的行動點 +1(leakBonus);回合結算時,場上(城上)每一個真標記讓民心往共軍 1(realMandate)。
+//   筆記 C 節第 4、7 條(2026-10-13 改過)。
+const C_SPEC = { markers: [5, 5], start: [1, 2], perCity: 2, defect: 2, gains: { reform4: [2, 1], turning: [1, 1], decisive: [1, 1] }, caughtFake: { centrists: 1, mandate: 1 }, leakBonus: 1, realMandate: 1 };
 const canon = (x) => (Array.isArray(x) ? x.map(canon) : x && typeof x === "object" ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, canon(x[k])])) : x);
 const cTodo = () => (E.C_SPEC === undefined ? "TODO: E.C_SPEC 還沒有;mechanismC 這個選項還沒有接進引擎" : null);
 const moles = (st, id) => J(E.molesAt(st, id)); // "[true,false]"
@@ -3993,7 +3996,7 @@ function answerC(st, picks = {}) {
   return s;
 }
 
-check("常數:10 個標記 5 真 5 假;開局 1 真 2 假;每城最多 2;倒戈 2;來源 建軍軌第 4 格 2 真 1 假、易勢期與決戰期各 1 真 1 假;抓錯 中間派 1 / 民心 1;mechanismC 不是預設", () => {
+check("常數:10 個標記 5 真 5 假;開局 1 真 2 假;每城最多 2;倒戈 2;洩密 +1;結算每個真標記民心 1;來源 建軍軌第 4 格 2 真 1 假、易勢期與決戰期各 1 真 1 假;抓錯 中間派 1 / 民心 1;mechanismC 不是預設", () => {
   const t = cTodo(); if (t) return t;
   const g = C_SPEC.gains, sum = [0, 1].map((i) => C_SPEC.start[i] + g.reform4[i] + g.turning[i] + g.decisive[i]);
   return all(
@@ -4094,13 +4097,14 @@ check("洩密:國軍回應之後、查表之前,T / R / 南京有標記就問;�
   const viaCapital = answerC(choose(capital, "point:nanjing"));
   return all(
     eq(realT.pending.tag, "leak", "共軍待決定的 tag"), same(optIds(realT), ["no", "point:jinan", "relief:jinan"], "濟南有一個標記時共軍的選項"),
-    eq(`${rb(leaked, "jinan")} ${moles(leaked, "jinan")}`, "1/0 []", "洩密改打點:濟南 紅/藍、濟南的標記(真的出局)"),
+    // #42:洩密 +1,淮海戰役 4 點變 5:移除 3、放 2 紅(#39 是 1/0)。
+    eq(`${rb(leaked, "jinan")} ${moles(leaked, "jinan")}`, "2/0 []", "洩密改打點(+1):濟南 紅/藍、濟南的標記(真的出局)"),
     eq(rb(kept, "jinan"), "0/3", "不洩密(打援對固守):濟南 紅/藍"),
-    eq(`${rb(viaCapital, "jinan")} ${moles(viaCapital, "nanjing")}`, "1/0 []", "南京的真標記洩密改打點:濟南 紅/藍、南京的標記"),
+    eq(`${rb(viaCapital, "jinan")} ${moles(viaCapital, "nanjing")}`, "2/0 []", "南京的真標記洩密改打點(+1):濟南 紅/藍、南京的標記"),
     eq(`${fakeT.pending && fakeT.pending.tag}`, "leak", "濟南只有假標記:共軍也被問(問了不洩漏真假)"),
     eq(thrown(() => choose(fakeT, "point:jinan")) != null, true, "濟南只有假標記,翻它沒有被拒絕"),
     eq(!!(none.pending && none.pending.tag === "leak"), false, "T、R、南京都沒有標記:共軍被問了洩密"), // #39 BE:沒有待決定時原本讀成 null
-    ok(true, "打援對固守 → 洩密改打點:濟南 0/3 → 1/0;南京的真標記一樣能洩密;只有假的被拒絕;沒有標記不問"),
+    ok(true, "打援對固守 → 洩密改打點、+1:濟南 0/3 → 2/0;南京的真標記一樣能洩密;只有假的被拒絕;沒有標記不問"),
   );
 });
 
@@ -4142,6 +4146,18 @@ check("和平易手:孤城上有真標記、X ≥ 藍:藍全部移除、共軍�
     eq(h(fake) != null, true, "濟南只有假標記,沒有被拒絕"), eq(h(off) != null, true, "選項關掉時和平易手沒有被拒絕"),
     ok(true, "濟南 0/2 → 1/0,真標記出局;藍 3、連得上、假的、選項關掉都被拒絕"),
   );
+});
+
+check("回合結算:城上每一個真標記讓民心往共軍 1(假的、共軍手上的都不算)", () => {
+  const t = cTodo(); if (t) return t;
+  // 同一個盤面兩份,只差真假擺在哪裡(在場上的真標記一樣是 2 個):A 城上 2 真 1 假、手上 1 假;B 城上 3 假、手上 2 真。
+  // 兩份都走到結算(atSettle),民心差的就是 A 城上那 2 個真的。國軍留一張牌、共軍沒有牌,不影響結算。
+  const A = cRig({ kmt: ["kunming_incident"], hand: [0, 1], at: { jinan: [true], xuzhou: [true], taiyuan: [false] } });
+  const B = cRig({ kmt: ["kunming_incident"], hand: [2, 0], at: { jinan: [false], xuzhou: [false], taiyuan: [false] } });
+  const a = atSettle(A), b = atSettle(B);
+  const pre = all(eq(a.turn, b.turn, "兩份結算之後的回合"), eq(a.turn > A.turn || a.winner != null, true, "A 走過了結算"));
+  if (pre !== true) return pre;
+  return all(eq(a.mandate - b.mandate, 2, "結算之後民心的差(A − B,往共軍)"), ok(true, `A 城上 2 真:民心 ${a.mandate};B 城上 0 真:民心 ${b.mandate}`));
 });
 
 check("拿標記:第 4 回合開始 1 真 1 假、第 7 回合開始 1 真 1 假(第 5 回合沒有);建軍軌第一次到第 4 格 2 真 1 假", () => {

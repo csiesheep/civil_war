@@ -1,0 +1,85 @@
+#42 機制 C 的規則照 owner 採用的那組(#41 ①):mechanismC 就是 MC-mand1+leak1(仍是選項)
+BE,分支 be/42-c-rules(從 origin/orch/42-acceptance f422f85 開)。
+
+〇 裁決
+owner 裁決(#41,2026-10-13,原文):「① 跑三批驗,過了就定為 C(建議)」。三批過了(orchestrator 在 main c5189a4,#41 的留言)。
+兩句:洩密「……而且這次進攻的行動點 +1」(cLeakBonus 1);「回合結算時,場上每一個真標記讓民心往共軍 1」(cRealMandate 1)。
+
+一 改了什麼
+- public/shared/engine.js
+  - C_SPEC 加兩個鍵:leakBonus: 1、realMandate: 1(註解寫出處:owner 裁決 #41 ①、筆記 C 節 2026-10-13 第 4、7 條)。
+  - cSpecBuild:cLeakBonus 的預設 0 → C_SPEC.leakBonus;cRealMandate 的預設 0 → C_SPEC.realMandate。給了的選項照舊蓋過。
+  - mechanismC 仍然不是 DEFAULT_OPTIONS 的鍵;C 關的路徑沒有動。
+  - RULES_VERSION "2026-10-12" → "2026-10-13":「what `mechanismC: true` plays changed …; the default (C off) is unchanged」,
+    舊的註解照慣例包在括號裡(tuning/42/edit-engine.mjs,跑一次)。
+- public/shared/bots.js:沒有動。cWorth 對 cLeakBonus 的基準是 0(#41 量價格時的 base2),預設變 1 之後照讀
+  C_ONCE_OPT["cLeakBonus:1"];board 讀 sp.realMandate。權重不動。
+- tests/sim.js(BE 的):newC 原本看「選項裡有沒有 cRealMandate / cFreePlant」決定要不要記 mandate / free;#42 之後
+  cRealMandate 不給也是 1,所以改成讀引擎的 E.cSpecOf({ options })。見 四。
+- tuning/23/variants.mjs:加 "C-41"({ mechanismC: true, cLeakBonus: 0, cRealMandate: 0 });"C" 的選項不動(它現在就是新的 C);
+  MC-… 那一段加註解:現在疊在新的 C 上(MC-leak1、MC-mand1、MC-mand1+leak1 和 C 玩的一樣),選項照 #41 寫的不動。
+- tuning/42/:edit-engine.mjs、same-all.mjs(比 same.mjs 嚴:more 也取兩邊鍵的聯集,浮點數最後幾位另計)、
+  tamper.mjs(把狀態檔的一個葉子 +1,用來讓比對紅)、brief-read.mjs、runs/(四個 300 局的狀態檔)、這份報告。
+
+二 結果(全部在這個分支、rebase 之前的樹上跑;rebase 之後 origin/main 沒有新的 commit 時就是同一棵樹)
+                     改之前(f422f85)       改之後
+  VERDICT            220 / 3 / 0            223 / 0 / 0
+  BOTS-VERDICT       (沒跑)                 37 / 0 / 0
+  FUZZ-VERDICT       (沒跑)                 2000 局 / 結束 2000 / 報錯或卡住 0 / 重播 200 不一致 0 / 動作 298709
+  FUZZ-CELLS-VERDICT (沒跑)                 控制組 9 個 / 有問題的 0 個 / 每個 300 局
+  SIM-VERDICT        (沒跑)                 7 / 0 / 0
+  ART-VERDICT        (沒跑)                 14 / 0 / 0
+改之前紅的三條,正好是 brief 說的常數、洩密、結算:
+  E.C_SPEC(鍵排序後): 期望 "...leakBonus":1,..."realMandate":1,...",實際 沒有這兩個鍵
+  洩密改打點(+1):濟南 紅/藍、濟南的標記(真的出局): 期望 "2/0 []",實際 "1/0 []"
+  結算之後民心的差(A − B,往共軍): 期望 2,實際 0
+
+三 三個身分比對(tests/sim.js 300 局 --cell=full --seed=1;tuning/37/same.mjs 與 tuning/42/same-all.mjs)
+1. C 關 = main:main c5189a4(git archive 抽到 _scratch/main,14 jobs)vs 這個分支(8 jobs)
+   same.mjs  SAME games 300: 257 leaves of sum, errors 0; more 57 leaves
+   same-all  SAME 315 leaves(sum + errors + more,鍵的聯集),0 個浮點差
+   (順便:和 #41 的 tuning/41/runs/screen2/off-s1-300 也是 SAME 315 / 0。)
+   紅一次:tamper sum.mandateByTurn.1.n 300 → 301 → same.mjs「DIFFER sum.mandateByTurn.1.n: 300 vs 301」,same-all 一樣。
+2. 新的 C(variant C = { mechanismC: true },10 jobs)= #41 的 MC-mand1+leak1-s1-300(28 jobs)
+   same.mjs  sum 全部相同;停在 more 的第一個浮點差:「DIFFER more.c.board.capital.bins.3.p: 62.713628626933904 vs 62.71362862693391」
+   same-all  SAME 630 leaves,20 個葉子只差在浮點數最後幾位(全部是 more.c.calib / more.c.board 的 p、brier、brierPrior 這種
+             小數的和;整數的葉子全部相同)。
+   浮點差是合併順序:同一份程式、同一批種子跑兩次(10 jobs vs 6 jobs,見 四)彼此也差 15 個這種葉子,整數全同。
+   紅一次:(a)新的 C vs #41 的 C-s1-300(舊的 C):「DIFFER sum.aheadByTurn.1.ccp: 74 vs 65」;
+          (b)tamper more.c.mandate 1041 → 1042:same-all「DIFFER 1 of 630 leaves  more.c.mandate: 1042 vs 1041」。
+3. 舊的 C(variant C-41,8 jobs)= #41 的 C-s1-300
+   same.mjs  sum 全部相同;停在「DIFFER more.c.board.capital.bins.4.p: 35.385314009503986 vs 35.385314009504」
+   same-all  SAME 492 leaves,8 個浮點差(同上,都是小數的和)
+   紅一次:(a)C-41 vs MC-mand1+leak1:「DIFFER sum.aheadByTurn.1.ccp: 65 vs 74」;
+          (b)tamper sum.winsBySide.0.reasons.emperor 8 → 9:same.mjs「DIFFER sum.winsBySide.0.reasons.emperor: 9 vs 8」。
+幾個讀數(300 局,種子 1..300;不是平衡的主張,只為了看身分):
+  C 關(分支 / main)   共軍勝 184(61.3%) 國軍 116                                     errors 0
+  新的 C / #41 mand1+leak1 共軍勝 193(64.3%) 國軍 107;結算民心 1041(3.47/局)、洩密 53(0.18/局)、肅諜 243(0.81/局;翻到真 310 假 198,抓錯 179)
+  C-41 / #41 C           共軍勝 186(62.0%) 國軍 114;洩密 6、肅諜 1
+  (兩組各自兩份一字不差;tuning/42/brief-read.mjs 印的。)
+
+四 tests/sim.js 的那一行,以及它有沒有影響比對
+newC 原本是 `options.cRealMandate ? { mandate: 0 } : {}`:#42 之後新的 C 不給 cRealMandate,這一行就不建 mandate,改由
+readLogC 在第一筆 moleMandate 時才補(`(C.mandate || 0) + l.vp`)。一局如果在第一次結算之前就結束,那一局就少一個
+cPerGame.mandate 的 0,和 #41 給了選項的跑法會差。改成讀 E.cSpecOf({ options }).realMandate / .freePlant。
+探針(未 commit):用改之前的 sim.js 把新的 C 再跑一次 300 局(6 jobs)→ 和 MC-mand1+leak1 也是 SAME(630 葉子,21 個浮點差)。
+所以這 300 局裡每一局都至少走到一次結算,這一行在這批種子上沒有差別;它擋的是別的種子。我沒有讓它在真的種子上紅過。
+
+五 證偽(在 _scratch/fz 的副本上一次一個,各自還原;cmp 確認副本和工作樹的 engine.js 一樣、兩邊都沒有 FALSIFY)
+1. 洩密的 +1 拿掉(`if (bonus) step.ops += 0;`):VERDICT 222 / 1 / 0,紅的是
+   「洩密改打點(+1):濟南 紅/藍、濟南的標記(真的出局): 期望 "2/0 []",實際 "1/0 []"」
+2. 結算的民心連假標記也算(`t + l.length`):VERDICT 222 / 1 / 0,紅的是
+   「回合結算:城上每一個真標記讓民心往共軍 1(假的、共軍手上的都不算) · 結算之後民心的差(A − B,往共軍): 期望 2,實際 0」
+3. 結算的民心連共軍手上的真標記也算(`+ st.moles.hand[0]`):VERDICT 222 / 1 / 0,紅的是同一條,同一行(期望 2,實際 0)
+   (A 城上 2 真、手上 0 真;B 城上 0 真、手上 2 真:兩種錯法都讓 A − B 變 0。)
+4. 常數:改之前的引擎就是 C_SPEC 少兩個鍵的樣子,那一條紅過(二)。
+
+六 沒有驗到的
+- 1000 局的三批(orchestrator 會另外拿 1000 局比;brief 說不重跑)。身分只在種子 1..300 上比過。
+- 四的 sim.js 那一行:這批種子上沒有一局在第一次結算之前結束,所以新舊寫法讀數一樣;它的紅沒有在真的種子上看過。
+- #39–#41 的探針(tuning/39、40、41 底下帶 mechanismC 的 probe-*.mjs、run-probes.sh)沒有改:現在它們不給 cLeakBonus /
+  cRealMandate 時玩的是新的 C。要重現 #41 的數字得加 { cLeakBonus: 0, cRealMandate: 0 }。#41 的狀態檔 meta 寫的
+  variant "C"、variantOptions { mechanismC: true } 指的是舊的 C(今天叫 C-41)。
+- 畫面(不在這張)。
+
+七 不屬於我的檔案:沒有動。tests/ 只改了 tests/sim.js(BE 的)。
