@@ -4185,7 +4185,8 @@ section("17 畫面要的引擎讀數(#45:圍點打援的乾跑預覽、每回合
 //   - `E.siegePreview(st, response)`:國軍要回答圍點打援時(待決定是國軍的 siege 回應),假設國軍選 `response`,
 //     共軍的暗牌分別是打點、打援時各會怎樣:`{ point: view, relief: view }`,每個是 `E.view(之後的局面, 國軍)`,
 //     「之後」= 走到下一個要人決定的地方為止(和 E.apply 一樣)。不改 `st`;**和共軍真的選了什麼無關**(兩個只差暗牌的局面,
-//     預覽一模一樣),所以給國軍看不洩漏暗牌。
+//     預覽一模一樣),所以給國軍看不洩漏暗牌。預覽走到對局結束時,view 的 `final`(種子、牌庫順序、兩邊的手牌)要拿掉
+//     (orchestrator 裁決 #45:預覽不能給國軍看到它在真的對局裡看不到的東西;勝者、方式、紀錄留著)。
 //   - `view.mandateByTurn`:陣列,[0] = 開局(第 1 回合的免費放置之後)的民心,[t] = 第 t 回合結算之後的民心;還沒到的回合沒有。
 //     對局結束時,最後一個回合的那一格是結束時的民心。
 const pvTodo = () => (typeof E.siegePreview !== "function" ? "TODO: E.siegePreview 還沒有(#45)" : null);
@@ -4211,8 +4212,11 @@ check("siegePreview 不洩漏暗牌:共軍暗選打點和打援的兩個局面,�
   const t = pvTodo(); if (t) return t;
   const go = (plan) => act(siegeRig(), CCP, "huaihai_campaign", "campaign", { target: "jinan", siege: plan });
   const P1 = go("point"), P2 = go("relief");
+  // #45(BE 抓到的洞):第一條的局面暗牌是打援,而預覽最後寫的剛好也是打援,改了原局面也看不出來;兩種暗牌的局面都要原封不動。
+  const j1 = J(P1), j2 = J(P2);
   const a = E.siegePreview(P1, "reinforce:xuzhou:1"), b = E.siegePreview(P2, "reinforce:xuzhou:1");
   return all(
+    eq(`${J(P1) === j1} ${J(P2) === j2}`, "true true", "預覽之後兩個局面(暗牌打點、打援)都沒變"),
     eq(J(canon17(a)) === J(canon17(b)), true, "兩個局面的預覽一樣"),
     ok(true, `增援 1:打點 濟南 ${rb(a.point, "jinan")} 徐州 ${rb(a.point, "xuzhou")};打援 濟南 ${rb(a.relief, "jinan")} 徐州 ${rb(a.relief, "xuzhou")}`),
   );
